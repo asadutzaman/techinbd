@@ -17,13 +17,15 @@ class Product extends Model
         'stock',
         'image',
         'category',
-        'status'
+        'status',
+        'featured'
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
         'sale_price' => 'decimal:2',
-        'status' => 'boolean'
+        'status' => 'boolean',
+        'featured' => 'boolean'
     ];
 
     public function orderItems()

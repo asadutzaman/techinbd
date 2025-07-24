@@ -123,10 +123,22 @@
                             @enderror
                         </div>
 
-                        <div class="form-group">
-                            <div class="custom-control custom-switch">
-                                <input type="checkbox" class="custom-control-input" id="status" name="status" {{ old('status', $product->status) ? 'checked' : '' }}>
-                                <label class="custom-control-label" for="status">Active</label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <div class="custom-control custom-switch">
+                                        <input type="checkbox" class="custom-control-input" id="status" name="status" {{ old('status', $product->status) ? 'checked' : '' }}>
+                                        <label class="custom-control-label" for="status">Active</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <div class="custom-control custom-switch">
+                                        <input type="checkbox" class="custom-control-input" id="featured" name="featured" {{ old('featured', $product->featured) ? 'checked' : '' }}>
+                                        <label class="custom-control-label" for="featured">Featured Product</label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

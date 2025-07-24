@@ -43,6 +43,7 @@
                                 <th>Price</th>
                                 <th>Stock</th>
                                 <th>Status</th>
+                                <th>Featured</th>
                                 <th>Created</th>
                                 <th>Actions</th>
                             </tr>
@@ -82,6 +83,13 @@
                                         <span class="badge badge-secondary">Inactive</span>
                                     @endif
                                 </td>
+                                <td>
+                                    @if($product->featured)
+                                        <span class="badge badge-warning"><i class="fas fa-star"></i> Featured</span>
+                                    @else
+                                        <span class="badge badge-light">Regular</span>
+                                    @endif
+                                </td>
                                 <td>{{ $product->created_at->format('M d, Y') }}</td>
                                 <td>
                                     <a href="{{ route('admin.products.edit', $product->id) }}" class="btn btn-sm btn-info">
@@ -98,7 +106,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="9" class="text-center py-4">
+                                <td colspan="10" class="text-center py-4">
                                     <h5>No products found</h5>
                                     <p class="text-muted">Start by adding your first product.</p>
                                     <a href="{{ route('admin.products.create') }}" class="btn btn-primary">

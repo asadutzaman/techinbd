@@ -104,58 +104,37 @@
     <div class="container-fluid pt-5">
         <h2 class="section-title position-relative text-uppercase mx-xl-5 mb-4"><span class="bg-secondary pr-3">Categories</span></h2>
         <div class="row px-xl-5 pb-3">
+            @forelse($categories as $index => $category)
             <div class="col-lg-3 col-md-4 col-sm-6 pb-1">
                 <a class="text-decoration-none" href="{{ route('shop') }}">
                     <div class="cat-item d-flex align-items-center mb-4">
                         <div class="overflow-hidden" style="width: 100px; height: 100px;">
-                            <img class="img-fluid" src="{{ asset('img/cat-1.jpg') }}" alt="">
+                            <img class="img-fluid" src="{{ asset('img/cat-' . ($index + 1) . '.jpg') }}" alt="{{ $category->name }}" style="object-fit: cover;">
                         </div>
                         <div class="flex-fill pl-3">
-                            <h6>Category Name</h6>
-                            <small class="text-body">100 Products</small>
+                            <h6>{{ $category->name }}</h6>
+                            <small class="text-body">{{ $category->products_count ?? 0 }} Products</small>
                         </div>
                     </div>
                 </a>
             </div>
+            @empty
+            @for($i = 1; $i <= 4; $i++)
             <div class="col-lg-3 col-md-4 col-sm-6 pb-1">
                 <a class="text-decoration-none" href="{{ route('shop') }}">
                     <div class="cat-item d-flex align-items-center mb-4">
                         <div class="overflow-hidden" style="width: 100px; height: 100px;">
-                            <img class="img-fluid" src="{{ asset('img/cat-2.jpg') }}" alt="">
+                            <img class="img-fluid" src="{{ asset('img/cat-' . $i . '.jpg') }}" alt="">
                         </div>
                         <div class="flex-fill pl-3">
                             <h6>Category Name</h6>
-                            <small class="text-body">100 Products</small>
+                            <small class="text-body">0 Products</small>
                         </div>
                     </div>
                 </a>
             </div>
-            <div class="col-lg-3 col-md-4 col-sm-6 pb-1">
-                <a class="text-decoration-none" href="{{ route('shop') }}">
-                    <div class="cat-item d-flex align-items-center mb-4">
-                        <div class="overflow-hidden" style="width: 100px; height: 100px;">
-                            <img class="img-fluid" src="{{ asset('img/cat-3.jpg') }}" alt="">
-                        </div>
-                        <div class="flex-fill pl-3">
-                            <h6>Category Name</h6>
-                            <small class="text-body">100 Products</small>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            <div class="col-lg-3 col-md-4 col-sm-6 pb-1">
-                <a class="text-decoration-none" href="{{ route('shop') }}">
-                    <div class="cat-item d-flex align-items-center mb-4">
-                        <div class="overflow-hidden" style="width: 100px; height: 100px;">
-                            <img class="img-fluid" src="{{ asset('img/cat-4.jpg') }}" alt="">
-                        </div>
-                        <div class="flex-fill pl-3">
-                            <h6>Category Name</h6>
-                            <small class="text-body">100 Products</small>
-                        </div>
-                    </div>
-                </a>
-            </div>
+            @endfor
+            @endforelse
         </div>
     </div>
     <!-- Categories End -->
@@ -164,22 +143,33 @@
     <div class="container-fluid pt-5 pb-3">
         <h2 class="section-title position-relative text-uppercase mx-xl-5 mb-4"><span class="bg-secondary pr-3">Featured Products</span></h2>
         <div class="row px-xl-5">
-            @for($i = 1; $i <= 8; $i++)
+            @forelse($featuredProducts as $product)
             <div class="col-lg-3 col-md-4 col-sm-6 pb-1">
                 <div class="product-item bg-light mb-4">
                     <div class="product-img position-relative overflow-hidden">
-                        <img class="img-fluid w-100" src="{{ asset('img/product-' . $i . '.jpg') }}" alt="">
+                        <img class="img-fluid w-100" src="{{ asset('img/' . $product->image) }}" alt="{{ $product->name }}" style="height: 250px; object-fit: cover;">
                         <div class="product-action">
-                            <a class="btn btn-outline-dark btn-square" href=""><i class="fa fa-shopping-cart"></i></a>
-                            <a class="btn btn-outline-dark btn-square" href=""><i class="far fa-heart"></i></a>
-                            <a class="btn btn-outline-dark btn-square" href=""><i class="fa fa-sync-alt"></i></a>
-                            <a class="btn btn-outline-dark btn-square" href="{{ route('product.detail', $i) }}"><i class="fa fa-search"></i></a>
+                            <button class="btn btn-outline-dark btn-square add-to-cart-btn" 
+                                    data-product-id="{{ $product->id }}" 
+                                    data-product-name="{{ $product->name }}" 
+                                    data-product-price="{{ $product->display_price }}"
+                                    data-product-image="{{ $product->image }}">
+                                <i class="fa fa-shopping-cart"></i>
+                            </button>
+                            <a class="btn btn-outline-dark btn-square" href="#"><i class="far fa-heart"></i></a>
+                            <a class="btn btn-outline-dark btn-square" href="#"><i class="fa fa-sync-alt"></i></a>
+                            <a class="btn btn-outline-dark btn-square" href="{{ route('product.detail', $product->id) }}"><i class="fa fa-search"></i></a>
                         </div>
                     </div>
                     <div class="text-center py-4">
-                        <a class="h6 text-decoration-none text-truncate" href="{{ route('product.detail', $i) }}">Product Name Goes Here</a>
+                        <a class="h6 text-decoration-none text-truncate" href="{{ route('product.detail', $product->id) }}">{{ $product->name }}</a>
                         <div class="d-flex align-items-center justify-content-center mt-2">
-                            <h5>${{ 123 + $i }}</h5><h6 class="text-muted ml-2"><del>${{ 123 + $i + 10 }}</del></h6>
+                            @if($product->is_on_sale)
+                                <h5>${{ number_format($product->sale_price, 2) }}</h5>
+                                <h6 class="text-muted ml-2"><del>${{ number_format($product->price, 2) }}</del></h6>
+                            @else
+                                <h5>${{ number_format($product->price, 2) }}</h5>
+                            @endif
                         </div>
                         <div class="d-flex align-items-center justify-content-center mb-1">
                             <small class="fa fa-star text-primary mr-1"></small>
@@ -187,12 +177,20 @@
                             <small class="fa fa-star text-primary mr-1"></small>
                             <small class="fa fa-star text-primary mr-1"></small>
                             <small class="fa fa-star text-primary mr-1"></small>
-                            <small>(99)</small>
+                            <small>({{ rand(10, 99) }})</small>
                         </div>
                     </div>
                 </div>
             </div>
-            @endfor
+            @empty
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <h4>No Featured Products Available</h4>
+                    <p class="text-muted">Check back later for featured products!</p>
+                    <a href="{{ route('shop') }}" class="btn btn-primary">Browse All Products</a>
+                </div>
+            </div>
+            @endforelse
         </div>
     </div>
     <!-- Products End -->
@@ -213,3 +211,66 @@
     </div>
     <!-- Vendor End -->
 @endsection
+
+@push('scripts')
+<script>
+$(document).ready(function() {
+    // Add to cart functionality
+    $('.add-to-cart-btn').click(function(e) {
+        e.preventDefault();
+        
+        const button = $(this);
+        const productId = button.data('product-id');
+        const productName = button.data('product-name');
+        const productPrice = button.data('product-price');
+        const productImage = button.data('product-image');
+        
+        // Disable button and show loading
+        button.prop('disabled', true);
+        const originalHtml = button.html();
+        button.html('<i class="fa fa-spinner fa-spin"></i>');
+        
+        $.ajax({
+            url: '{{ route("cart.add") }}',
+            method: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}',
+                product_id: productId,
+                quantity: 1,
+                price: productPrice
+            },
+            success: function(response) {
+                // Show success message
+                toastr.success('Product added to cart successfully!');
+                
+                // Update cart count in navbar
+                updateCartCount();
+                
+                // Re-enable button
+                button.prop('disabled', false);
+                button.html(originalHtml);
+            },
+            error: function(xhr) {
+                // Show error message
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    toastr.error(xhr.responseJSON.message);
+                } else {
+                    toastr.error('Failed to add product to cart. Please try again.');
+                }
+                
+                // Re-enable button
+                button.prop('disabled', false);
+                button.html(originalHtml);
+            }
+        });
+    });
+    
+    // Function to update cart count
+    function updateCartCount() {
+        $.get('{{ route("cart.count") }}', function(data) {
+            $('.cart-count').text(data.count);
+        });
+    }
+});
+</script>
+@endpush

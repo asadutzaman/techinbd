@@ -39,7 +39,8 @@ class ProductController extends Controller
             'stock' => 'required|integer|min:0',
             'category' => 'required|string|max:255',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'status' => 'boolean'
+            'status' => 'boolean',
+            'featured' => 'boolean'
         ]);
 
         $data = $request->all();
@@ -52,8 +53,9 @@ class ProductController extends Controller
             $data['image'] = $imageName;
         }
 
-        // Handle status checkbox
+        // Handle checkboxes
         $data['status'] = $request->has('status') ? 1 : 0;
+        $data['featured'] = $request->has('featured') ? 1 : 0;
 
         \App\Models\Product::create($data);
 
@@ -76,7 +78,8 @@ class ProductController extends Controller
             'stock' => 'required|integer|min:0',
             'category' => 'required|string|max:255',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'status' => 'boolean'
+            'status' => 'boolean',
+            'featured' => 'boolean'
         ]);
 
         $product = \App\Models\Product::findOrFail($id);
@@ -95,8 +98,9 @@ class ProductController extends Controller
             $data['image'] = $imageName;
         }
 
-        // Handle status checkbox
+        // Handle checkboxes
         $data['status'] = $request->has('status') ? 1 : 0;
+        $data['featured'] = $request->has('featured') ? 1 : 0;
 
         $product->update($data);
 
