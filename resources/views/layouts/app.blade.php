@@ -61,13 +61,19 @@
                 </a>
             </div>
             <div class="col-lg-5 col-6 text-left">
-                <form action="{{ route('shop') }}" method="GET">
-                    <div class="input-group">
-                        <input type="text" class="form-control" name="search" placeholder="Search for products" value="{{ request('search') }}">
+                <form action="{{ route('shop') }}" method="GET" id="search-form">
+                    <div class="input-group position-relative">
+                        <input type="text" class="form-control" name="search" id="search-input" 
+                               placeholder="Search for products..." value="{{ request('search') }}" 
+                               autocomplete="off">
                         <div class="input-group-append">
                             <button class="btn btn-primary" type="submit">
                                 <i class="fa fa-search"></i>
                             </button>
+                        </div>
+                        <!-- Search Suggestions Dropdown -->
+                        <div id="search-suggestions" class="position-absolute bg-white border rounded shadow-sm" 
+                             style="top: 100%; left: 0; right: 0; z-index: 1000; display: none; max-height: 300px; overflow-y: auto;">
                         </div>
                     </div>
                 </form>
@@ -718,6 +724,104 @@
 
         // Initialize compare modal
         updateCompareModal();
+
+        // Search autocomplete functionality
+        let searchTimeout;
+        $('#search-input').on('input', function() {
+            const query = $(this).val().trim();
+            const suggestionsDiv = $('#search-suggestions');
+            
+            clearTimeout(searchTimeout);
+            
+            if (query.length < 2) {
+                suggestionsDiv.hide();
+                return;
+            }
+            
+            searchTimeout = setTimeout(function() {
+                $.ajax({
+                    url: '{{ route("search.suggestions") }}',
+                    method: 'GET',
+                    data: { q: query },
+                    success: function(suggestions) {
+                        if (suggestions.length > 0) {
+                            let html = '';
+                            suggestions.forEach(function(item) {
+                                html += '<div class="suggestion-item p-2 border-bottom" style="cursor: pointer;" data-name="' + item.name + '">';
+                                html += '<div class="d-flex align-items-center">';
+                                html += '<i class="fas fa-search text-muted mr-2"></i>';
+                                html += '<div>';
+                                html += '<div class="font-weight-bold">' + item.name + '</div>';
+                                html += '<small class="text-muted">in ' + item.category + '</small>';
+                                html += '</div>';
+                                html += '</div>';
+                                html += '</div>';
+                            });
+                            suggestionsDiv.html(html).show();
+                        } else {
+                            suggestionsDiv.hide();
+                        }
+                    },
+                    error: function() {
+                        suggestionsDiv.hide();
+                    }
+                });
+            }, 300);
+        });
+        
+        // Handle suggestion clicks
+        $(document).on('click', '.suggestion-item', function() {
+            const productName = $(this).data('name');
+            $('#search-input').val(productName);
+            $('#search-suggestions').hide();
+            $('#search-form').submit();
+        });
+        
+        // Hide suggestions when clicking outside
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#search-input, #search-suggestions').length) {
+                $('#search-suggestions').hide();
+            }
+        });
+        
+        // Handle keyboard navigation
+        $('#search-input').on('keydown', function(e) {
+            const suggestions = $('.suggestion-item');
+            const current = $('.suggestion-item.active');
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (current.length === 0) {
+                    suggestions.first().addClass('active bg-light');
+                } else {
+                    current.removeClass('active bg-light');
+                    const next = current.next('.suggestion-item');
+                    if (next.length) {
+                        next.addClass('active bg-light');
+                    } else {
+                        suggestions.first().addClass('active bg-light');
+                    }
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (current.length === 0) {
+                    suggestions.last().addClass('active bg-light');
+                } else {
+                    current.removeClass('active bg-light');
+                    const prev = current.prev('.suggestion-item');
+                    if (prev.length) {
+                        prev.addClass('active bg-light');
+                    } else {
+                        suggestions.last().addClass('active bg-light');
+                    }
+                }
+            } else if (e.key === 'Enter' && current.length) {
+                e.preventDefault();
+                current.click();
+            } else if (e.key === 'Escape') {
+                $('#search-suggestions').hide();
+            }
+        });
 
         // Update cart count on page load
         updateCartCount();

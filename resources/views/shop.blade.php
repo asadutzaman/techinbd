@@ -16,124 +16,146 @@
     </div>
     <!-- Breadcrumb End -->
 
+    @if($isSearching)
+    <!-- Search Results Header Start -->
+    <div class="container-fluid">
+        <div class="row px-xl-5">
+            <div class="col-12">
+                <div class="bg-light p-4 mb-30">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h4 class="mb-2">
+                                <i class="fas fa-search text-primary mr-2"></i>
+                                Search Results for "{{ $searchTerm }}"
+                            </h4>
+                            <p class="mb-0 text-muted">
+                                Found {{ $products->total() }} {{ Str::plural('product', $products->total()) }}
+                                @if(request('category'))
+                                    in {{ ucfirst(request('category')) }} category
+                                @endif
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-right">
+                            <a href="{{ route('shop') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-times mr-1"></i>Clear Search
+                            </a>
+                        </div>
+                    </div>
+                    
+                    @if($suggestions->count() > 0 && $products->count() < 3)
+                    <div class="mt-3">
+                        <small class="text-muted">Did you mean:</small>
+                        @foreach($suggestions as $suggestion)
+                            <a href="{{ route('shop', ['search' => $suggestion['name']]) }}" 
+                               class="badge badge-light border ml-1">{{ $suggestion['name'] }}</a>
+                        @endforeach
+                    </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Search Results Header End -->
+    @endif
+
     <!-- Shop Start -->
     <div class="container-fluid">
         <div class="row px-xl-5">
             <!-- Shop Sidebar Start -->
             <div class="col-lg-3 col-md-4">
-                <!-- Price Start -->
-                <h5 class="section-title position-relative text-uppercase mb-3"><span class="bg-secondary pr-3">Filter by price</span></h5>
-                <div class="bg-light p-4 mb-30">
-                    <form>
-                        <div class="custom-control custom-checkbox d-flex align-items-center justify-content-between mb-3">
-                            <input type="checkbox" class="custom-control-input" checked id="price-all">
-                            <label class="custom-control-label" for="price-all">All Price</label>
-                            <span class="badge border font-weight-normal">1000</span>
+                <form id="filter-form" method="GET" action="{{ route('shop') }}">
+                    <!-- Preserve search term -->
+                    @if(request('search'))
+                        <input type="hidden" name="search" value="{{ request('search') }}">
+                    @endif
+                    
+                    <!-- Categories Filter Start -->
+                    @if($categories->count() > 0)
+                    <h5 class="section-title position-relative text-uppercase mb-3"><span class="bg-secondary pr-3">Categories</span></h5>
+                    <div class="bg-light p-4 mb-30">
+                        <div class="custom-control custom-radio d-flex align-items-center justify-content-between mb-3">
+                            <input type="radio" class="custom-control-input" name="category" value="" id="category-all" 
+                                   {{ !request('category') ? 'checked' : '' }}>
+                            <label class="custom-control-label" for="category-all">All Categories</label>
                         </div>
-                        <div class="custom-control custom-checkbox d-flex align-items-center justify-content-between mb-3">
-                            <input type="checkbox" class="custom-control-input" id="price-1">
-                            <label class="custom-control-label" for="price-1">$0 - $100</label>
-                            <span class="badge border font-weight-normal">150</span>
+                        @foreach($categories as $cat)
+                        <div class="custom-control custom-radio d-flex align-items-center justify-content-between mb-3">
+                            <input type="radio" class="custom-control-input" name="category" value="{{ $cat }}" 
+                                   id="category-{{ $loop->index }}" {{ request('category') == $cat ? 'checked' : '' }}>
+                            <label class="custom-control-label" for="category-{{ $loop->index }}">{{ ucfirst($cat) }}</label>
                         </div>
-                        <div class="custom-control custom-checkbox d-flex align-items-center justify-content-between mb-3">
-                            <input type="checkbox" class="custom-control-input" id="price-2">
-                            <label class="custom-control-label" for="price-2">$100 - $200</label>
-                            <span class="badge border font-weight-normal">295</span>
+                        @endforeach
+                    </div>
+                    @endif
+                    <!-- Categories Filter End -->
+                    
+                    <!-- Price Range Filter Start -->
+                    <h5 class="section-title position-relative text-uppercase mb-3"><span class="bg-secondary pr-3">Price Range</span></h5>
+                    <div class="bg-light p-4 mb-30">
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="form-group">
+                                    <label for="min_price" class="small">Min Price</label>
+                                    <input type="number" class="form-control form-control-sm" name="min_price" 
+                                           id="min_price" placeholder="$0" value="{{ request('min_price') }}" min="0">
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-group">
+                                    <label for="max_price" class="small">Max Price</label>
+                                    <input type="number" class="form-control form-control-sm" name="max_price" 
+                                           id="max_price" placeholder="$1000" value="{{ request('max_price') }}" min="0">
+                                </div>
+                            </div>
                         </div>
-                        <div class="custom-control custom-checkbox d-flex align-items-center justify-content-between mb-3">
-                            <input type="checkbox" class="custom-control-input" id="price-3">
-                            <label class="custom-control-label" for="price-3">$200 - $300</label>
-                            <span class="badge border font-weight-normal">246</span>
+                        
+                        <!-- Quick Price Filters -->
+                        <div class="mb-2">
+                            <small class="text-muted">Quick filters:</small>
                         </div>
-                        <div class="custom-control custom-checkbox d-flex align-items-center justify-content-between mb-3">
-                            <input type="checkbox" class="custom-control-input" id="price-4">
-                            <label class="custom-control-label" for="price-4">$300 - $400</label>
-                            <span class="badge border font-weight-normal">145</span>
+                        <div class="d-flex flex-wrap">
+                            <button type="button" class="btn btn-sm btn-outline-primary mr-1 mb-1 price-filter" 
+                                    data-min="0" data-max="50">$0-$50</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary mr-1 mb-1 price-filter" 
+                                    data-min="50" data-max="100">$50-$100</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary mr-1 mb-1 price-filter" 
+                                    data-min="100" data-max="200">$100-$200</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary mr-1 mb-1 price-filter" 
+                                    data-min="200" data-max="">$200+</button>
                         </div>
-                        <div class="custom-control custom-checkbox d-flex align-items-center justify-content-between">
-                            <input type="checkbox" class="custom-control-input" id="price-5">
-                            <label class="custom-control-label" for="price-5">$400 - $500</label>
-                            <span class="badge border font-weight-normal">168</span>
+                    </div>
+                    <!-- Price Range Filter End -->
+                    
+                    <!-- Additional Filters Start -->
+                    <h5 class="section-title position-relative text-uppercase mb-3"><span class="bg-secondary pr-3">Filters</span></h5>
+                    <div class="bg-light p-4 mb-30">
+                        <div class="custom-control custom-checkbox mb-3">
+                            <input type="checkbox" class="custom-control-input" name="sale" value="1" 
+                                   id="filter-sale" {{ request('sale') ? 'checked' : '' }}>
+                            <label class="custom-control-label" for="filter-sale">
+                                <i class="fas fa-tag text-danger mr-1"></i>On Sale
+                            </label>
                         </div>
-                    </form>
-                </div>
-                <!-- Price End -->
-                
-                <!-- Color Start -->
-                <h5 class="section-title position-relative text-uppercase mb-3"><span class="bg-secondary pr-3">Filter by color</span></h5>
-                <div class="bg-light p-4 mb-30">
-                    <form>
-                        <div class="custom-control custom-checkbox d-flex align-items-center justify-content-between mb-3">
-                            <input type="checkbox" class="custom-control-input" checked id="color-all">
-                            <label class="custom-control-label" for="color-all">All Color</label>
-                            <span class="badge border font-weight-normal">1000</span>
+                        <div class="custom-control custom-checkbox mb-3">
+                            <input type="checkbox" class="custom-control-input" name="in_stock" value="1" 
+                                   id="filter-stock" {{ request('in_stock') ? 'checked' : '' }}>
+                            <label class="custom-control-label" for="filter-stock">
+                                <i class="fas fa-check-circle text-success mr-1"></i>In Stock
+                            </label>
                         </div>
-                        <div class="custom-control custom-checkbox d-flex align-items-center justify-content-between mb-3">
-                            <input type="checkbox" class="custom-control-input" id="color-1">
-                            <label class="custom-control-label" for="color-1">Black</label>
-                            <span class="badge border font-weight-normal">150</span>
-                        </div>
-                        <div class="custom-control custom-checkbox d-flex align-items-center justify-content-between mb-3">
-                            <input type="checkbox" class="custom-control-input" id="color-2">
-                            <label class="custom-control-label" for="color-2">White</label>
-                            <span class="badge border font-weight-normal">295</span>
-                        </div>
-                        <div class="custom-control custom-checkbox d-flex align-items-center justify-content-between mb-3">
-                            <input type="checkbox" class="custom-control-input" id="color-3">
-                            <label class="custom-control-label" for="color-3">Red</label>
-                            <span class="badge border font-weight-normal">246</span>
-                        </div>
-                        <div class="custom-control custom-checkbox d-flex align-items-center justify-content-between mb-3">
-                            <input type="checkbox" class="custom-control-input" id="color-4">
-                            <label class="custom-control-label" for="color-4">Blue</label>
-                            <span class="badge border font-weight-normal">145</span>
-                        </div>
-                        <div class="custom-control custom-checkbox d-flex align-items-center justify-content-between">
-                            <input type="checkbox" class="custom-control-input" id="color-5">
-                            <label class="custom-control-label" for="color-5">Green</label>
-                            <span class="badge border font-weight-normal">168</span>
-                        </div>
-                    </form>
-                </div>
-                <!-- Color End -->
-
-                <!-- Size Start -->
-                <h5 class="section-title position-relative text-uppercase mb-3"><span class="bg-secondary pr-3">Filter by size</span></h5>
-                <div class="bg-light p-4 mb-30">
-                    <form>
-                        <div class="custom-control custom-checkbox d-flex align-items-center justify-content-between mb-3">
-                            <input type="checkbox" class="custom-control-input" checked id="size-all">
-                            <label class="custom-control-label" for="size-all">All Size</label>
-                            <span class="badge border font-weight-normal">1000</span>
-                        </div>
-                        <div class="custom-control custom-checkbox d-flex align-items-center justify-content-between mb-3">
-                            <input type="checkbox" class="custom-control-input" id="size-1">
-                            <label class="custom-control-label" for="size-1">XS</label>
-                            <span class="badge border font-weight-normal">150</span>
-                        </div>
-                        <div class="custom-control custom-checkbox d-flex align-items-center justify-content-between mb-3">
-                            <input type="checkbox" class="custom-control-input" id="size-2">
-                            <label class="custom-control-label" for="size-2">S</label>
-                            <span class="badge border font-weight-normal">295</span>
-                        </div>
-                        <div class="custom-control custom-checkbox d-flex align-items-center justify-content-between mb-3">
-                            <input type="checkbox" class="custom-control-input" id="size-3">
-                            <label class="custom-control-label" for="size-3">M</label>
-                            <span class="badge border font-weight-normal">246</span>
-                        </div>
-                        <div class="custom-control custom-checkbox d-flex align-items-center justify-content-between mb-3">
-                            <input type="checkbox" class="custom-control-input" id="size-4">
-                            <label class="custom-control-label" for="size-4">L</label>
-                            <span class="badge border font-weight-normal">145</span>
-                        </div>
-                        <div class="custom-control custom-checkbox d-flex align-items-center justify-content-between">
-                            <input type="checkbox" class="custom-control-input" id="size-5">
-                            <label class="custom-control-label" for="size-5">XL</label>
-                            <span class="badge border font-weight-normal">168</span>
-                        </div>
-                    </form>
-                </div>
-                <!-- Size End -->
+                    </div>
+                    <!-- Additional Filters End -->
+                    
+                    <!-- Filter Actions -->
+                    <div class="mb-30">
+                        <button type="submit" class="btn btn-primary btn-block mb-2">
+                            <i class="fas fa-filter mr-1"></i>Apply Filters
+                        </button>
+                        <a href="{{ route('shop') }}" class="btn btn-outline-secondary btn-block">
+                            <i class="fas fa-times mr-1"></i>Clear All
+                        </a>
+                    </div>
+                </form>
             </div>
             <!-- Shop Sidebar End -->
 
@@ -335,6 +357,40 @@ $(document).ready(function() {
             addToCompare(productId, productName, productPrice, productImage);
         } else {
             showNotification('error', 'Compare functionality not available');
+        }
+    });
+    
+    // Price filter buttons functionality
+    $('.price-filter').on('click', function() {
+        var minPrice = $(this).data('min');
+        var maxPrice = $(this).data('max');
+        
+        $('#min_price').val(minPrice);
+        $('#max_price').val(maxPrice || '');
+        
+        // Highlight active button
+        $('.price-filter').removeClass('btn-primary').addClass('btn-outline-primary');
+        $(this).removeClass('btn-outline-primary').addClass('btn-primary');
+        
+        // Auto-submit form
+        $('#filter-form').submit();
+    });
+    
+    // Auto-submit form when filters change
+    $('#filter-form input[type="radio"], #filter-form input[type="checkbox"]').on('change', function() {
+        $('#filter-form').submit();
+    });
+    
+    // Highlight current price filter on page load
+    var currentMin = $('#min_price').val();
+    var currentMax = $('#max_price').val();
+    
+    $('.price-filter').each(function() {
+        var btnMin = $(this).data('min').toString();
+        var btnMax = $(this).data('max').toString();
+        
+        if (currentMin == btnMin && (currentMax == btnMax || (btnMax === '' && currentMax === ''))) {
+            $(this).removeClass('btn-outline-primary').addClass('btn-primary');
         }
     });
     

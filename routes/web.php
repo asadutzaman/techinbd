@@ -25,6 +25,9 @@ Route::get('/cart/count', [CartController::class, 'count'])->name('cart.count');
 Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
 Route::get('/order/success/{id}', [CheckoutController::class, 'success'])->name('order.success');
 
+// Search Routes
+Route::get('/search/suggestions', [ShopController::class, 'searchSuggestions'])->name('search.suggestions');
+
 // Admin Routes
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [App\Http\Controllers\Admin\AdminController::class, 'dashboard'])->name('dashboard');
