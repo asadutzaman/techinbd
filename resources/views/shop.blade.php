@@ -151,11 +151,21 @@
                                     Showing {{ $products->firstItem() ?? 0 }}-{{ $products->lastItem() ?? 0 }} of {{ $products->total() }} products
                                 </span>
                                 <div class="btn-group">
-                                    <button type="button" class="btn btn-sm btn-light dropdown-toggle" data-toggle="dropdown">Sorting</button>
+                                    <button type="button" class="btn btn-sm btn-light dropdown-toggle" data-toggle="dropdown">
+                                        Sorting
+                                        @if(request('sort'))
+                                            <small class="text-primary">({{ ucfirst(str_replace('_', ' ', request('sort'))) }})</small>
+                                        @endif
+                                    </button>
                                     <div class="dropdown-menu dropdown-menu-right">
-                                        <a class="dropdown-item" href="#">Latest</a>
-                                        <a class="dropdown-item" href="#">Popularity</a>
-                                        <a class="dropdown-item" href="#">Best Rating</a>
+                                        <a class="dropdown-item {{ request('sort', 'latest') == 'latest' ? 'active' : '' }}" 
+                                           href="{{ request()->fullUrlWithQuery(['sort' => 'latest']) }}">Latest</a>
+                                        <a class="dropdown-item {{ request('sort') == 'price_low' ? 'active' : '' }}" 
+                                           href="{{ request()->fullUrlWithQuery(['sort' => 'price_low']) }}">Price: Low to High</a>
+                                        <a class="dropdown-item {{ request('sort') == 'price_high' ? 'active' : '' }}" 
+                                           href="{{ request()->fullUrlWithQuery(['sort' => 'price_high']) }}">Price: High to Low</a>
+                                        <a class="dropdown-item {{ request('sort') == 'name' ? 'active' : '' }}" 
+                                           href="{{ request()->fullUrlWithQuery(['sort' => 'name']) }}">Name A-Z</a>
                                     </div>
                                 </div>
                                 <div class="btn-group ml-2">
@@ -182,7 +192,14 @@
                                         <i class="fa fa-shopping-cart"></i>
                                     </button>
                                     <a class="btn btn-outline-dark btn-square" href=""><i class="far fa-heart"></i></a>
-                                    <a class="btn btn-outline-dark btn-square" href=""><i class="fa fa-sync-alt"></i></a>
+                                    <button class="btn btn-outline-dark btn-square add-to-compare-btn" 
+                                            data-product-id="{{ $product->id }}" 
+                                            data-product-name="{{ $product->name }}" 
+                                            data-product-price="{{ $product->display_price }}"
+                                            data-product-image="{{ asset('img/' . $product->image) }}"
+                                            title="Add to Compare">
+                                        <i class="fa fa-balance-scale"></i>
+                                    </button>
                                     <a class="btn btn-outline-dark btn-square" href="{{ route('product.detail', $product->id) }}"><i class="fa fa-search"></i></a>
                                 </div>
                             </div>
@@ -302,6 +319,24 @@ $(document).ready(function() {
             }
         });
     }
+    
+    // Add to compare functionality
+    $('.add-to-compare-btn').on('click', function(e) {
+        e.preventDefault();
+        
+        var button = $(this);
+        var productId = button.data('product-id');
+        var productName = button.data('product-name');
+        var productPrice = button.data('product-price');
+        var productImage = button.data('product-image');
+        
+        // Use the global addToCompare function from layout
+        if (typeof addToCompare === 'function') {
+            addToCompare(productId, productName, productPrice, productImage);
+        } else {
+            showNotification('error', 'Compare functionality not available');
+        }
+    });
     
     // Load cart count on page load
     updateCartCount();

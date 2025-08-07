@@ -157,7 +157,14 @@
                                 <i class="fa fa-shopping-cart"></i>
                             </button>
                             <a class="btn btn-outline-dark btn-square" href="#"><i class="far fa-heart"></i></a>
-                            <a class="btn btn-outline-dark btn-square" href="#"><i class="fa fa-sync-alt"></i></a>
+                            <button class="btn btn-outline-dark btn-square add-to-compare-btn" 
+                                    data-product-id="{{ $product->id }}" 
+                                    data-product-name="{{ $product->name }}" 
+                                    data-product-price="{{ $product->display_price }}"
+                                    data-product-image="{{ asset('img/' . $product->image) }}"
+                                    title="Add to Compare">
+                                <i class="fa fa-balance-scale"></i>
+                            </button>
                             <a class="btn btn-outline-dark btn-square" href="{{ route('product.detail', $product->id) }}"><i class="fa fa-search"></i></a>
                         </div>
                     </div>
@@ -263,6 +270,24 @@ $(document).ready(function() {
                 button.html(originalHtml);
             }
         });
+    });
+    
+    // Add to compare functionality
+    $('.add-to-compare-btn').click(function(e) {
+        e.preventDefault();
+        
+        const button = $(this);
+        const productId = button.data('product-id');
+        const productName = button.data('product-name');
+        const productPrice = button.data('product-price');
+        const productImage = button.data('product-image');
+        
+        // Use the global addToCompare function from layout
+        if (typeof addToCompare === 'function') {
+            addToCompare(productId, productName, productPrice, productImage);
+        } else {
+            toastr.error('Compare functionality not available');
+        }
     });
     
     // Function to update cart count

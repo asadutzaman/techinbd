@@ -50,22 +50,6 @@
                             <button class="dropdown-item" type="button">Sign up</button>
                         </div>
                     </div>
-                    <div class="btn-group mx-2">
-                        <button type="button" class="btn btn-sm btn-light dropdown-toggle" data-toggle="dropdown">USD</button>
-                        <div class="dropdown-menu dropdown-menu-right">
-                            <button class="dropdown-item" type="button">EUR</button>
-                            <button class="dropdown-item" type="button">GBP</button>
-                            <button class="dropdown-item" type="button">CAD</button>
-                        </div>
-                    </div>
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-sm btn-light dropdown-toggle" data-toggle="dropdown">EN</button>
-                        <div class="dropdown-menu dropdown-menu-right">
-                            <button class="dropdown-item" type="button">FR</button>
-                            <button class="dropdown-item" type="button">AR</button>
-                            <button class="dropdown-item" type="button">RU</button>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -76,21 +60,30 @@
                     <span class="h1 text-uppercase text-dark bg-primary px-2 ml-n1">Shop</span>
                 </a>
             </div>
-            <div class="col-lg-4 col-6 text-left">
-                <form action="">
+            <div class="col-lg-5 col-6 text-left">
+                <form action="{{ route('shop') }}" method="GET">
                     <div class="input-group">
-                        <input type="text" class="form-control" placeholder="Search for products">
+                        <input type="text" class="form-control" name="search" placeholder="Search for products" value="{{ request('search') }}">
                         <div class="input-group-append">
-                            <span class="input-group-text bg-transparent text-primary">
+                            <button class="btn btn-primary" type="submit">
                                 <i class="fa fa-search"></i>
-                            </span>
+                            </button>
                         </div>
                     </div>
                 </form>
             </div>
-            <div class="col-lg-4 col-6 text-right">
-                <p class="m-0">Customer Service</p>
-                <h5 class="m-0">+012 345 6789</h5>
+            <div class="col-lg-3 col-6 text-right">
+                <div class="d-flex justify-content-end align-items-center">
+                    <a href="#" class="btn btn-outline-primary btn-sm mr-2" data-toggle="modal" data-target="#offersModal">
+                        <i class="fas fa-tags mr-1"></i>Offers
+                    </a>
+                    <a href="#" class="btn btn-outline-success btn-sm mr-2" data-toggle="modal" data-target="#pcBuilderModal">
+                        <i class="fas fa-desktop mr-1"></i>PC Builder
+                    </a>
+                    <a href="#" class="btn btn-outline-info btn-sm" data-toggle="modal" data-target="#compareModal">
+                        <i class="fas fa-balance-scale mr-1"></i>Compare
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -237,6 +230,278 @@
     </div>
     <!-- Footer End -->
 
+    <!-- Offers Modal -->
+    <div class="modal fade" id="offersModal" tabindex="-1" role="dialog" aria-labelledby="offersModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="offersModalLabel">
+                        <i class="fas fa-tags mr-2"></i>Special Offers & Deals
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0"><i class="fas fa-percentage mr-2"></i>Flash Sale</h6>
+                                </div>
+                                <div class="card-body">
+                                    <h5 class="text-primary">Up to 50% OFF</h5>
+                                    <p class="mb-2">Limited time offer on selected items</p>
+                                    <small class="text-muted">Ends in: 2 days 5 hours</small>
+                                    <br>
+                                    <a href="{{ route('shop') }}?sale=1" class="btn btn-primary btn-sm mt-2">Shop Now</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-success">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0"><i class="fas fa-gift mr-2"></i>Bundle Deal</h6>
+                                </div>
+                                <div class="card-body">
+                                    <h5 class="text-success">Buy 2 Get 1 Free</h5>
+                                    <p class="mb-2">On all fashion items</p>
+                                    <small class="text-muted">Valid until stock lasts</small>
+                                    <br>
+                                    <a href="{{ route('shop') }}?category=fashion" class="btn btn-success btn-sm mt-2">Shop Fashion</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0"><i class="fas fa-shipping-fast mr-2"></i>Free Shipping</h6>
+                                </div>
+                                <div class="card-body">
+                                    <h5 class="text-warning">Free Delivery</h5>
+                                    <p class="mb-2">On orders above $50</p>
+                                    <small class="text-muted">Worldwide shipping</small>
+                                    <br>
+                                    <a href="{{ route('shop') }}" class="btn btn-warning btn-sm mt-2">Start Shopping</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="fas fa-star mr-2"></i>New Customer</h6>
+                                </div>
+                                <div class="card-body">
+                                    <h5 class="text-info">20% OFF</h5>
+                                    <p class="mb-2">First order discount</p>
+                                    <small class="text-muted">Use code: WELCOME20</small>
+                                    <br>
+                                    <button class="btn btn-info btn-sm mt-2" onclick="copyCode('WELCOME20')">Copy Code</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PC Builder Modal -->
+    <div class="modal fade" id="pcBuilderModal" tabindex="-1" role="dialog" aria-labelledby="pcBuilderModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="pcBuilderModalLabel">
+                        <i class="fas fa-desktop mr-2"></i>PC Builder Tool
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h6 class="mb-3">Build Your Custom PC</h6>
+                            <div class="pc-builder-components">
+                                <div class="component-row mb-3 p-3 border rounded">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-3">
+                                            <i class="fas fa-microchip fa-2x text-primary"></i>
+                                            <strong class="ml-2">CPU</strong>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <select class="form-control" id="cpu-select">
+                                                <option value="">Select CPU</option>
+                                                <option value="intel-i5">Intel Core i5-12400F - $199</option>
+                                                <option value="intel-i7">Intel Core i7-12700K - $349</option>
+                                                <option value="amd-ryzen5">AMD Ryzen 5 5600X - $229</option>
+                                                <option value="amd-ryzen7">AMD Ryzen 7 5800X - $329</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <span class="price-display">$0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="component-row mb-3 p-3 border rounded">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-3">
+                                            <i class="fas fa-memory fa-2x text-success"></i>
+                                            <strong class="ml-2">RAM</strong>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <select class="form-control" id="ram-select">
+                                                <option value="">Select RAM</option>
+                                                <option value="8gb-ddr4">8GB DDR4 3200MHz - $79</option>
+                                                <option value="16gb-ddr4">16GB DDR4 3200MHz - $149</option>
+                                                <option value="32gb-ddr4">32GB DDR4 3200MHz - $299</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <span class="price-display">$0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="component-row mb-3 p-3 border rounded">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-3">
+                                            <i class="fas fa-hdd fa-2x text-warning"></i>
+                                            <strong class="ml-2">Storage</strong>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <select class="form-control" id="storage-select">
+                                                <option value="">Select Storage</option>
+                                                <option value="ssd-500gb">500GB NVMe SSD - $89</option>
+                                                <option value="ssd-1tb">1TB NVMe SSD - $159</option>
+                                                <option value="hdd-1tb">1TB HDD - $49</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <span class="price-display">$0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="component-row mb-3 p-3 border rounded">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-3">
+                                            <i class="fas fa-tv fa-2x text-danger"></i>
+                                            <strong class="ml-2">GPU</strong>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <select class="form-control" id="gpu-select">
+                                                <option value="">Select Graphics Card</option>
+                                                <option value="rtx-3060">NVIDIA RTX 3060 - $399</option>
+                                                <option value="rtx-3070">NVIDIA RTX 3070 - $599</option>
+                                                <option value="rx-6600">AMD RX 6600 - $329</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <span class="price-display">$0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0">Build Summary</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="build-summary">
+                                        <p class="text-muted">Select components to see your build</p>
+                                    </div>
+                                    <hr>
+                                    <div class="d-flex justify-content-between">
+                                        <strong>Total Price:</strong>
+                                        <strong id="total-price">$0</strong>
+                                    </div>
+                                    <button class="btn btn-success btn-block mt-3" id="add-build-to-cart" disabled>
+                                        Add Build to Cart
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compare Modal -->
+    <div class="modal fade" id="compareModal" tabindex="-1" role="dialog" aria-labelledby="compareModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title" id="compareModalLabel">
+                        <i class="fas fa-balance-scale mr-2"></i>Product Comparison
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <p class="text-muted">Select products from the shop to compare their features and prices.</p>
+                        </div>
+                    </div>
+                    <div id="compare-container">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card h-100">
+                                    <div class="card-header text-center">
+                                        <h6>Product 1</h6>
+                                    </div>
+                                    <div class="card-body text-center">
+                                        <div class="compare-placeholder">
+                                            <i class="fas fa-plus fa-3x text-muted mb-3"></i>
+                                            <p class="text-muted">Click "Add to Compare" on any product in the shop</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card h-100">
+                                    <div class="card-header text-center">
+                                        <h6>Product 2</h6>
+                                    </div>
+                                    <div class="card-body text-center">
+                                        <div class="compare-placeholder">
+                                            <i class="fas fa-plus fa-3x text-muted mb-3"></i>
+                                            <p class="text-muted">Add second product to compare</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card h-100">
+                                    <div class="card-header text-center">
+                                        <h6>Product 3</h6>
+                                    </div>
+                                    <div class="card-body text-center">
+                                        <div class="compare-placeholder">
+                                            <i class="fas fa-plus fa-3x text-muted mb-3"></i>
+                                            <p class="text-muted">Add third product to compare</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-4">
+                        <a href="{{ route('shop') }}" class="btn btn-primary">
+                            <i class="fas fa-shopping-bag mr-2"></i>Browse Products
+                        </a>
+                        <button class="btn btn-secondary ml-2" id="clear-comparison">
+                            <i class="fas fa-trash mr-2"></i>Clear All
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Back to Top -->
     <a href="#" class="btn btn-primary back-to-top"><i class="fa fa-angle-double-up"></i></a>
 
@@ -255,6 +520,211 @@
     
     <!-- Toastr JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    
+    <script>
+    $(document).ready(function() {
+        // PC Builder functionality
+        const componentPrices = {
+            'intel-i5': 199,
+            'intel-i7': 349,
+            'amd-ryzen5': 229,
+            'amd-ryzen7': 329,
+            '8gb-ddr4': 79,
+            '16gb-ddr4': 149,
+            '32gb-ddr4': 299,
+            'ssd-500gb': 89,
+            'ssd-1tb': 159,
+            'hdd-1tb': 49,
+            'rtx-3060': 399,
+            'rtx-3070': 599,
+            'rx-6600': 329
+        };
+
+        const componentNames = {
+            'intel-i5': 'Intel Core i5-12400F',
+            'intel-i7': 'Intel Core i7-12700K',
+            'amd-ryzen5': 'AMD Ryzen 5 5600X',
+            'amd-ryzen7': 'AMD Ryzen 7 5800X',
+            '8gb-ddr4': '8GB DDR4 3200MHz',
+            '16gb-ddr4': '16GB DDR4 3200MHz',
+            '32gb-ddr4': '32GB DDR4 3200MHz',
+            'ssd-500gb': '500GB NVMe SSD',
+            'ssd-1tb': '1TB NVMe SSD',
+            'hdd-1tb': '1TB HDD',
+            'rtx-3060': 'NVIDIA RTX 3060',
+            'rtx-3070': 'NVIDIA RTX 3070',
+            'rx-6600': 'AMD RX 6600'
+        };
+
+        let selectedComponents = {};
+
+        // Handle component selection
+        $('#cpu-select, #ram-select, #storage-select, #gpu-select').change(function() {
+            const componentType = $(this).attr('id').replace('-select', '');
+            const selectedValue = $(this).val();
+            const priceDisplay = $(this).closest('.component-row').find('.price-display');
+            
+            if (selectedValue) {
+                const price = componentPrices[selectedValue];
+                priceDisplay.text('$' + price);
+                selectedComponents[componentType] = {
+                    value: selectedValue,
+                    name: componentNames[selectedValue],
+                    price: price
+                };
+            } else {
+                priceDisplay.text('$0');
+                delete selectedComponents[componentType];
+            }
+            
+            updateBuildSummary();
+        });
+
+        function updateBuildSummary() {
+            const summaryDiv = $('#build-summary');
+            const totalPriceSpan = $('#total-price');
+            const addToCartBtn = $('#add-build-to-cart');
+            
+            if (Object.keys(selectedComponents).length === 0) {
+                summaryDiv.html('<p class="text-muted">Select components to see your build</p>');
+                totalPriceSpan.text('$0');
+                addToCartBtn.prop('disabled', true);
+                return;
+            }
+            
+            let html = '';
+            let totalPrice = 0;
+            
+            Object.keys(selectedComponents).forEach(function(type) {
+                const component = selectedComponents[type];
+                html += '<div class="mb-2"><strong>' + type.toUpperCase() + ':</strong><br>' + 
+                       component.name + ' - $' + component.price + '</div>';
+                totalPrice += component.price;
+            });
+            
+            summaryDiv.html(html);
+            totalPriceSpan.text('$' + totalPrice);
+            addToCartBtn.prop('disabled', Object.keys(selectedComponents).length < 2);
+        }
+
+        // Add build to cart
+        $('#add-build-to-cart').click(function() {
+            if (Object.keys(selectedComponents).length < 2) {
+                toastr.warning('Please select at least 2 components');
+                return;
+            }
+            
+            // Here you would typically send the build to the server
+            toastr.success('PC Build added to cart successfully!');
+            $('#pcBuilderModal').modal('hide');
+            
+            // Reset the builder
+            $('#cpu-select, #ram-select, #storage-select, #gpu-select').val('');
+            $('.price-display').text('$0');
+            selectedComponents = {};
+            updateBuildSummary();
+        });
+
+        // Copy code functionality for offers
+        window.copyCode = function(code) {
+            navigator.clipboard.writeText(code).then(function() {
+                toastr.success('Code copied to clipboard: ' + code);
+            }).catch(function() {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = code;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                toastr.success('Code copied to clipboard: ' + code);
+            });
+        };
+
+        // Compare functionality
+        let compareProducts = JSON.parse(localStorage.getItem('compareProducts') || '[]');
+
+        function updateCompareModal() {
+            const container = $('#compare-container .row');
+            container.empty();
+            
+            for (let i = 0; i < 3; i++) {
+                const product = compareProducts[i];
+                let cardHtml = '<div class="col-md-4"><div class="card h-100">';
+                cardHtml += '<div class="card-header text-center"><h6>Product ' + (i + 1) + '</h6></div>';
+                cardHtml += '<div class="card-body text-center">';
+                
+                if (product) {
+                    cardHtml += '<img src="' + product.image + '" alt="' + product.name + '" class="img-fluid mb-3" style="height: 150px; object-fit: cover;">';
+                    cardHtml += '<h6>' + product.name + '</h6>';
+                    cardHtml += '<p class="text-primary">$' + product.price + '</p>';
+                    cardHtml += '<button class="btn btn-sm btn-danger" onclick="removeFromCompare(' + i + ')">Remove</button>';
+                } else {
+                    cardHtml += '<div class="compare-placeholder">';
+                    cardHtml += '<i class="fas fa-plus fa-3x text-muted mb-3"></i>';
+                    cardHtml += '<p class="text-muted">Add product to compare</p>';
+                    cardHtml += '</div>';
+                }
+                
+                cardHtml += '</div></div></div>';
+                container.append(cardHtml);
+            }
+        }
+
+        window.addToCompare = function(productId, productName, productPrice, productImage) {
+            if (compareProducts.length >= 3) {
+                toastr.warning('You can only compare up to 3 products');
+                return;
+            }
+            
+            // Check if product already in compare
+            if (compareProducts.find(p => p.id === productId)) {
+                toastr.info('Product already in comparison');
+                return;
+            }
+            
+            compareProducts.push({
+                id: productId,
+                name: productName,
+                price: productPrice,
+                image: productImage
+            });
+            
+            localStorage.setItem('compareProducts', JSON.stringify(compareProducts));
+            toastr.success('Product added to comparison');
+            updateCompareModal();
+        };
+
+        window.removeFromCompare = function(index) {
+            compareProducts.splice(index, 1);
+            localStorage.setItem('compareProducts', JSON.stringify(compareProducts));
+            updateCompareModal();
+            toastr.info('Product removed from comparison');
+        };
+
+        $('#clear-comparison').click(function() {
+            compareProducts = [];
+            localStorage.setItem('compareProducts', JSON.stringify(compareProducts));
+            updateCompareModal();
+            toastr.info('Comparison cleared');
+        });
+
+        // Initialize compare modal
+        updateCompareModal();
+
+        // Update cart count on page load
+        updateCartCount();
+
+        function updateCartCount() {
+            $.get('{{ route("cart.count") }}', function(data) {
+                $('.cart-count').text(data.count);
+            }).fail(function() {
+                // If cart count route doesn't exist, set to 0
+                $('.cart-count').text('0');
+            });
+        }
+    });
+    </script>
     
     @stack('scripts')
 </body>
