@@ -42,6 +42,8 @@
                                 <th>Description</th>
                                 <th>Products Count</th>
                                 <th>Status</th>
+                                <th>Menu</th>
+                                <th>Featured</th>
                                 <th>Created</th>
                                 <th>Actions</th>
                             </tr>
@@ -71,6 +73,20 @@
                                         <span class="badge badge-secondary">Inactive</span>
                                     @endif
                                 </td>
+                                <td>
+                                    @if($category->is_menu)
+                                        <span class="badge badge-primary"><i class="fas fa-check"></i> Yes</span>
+                                    @else
+                                        <span class="badge badge-light">No</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($category->is_featured)
+                                        <span class="badge badge-warning"><i class="fas fa-star"></i> Featured</span>
+                                    @else
+                                        <span class="badge badge-light">Regular</span>
+                                    @endif
+                                </td>
                                 <td>{{ $category->created_at->format('M d, Y') }}</td>
                                 <td>
                                     <a href="{{ route('admin.categories.edit', $category->id) }}" class="btn btn-sm btn-info">
@@ -87,7 +103,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="8" class="text-center py-4">
+                                <td colspan="10" class="text-center py-4">
                                     <h5>No categories found</h5>
                                     <p class="text-muted">Start by adding your first category.</p>
                                     <a href="{{ route('admin.categories.create') }}" class="btn btn-primary">

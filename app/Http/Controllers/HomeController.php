@@ -15,7 +15,11 @@ class HomeController extends Controller
                                   ->take(8)
                                   ->get();
         
-        $categories = Category::withCount('products')->take(4)->get();
+        $categories = Category::where('is_featured', true)
+                                  ->where('status', true)
+                                  ->withCount('products')
+                                  ->take(4)
+                                  ->get();
         
         return view('home', compact('featuredProducts', 'categories'));
     }

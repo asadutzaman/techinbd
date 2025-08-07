@@ -13,11 +13,15 @@ class Category extends Model
         'name',
         'description',
         'image',
-        'status'
+        'status',
+        'is_menu',
+        'is_featured'
     ];
 
     protected $casts = [
-        'status' => 'boolean'
+        'status' => 'boolean',
+        'is_menu' => 'boolean',
+        'is_featured' => 'boolean'
     ];
 
     public function products()

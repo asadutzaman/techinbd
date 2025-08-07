@@ -19,6 +19,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Register view composer for menu categories
+        view()->composer('layouts.app', \App\Http\View\Composers\MenuComposer::class);
     }
 }

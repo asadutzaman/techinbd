@@ -71,10 +71,30 @@
                             @enderror
                         </div>
 
-                        <div class="form-group">
-                            <div class="custom-control custom-switch">
-                                <input type="checkbox" class="custom-control-input" id="status" name="status" {{ old('status', $category->status) ? 'checked' : '' }}>
-                                <label class="custom-control-label" for="status">Active</label>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <div class="custom-control custom-switch">
+                                        <input type="checkbox" class="custom-control-input" id="status" name="status" {{ old('status', $category->status) ? 'checked' : '' }}>
+                                        <label class="custom-control-label" for="status">Active</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <div class="custom-control custom-switch">
+                                        <input type="checkbox" class="custom-control-input" id="is_menu" name="is_menu" {{ old('is_menu', $category->is_menu) ? 'checked' : '' }}>
+                                        <label class="custom-control-label" for="is_menu">Show in Menu</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <div class="custom-control custom-switch">
+                                        <input type="checkbox" class="custom-control-input" id="is_featured" name="is_featured" {{ old('is_featured', $category->is_featured) ? 'checked' : '' }}>
+                                        <label class="custom-control-label" for="is_featured">Featured Category</label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

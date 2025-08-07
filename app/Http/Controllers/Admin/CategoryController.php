@@ -32,7 +32,9 @@ class CategoryController extends Controller
             'name' => 'required|string|max:255|unique:categories,name',
             'description' => 'nullable|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'status' => 'boolean'
+            'status' => 'boolean',
+            'is_menu' => 'boolean',
+            'is_featured' => 'boolean'
         ]);
 
         $data = $request->all();
@@ -45,8 +47,10 @@ class CategoryController extends Controller
             $data['image'] = $imageName;
         }
 
-        // Handle status checkbox
+        // Handle checkboxes
         $data['status'] = $request->has('status') ? 1 : 0;
+        $data['is_menu'] = $request->has('is_menu') ? 1 : 0;
+        $data['is_featured'] = $request->has('is_featured') ? 1 : 0;
 
         \App\Models\Category::create($data);
 
@@ -65,7 +69,9 @@ class CategoryController extends Controller
             'name' => 'required|string|max:255|unique:categories,name,' . $id,
             'description' => 'nullable|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'status' => 'boolean'
+            'status' => 'boolean',
+            'is_menu' => 'boolean',
+            'is_featured' => 'boolean'
         ]);
 
         $category = \App\Models\Category::findOrFail($id);
@@ -84,8 +90,10 @@ class CategoryController extends Controller
             $data['image'] = $imageName;
         }
 
-        // Handle status checkbox
+        // Handle checkboxes
         $data['status'] = $request->has('status') ? 1 : 0;
+        $data['is_menu'] = $request->has('is_menu') ? 1 : 0;
+        $data['is_featured'] = $request->has('is_featured') ? 1 : 0;
 
         $category->update($data);
 
