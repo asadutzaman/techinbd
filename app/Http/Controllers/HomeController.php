@@ -17,7 +17,6 @@ class HomeController extends Controller
         
         $categories = Category::where('is_featured', true)
                                   ->where('status', true)
-                                  ->withCount('products')
                                   ->take(4)
                                   ->get();
         

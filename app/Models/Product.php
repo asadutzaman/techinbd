@@ -16,7 +16,8 @@ class Product extends Model
         'sale_price',
         'stock',
         'image',
-        'category',
+        'category_id',
+        'brand_id',
         'status',
         'featured'
     ];
@@ -46,5 +47,51 @@ class Product extends Model
     public function getIsOnSaleAttribute()
     {
         return !is_null($this->sale_price);
+    }
+
+    /**
+     * Get the brand that owns the product
+     */
+    public function brand()
+    {
+        return $this->belongsTo(Brand::class);
+    }
+
+    /**
+     * Get the category that owns the product
+     */
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    /**
+     * Get product attributes
+     */
+    public function productAttributes()
+    {
+        return $this->hasMany(ProductAttribute::class);
+    }
+
+    /**
+     * Get attributes with values for this product
+     */
+    public function attributesWithValues()
+    {
+        return $this->productAttributes()->with('attribute');
+    }
+
+    /**
+     * Get specific attribute value
+     */
+    public function getAttributeValue($attributeName)
+    {
+        $productAttribute = $this->productAttributes()
+            ->whereHas('attribute', function($query) use ($attributeName) {
+                $query->where('name', $attributeName);
+            })
+            ->first();
+            
+        return $productAttribute ? $productAttribute->value : null;
     }
 }

@@ -31,9 +31,14 @@ Route::get('/search/suggestions', [ShopController::class, 'searchSuggestions'])-
 // Admin Routes
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [App\Http\Controllers\Admin\AdminController::class, 'dashboard'])->name('dashboard');
+
+    // AJAX endpoints
+    Route::get('products/attributes-by-category', [App\Http\Controllers\Admin\ProductController::class, 'getAttributesByCategory'])->name('products.attributes-by-category');
+
     Route::get('/products', [App\Http\Controllers\Admin\ProductController::class, 'index'])->name('products.index');
     Route::get('/products/create', [App\Http\Controllers\Admin\ProductController::class, 'create'])->name('products.create');
     Route::post('/products', [App\Http\Controllers\Admin\ProductController::class, 'store'])->name('products.store');
+    Route::get('/products/{id}', [App\Http\Controllers\Admin\ProductController::class, 'show'])->name('products.show');
     Route::get('/products/{id}/edit', [App\Http\Controllers\Admin\ProductController::class, 'edit'])->name('products.edit');
     Route::put('/products/{id}', [App\Http\Controllers\Admin\ProductController::class, 'update'])->name('products.update');
     Route::delete('/products/{id}', [App\Http\Controllers\Admin\ProductController::class, 'destroy'])->name('products.destroy');
@@ -52,4 +57,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
     
     Route::get('/settings', [App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('settings.index');
     Route::post('/settings', [App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('settings.update');
+    
+    // Brands
+    Route::resource('brands', App\Http\Controllers\Admin\BrandController::class);
+    
+    // Attributes
+    Route::resource('attributes', App\Http\Controllers\Admin\AttributeController::class);
+    Route::get('attributes/{id}/values', [App\Http\Controllers\Admin\AttributeController::class, 'manageValues'])->name('attributes.values');
+    Route::post('attributes/{id}/values', [App\Http\Controllers\Admin\AttributeController::class, 'storeValue'])->name('attributes.values.store');
+    Route::put('attributes/{attributeId}/values/{valueId}', [App\Http\Controllers\Admin\AttributeController::class, 'updateValue'])->name('attributes.values.update');
+    Route::delete('attributes/{attributeId}/values/{valueId}', [App\Http\Controllers\Admin\AttributeController::class, 'destroyValue'])->name('attributes.values.destroy');
+
 });

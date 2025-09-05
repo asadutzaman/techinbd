@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\Product;
+use App\Models\Category;
 
 class ProductSeeder extends Seeder
 {
@@ -13,6 +14,8 @@ class ProductSeeder extends Seeder
      */
     public function run(): void
     {
+        $categories = Category::pluck('id', 'name')->all();
+
         $products = [
             [
                 'name' => 'Men\'s Fashion T-Shirt',
@@ -21,8 +24,9 @@ class ProductSeeder extends Seeder
                 'sale_price' => 24.99,
                 'stock' => 50,
                 'image' => 'product-1.jpg',
-                'category' => 'men',
-                'status' => true
+                'category_name' => 'Men',
+                'status' => true,
+                'featured' => true
             ],
             [
                 'name' => 'Women\'s Summer Dress',
@@ -31,8 +35,9 @@ class ProductSeeder extends Seeder
                 'sale_price' => 49.99,
                 'stock' => 30,
                 'image' => 'product-2.jpg',
-                'category' => 'women',
-                'status' => true
+                'category_name' => 'Women',
+                'status' => true,
+                'featured' => true
             ],
             [
                 'name' => 'Kids Casual Wear',
@@ -41,8 +46,9 @@ class ProductSeeder extends Seeder
                 'sale_price' => null,
                 'stock' => 40,
                 'image' => 'product-3.jpg',
-                'category' => 'kids',
-                'status' => true
+                'category_name' => 'Kids',
+                'status' => true,
+                'featured' => false
             ],
             [
                 'name' => 'Premium Jeans',
@@ -51,8 +57,9 @@ class ProductSeeder extends Seeder
                 'sale_price' => 69.99,
                 'stock' => 25,
                 'image' => 'product-4.jpg',
-                'category' => 'men',
-                'status' => true
+                'category_name' => 'Men',
+                'status' => true,
+                'featured' => true
             ],
             [
                 'name' => 'Sports Sneakers',
@@ -61,8 +68,9 @@ class ProductSeeder extends Seeder
                 'sale_price' => null,
                 'stock' => 35,
                 'image' => 'product-5.jpg',
-                'category' => 'shoes',
-                'status' => true
+                'category_name' => 'Shoes',
+                'status' => true,
+                'featured' => false
             ],
             [
                 'name' => 'Elegant Blouse',
@@ -71,8 +79,9 @@ class ProductSeeder extends Seeder
                 'sale_price' => 39.99,
                 'stock' => 20,
                 'image' => 'product-6.jpg',
-                'category' => 'women',
-                'status' => true
+                'category_name' => 'Women',
+                'status' => true,
+                'featured' => true
             ],
             [
                 'name' => 'Casual Jacket',
@@ -81,8 +90,9 @@ class ProductSeeder extends Seeder
                 'sale_price' => 84.99,
                 'stock' => 15,
                 'image' => 'product-7.jpg',
-                'category' => 'men',
-                'status' => true
+                'category_name' => 'Men',
+                'status' => true,
+                'featured' => false
             ],
             [
                 'name' => 'Designer Handbag',
@@ -91,8 +101,9 @@ class ProductSeeder extends Seeder
                 'sale_price' => null,
                 'stock' => 10,
                 'image' => 'product-8.jpg',
-                'category' => 'accessories',
-                'status' => true
+                'category_name' => 'Accessories',
+                'status' => true,
+                'featured' => true
             ],
             [
                 'name' => 'Winter Coat',
@@ -101,13 +112,17 @@ class ProductSeeder extends Seeder
                 'sale_price' => 109.99,
                 'stock' => 18,
                 'image' => 'product-9.jpg',
-                'category' => 'women',
-                'status' => true
+                'category_name' => 'Women',
+                'status' => true,
+                'featured' => false
             ]
         ];
 
-        foreach ($products as $product) {
-            Product::create($product);
+        foreach ($products as $productData) {
+            $categoryId = $categories[$productData['category_name']] ?? null;
+            unset($productData['category_name']);
+            $productData['category_id'] = $categoryId;
+            Product::create($productData);
         }
     }
 }

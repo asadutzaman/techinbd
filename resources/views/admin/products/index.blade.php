@@ -57,7 +57,7 @@
                                 </td>
                                 <td>{{ $product->name }}</td>
                                 <td>
-                                    <span class="badge badge-secondary">{{ ucfirst($product->category) }}</span>
+                                    <span class="badge badge-secondary">{{ $product->category->name ?? 'N/A' }}</span>
                                 </td>
                                 <td>
                                     @if($product->sale_price)
@@ -92,13 +92,16 @@
                                 </td>
                                 <td>{{ $product->created_at->format('M d, Y') }}</td>
                                 <td>
-                                    <a href="{{ route('admin.products.edit', $product->id) }}" class="btn btn-sm btn-info">
+                                    <a href="{{ route('admin.products.show', $product->id) }}" class="btn btn-sm btn-primary" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{{ route('admin.products.edit', $product->id) }}" class="btn btn-sm btn-info" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
                                     <form action="{{ route('admin.products.destroy', $product->id) }}" method="POST" style="display: inline-block;">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this product?')">
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this product?')" title="Delete">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </form>

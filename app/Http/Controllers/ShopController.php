@@ -32,29 +32,17 @@ class ShopController extends Controller
                   // Description match
                   ->orWhere('description', 'LIKE', '%' . $searchTerm . '%')
                   // Category match
-                  ->orWhere('category', 'LIKE', '%' . $searchTerm . '%');
+                  ->orWhereHas('category', function ($query) use ($searchTerm) {
+                      $query->where('name', 'LIKE', '%' . $searchTerm . '%');
+                  });
             });
             
-            // Order by relevance when searching
-            $query->orderByRaw("
-                CASE 
-                    WHEN name LIKE ? THEN 1
-                    WHEN name LIKE ? THEN 2
-                    WHEN category LIKE ? THEN 3
-                    WHEN description LIKE ? THEN 4
-                    ELSE 5
-                END
-            ", [
-                $searchTerm . '%',  // Starts with search term
-                '%' . $searchTerm . '%',  // Contains search term
-                '%' . $searchTerm . '%',  // Category contains
-                '%' . $searchTerm . '%'   // Description contains
-            ]);
+            
         }
         
         // Handle category filter
         if ($request->has('category') && !empty($request->category)) {
-            $query->where('category', $request->category);
+            $query->where('category_id', $request->category);
         }
         
         // Handle price range filter
@@ -108,13 +96,7 @@ class ShopController extends Controller
         }
         
         // Get available categories for filter
-        $categories = Product::where('status', 1)
-                            ->select('category')
-                            ->distinct()
-                            ->pluck('category')
-                            ->filter()
-                            ->sort()
-                            ->values();
+        $categories = \App\Models\Category::where('status', 1)->orderBy('name')->get();
         
         return view('shop', compact('products', 'searchTerm', 'isSearching', 'suggestions', 'categories'));
     }
@@ -128,15 +110,16 @@ class ShopController extends Controller
         $suggestions = Product::where('status', 1)
             ->where(function($q) use ($searchTerm) {
                 $q->where('name', 'LIKE', '%' . $searchTerm . '%')
-                  ->orWhere('category', 'LIKE', '%' . $searchTerm . '%');
+                  ->orWhereHas('category', function ($query) use ($searchTerm) {
+                      $query->where('name', 'LIKE', '%' . $searchTerm . '%');
+                  });
             })
-            ->select('name', 'category')
+            ->select('name')
             ->limit(5)
             ->get()
             ->map(function($product) {
                 return [
-                    'name' => $product->name,
-                    'category' => $product->category
+                    'name' => $product->name
                 ];
             })
             ->unique('name')
@@ -159,16 +142,17 @@ class ShopController extends Controller
         $suggestions = Product::where('status', 1)
             ->where(function($q) use ($searchTerm) {
                 $q->where('name', 'LIKE', '%' . $searchTerm . '%')
-                  ->orWhere('category', 'LIKE', '%' . $searchTerm . '%');
+                  ->orWhereHas('category', function ($query) use ($searchTerm) {
+                      $query->where('name', 'LIKE', '%' . $searchTerm . '%');
+                  });
             })
-            ->select('name', 'category', 'id')
+            ->select('name', 'id')
             ->limit(8)
             ->get()
             ->map(function($product) {
                 return [
                     'id' => $product->id,
                     'name' => $product->name,
-                    'category' => $product->category,
                     'url' => route('product.detail', $product->id)
                 ];
             });

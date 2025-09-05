@@ -26,6 +26,14 @@ class Category extends Model
 
     public function products()
     {
-        return $this->hasMany(Product::class, 'category', 'name');
+        return $this->hasMany(Product::class);
+    }
+
+    /**
+     * Get attributes for this category
+     */
+    public function attributes()
+    {
+        return $this->hasMany(Attribute::class);
     }
 }
