@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Attribute extends Model
 {
@@ -12,6 +14,7 @@ class Attribute extends Model
     protected $fillable = [
         'category_id',
         'name',
+        'slug',
         'type',
         'required',
         'filterable',
@@ -25,57 +28,37 @@ class Attribute extends Model
         'status' => 'boolean'
     ];
 
-    /**
-     * Get the category that owns the attribute
-     */
-    public function category()
+    public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
     }
 
-    /**
-     * Get attribute values
-     */
-    public function attributeValues()
+    public function values(): HasMany
     {
         return $this->hasMany(AttributeValue::class)->orderBy('sort_order');
     }
 
-    /**
-     * Get active attribute values
-     */
-    public function activeAttributeValues()
+    public function activeValues(): HasMany
     {
-        return $this->hasMany(AttributeValue::class)->where('status', true)->orderBy('sort_order');
+        return $this->values()->where('status', true);
     }
 
-    /**
-     * Get product attributes
-     */
-    public function productAttributes()
+    public function productAttributes(): HasMany
     {
         return $this->hasMany(ProductAttribute::class);
     }
 
-    /**
-     * Scope for active attributes
-     */
+    // Scopes
     public function scopeActive($query)
     {
         return $query->where('status', true);
     }
 
-    /**
-     * Scope for filterable attributes
-     */
     public function scopeFilterable($query)
     {
         return $query->where('filterable', true);
     }
 
-    /**
-     * Scope for required attributes
-     */
     public function scopeRequired($query)
     {
         return $query->where('required', true);

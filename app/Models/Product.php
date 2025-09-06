@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
 {
@@ -11,6 +13,7 @@ class Product extends Model
 
     protected $fillable = [
         'name',
+        'slug',
         'description',
         'price',
         'sale_price',
@@ -29,69 +32,87 @@ class Product extends Model
         'featured' => 'boolean'
     ];
 
-    public function orderItems()
-    {
-        return $this->hasMany(OrderItem::class);
-    }
-
-    public function cartItems()
-    {
-        return $this->hasMany(Cart::class);
-    }
-
-    public function getDisplayPriceAttribute()
-    {
-        return $this->sale_price ?? $this->price;
-    }
-
-    public function getIsOnSaleAttribute()
-    {
-        return !is_null($this->sale_price);
-    }
-
-    /**
-     * Get the brand that owns the product
-     */
-    public function brand()
+    // Relationships
+    public function brand(): BelongsTo
     {
         return $this->belongsTo(Brand::class);
     }
 
-    /**
-     * Get the category that owns the product
-     */
-    public function category()
+    public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
     }
 
-    /**
-     * Get product attributes
-     */
-    public function productAttributes()
+    public function productAttributes(): HasMany
     {
         return $this->hasMany(ProductAttribute::class);
     }
 
-    /**
-     * Get attributes with values for this product
-     */
-    public function attributesWithValues()
+    // Accessors
+    public function getDisplayPriceAttribute(): string
     {
-        return $this->productAttributes()->with('attribute');
+        return $this->sale_price ?? $this->price;
     }
 
-    /**
-     * Get specific attribute value
-     */
-    public function getAttributeValue($attributeName)
+    public function getIsOnSaleAttribute(): bool
     {
-        $productAttribute = $this->productAttributes()
-            ->whereHas('attribute', function($query) use ($attributeName) {
-                $query->where('name', $attributeName);
+        return !is_null($this->sale_price) && $this->sale_price < $this->price;
+    }
+
+    // Custom method to get attribute value (renamed to avoid conflict)
+    public function getCustomAttributeValue(string $attributeSlug)
+    {
+        return $this->productAttributes()
+            ->whereHas('attribute', function($query) use ($attributeSlug) {
+                $query->where('slug', $attributeSlug);
             })
-            ->first();
-            
-        return $productAttribute ? $productAttribute->value : null;
+            ->value('value');
+    }
+
+    // Get all attributes as key-value pairs
+    public function getAttributesArrayAttribute(): array
+    {
+        return $this->productAttributes()
+            ->with('attribute')
+            ->get()
+            ->mapWithKeys(function ($productAttribute) {
+                return [$productAttribute->attribute->slug => $productAttribute->value];
+            })
+            ->toArray();
+    }
+
+    // Scopes
+    public function scopeWithAttributes($query)
+    {
+        return $query->with([
+            'brand:id,name,slug',
+            'category:id,name,slug',
+            'productAttributes.attribute:id,name,slug,type',
+            'productAttributes.attributeValue:id,value,display_value'
+        ]);
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('status', true);
+    }
+
+    public function scopeFeatured($query)
+    {
+        return $query->where('featured', true);
+    }
+
+    public function scopeFilterByCategory($query, $categorySlug)
+    {
+        return $query->whereHas('category', function($q) use ($categorySlug) {
+            $q->where('slug', $categorySlug);
+        });
+    }
+
+    public function scopeFilterByBrand($query, $brandSlug)
+    {
+        return $query->whereHas('brand', function($q) use ($brandSlug) {
+            $q->where('slug', $brandSlug);
+        });
     }
 }

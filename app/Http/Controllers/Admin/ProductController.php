@@ -16,9 +16,20 @@ class ProductController extends Controller
     {
         $perPage = $request->get('per_page', 15);
         
-         $products = Product::with(['brand', 'category', 'productAttributes.attribute'])
-                          ->orderBy('created_at', 'desc')
-                          ->paginate($perPage);
+        $products = Product::with([
+            'brand:id,name',
+            'category:id,name',
+            'productAttributes' => function($query) {
+                $query->select('id', 'product_id', 'attribute_id', 'attribute_value_id', 'value')
+                      ->with([
+                          'attribute:id,name,type',
+                          'attributeValue:id,value,display_value'
+                      ]);
+            }
+        ])
+        ->select('id', 'name', 'price', 'sale_price', 'image', 'category_id', 'brand_id', 'created_at')
+        ->orderBy('created_at', 'desc')
+        ->paginate($perPage);
         
         return view('admin.products.index', compact('products'));
     }

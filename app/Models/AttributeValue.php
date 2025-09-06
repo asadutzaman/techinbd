@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AttributeValue extends Model
 {
@@ -13,6 +14,7 @@ class AttributeValue extends Model
         'attribute_id',
         'value',
         'display_value',
+        'slug',
         'sort_order',
         'status'
     ];
@@ -21,25 +23,16 @@ class AttributeValue extends Model
         'status' => 'boolean'
     ];
 
-    /**
-     * Get the attribute that owns the value
-     */
-    public function attribute()
+    public function attribute(): BelongsTo
     {
         return $this->belongsTo(Attribute::class);
     }
 
-    /**
-     * Get display value or fallback to value
-     */
-    public function getDisplayNameAttribute()
+    public function getDisplayNameAttribute(): string
     {
         return $this->display_value ?: $this->value;
     }
 
-    /**
-     * Scope for active values
-     */
     public function scopeActive($query)
     {
         return $query->where('status', true);
