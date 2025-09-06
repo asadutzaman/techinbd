@@ -7,6 +7,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\CategoryAttributeController;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/shop', [ShopController::class, 'index'])->name('shop');
@@ -14,6 +15,7 @@ Route::get('/cart', [CartController::class, 'index'])->name('cart');
 Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::get('/product/{id}', [ProductController::class, 'show'])->name('product.detail');
+
 
 // Cart Routes
 Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
@@ -42,6 +44,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/products/{id}/edit', [App\Http\Controllers\Admin\ProductController::class, 'edit'])->name('products.edit');
     Route::put('/products/{id}', [App\Http\Controllers\Admin\ProductController::class, 'update'])->name('products.update');
     Route::delete('/products/{id}', [App\Http\Controllers\Admin\ProductController::class, 'destroy'])->name('products.destroy');
+    
+    Route::get('/categories/{category}/attributes', [CategoryAttributeController::class, 'getAttributes']);
     
     Route::get('/categories', [App\Http\Controllers\Admin\CategoryController::class, 'index'])->name('categories.index');
     Route::get('/categories/create', [App\Http\Controllers\Admin\CategoryController::class, 'create'])->name('categories.create');

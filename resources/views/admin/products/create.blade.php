@@ -42,7 +42,7 @@
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="form-group">
+                                <!-- <div class="form-group">
                                     <label for="category_id">Category</label>
                                     <select class="form-control @error('category_id') is-invalid @enderror" id="category_id" name="category_id" required>
                                         <option value="">Select Category</option>
@@ -55,7 +55,24 @@
                                     @error('category_id')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
-                                </div>
+                                </div> -->
+                                {{-- In your products/create.blade.php and products/edit.blade.php --}}
+                                    <div class="form-group">
+                                        <label for="category_id">Category *</label>
+                                        <select name="category_id" id="category_id" class="form-control" required 
+                                                onchange="loadCategoryAttributes(this.value)">
+                                            <option value="">Select Category</option>
+                                            @foreach($categories as $category)
+                                                <option value="{{ $category->id }}" {{ old('category_id', $product->category_id ?? '') == $category->id ? 'selected' : '' }}>
+                                                    {{ $category->name }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    <div id="attributes-container">
+                                        <!-- Attributes will be loaded here dynamically -->
+                                    </div>
                             </div>
                         </div>
                         
@@ -170,88 +187,134 @@
 @endsection
 
 @push('scripts')
-<script>
-$(document).ready(function() {
-    $('.custom-file-input').on('change', function() {
-        let fileName = $(this).val().split('\\').pop();
-        $(this).next('.custom-file-label').addClass("selected").html(fileName);
-    });
-    
-    // Load attributes when category changes
-    $('#category_id').on('change', function() {
-        const categoryId = $(this).val();
-        const attributesContainer = $('#attributes-container');
-        const attributesFields = $('#attributes-fields');
-        
-        if (!categoryId) {
-            attributesContainer.hide();
-            attributesFields.empty();
-            return;
-        }
-        
-        // Show loading
-        attributesFields.html('<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading attributes...</div>');
-        attributesContainer.show();
-        
-        // Fetch attributes for this category
-        console.log('Fetching attributes for category ID:', categoryId);
-        $.get('{{ route("admin.products.attributes-by-category") }}', { category_id: categoryId })
-            .done(function(attributes) {
-                console.log('Received attributes:', attributes);
-                attributesFields.empty();
-                
-                if (attributes.length === 0) {
-                    attributesContainer.hide();
-                    return;
-                }
-                
-                attributes.forEach(function(attribute) {
-                    let fieldHtml = '<div class="form-group">';
-                    fieldHtml += '<label for="attribute_' + attribute.id + '">' + attribute.name;
-                    if (attribute.required) {
-                        fieldHtml += ' <span class="text-danger">*</span>';
+    <script>
+        function loadCategoryAttributes(categoryId) {
+            const container = document.getElementById('attributes-container');
+            
+            if (!categoryId) {
+                container.innerHTML = '<div class="alert alert-info">Please select a category to see attributes</div>';
+                return;
+            }
+
+            // Show loading state
+            container.innerHTML = `
+                <div class="text-center py-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Loading attributes...</span>
+                    </div>
+                    <p class="mt-2">Loading attributes...</p>
+                </div>
+            `;
+
+            // Use the correct route URL
+            fetch(`/admin/categories/${categoryId}/attributes`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load attributes');
                     }
-                    fieldHtml += '</label>';
-                    
-                    if (attribute.type === 'select' && attribute.active_attribute_values.length > 0) {
-                        fieldHtml += '<select class="form-control" id="attribute_' + attribute.id + '" name="attributes[' + attribute.id + ']"';
-                        if (attribute.required) fieldHtml += ' required';
-                        fieldHtml += '>';
-                        fieldHtml += '<option value="">Select ' + attribute.name + '</option>';
-                        attribute.active_attribute_values.forEach(function(value) {
-                            fieldHtml += '<option value="' + value.value + '">' + (value.display_value || value.value) + '</option>';
-                        });
-                        fieldHtml += '</select>';
-                    } else if (attribute.type === 'boolean') {
-                        fieldHtml += '<select class="form-control" id="attribute_' + attribute.id + '" name="attributes[' + attribute.id + ']"';
-                        if (attribute.required) fieldHtml += ' required';
-                        fieldHtml += '>';
-                        fieldHtml += '<option value="">Select ' + attribute.name + '</option>';
-                        fieldHtml += '<option value="1">Yes</option>';
-                        fieldHtml += '<option value="0">No</option>';
-                        fieldHtml += '</select>';
-                    } else if (attribute.type === 'textarea') {
-                        fieldHtml += '<textarea class="form-control" id="attribute_' + attribute.id + '" name="attributes[' + attribute.id + ']" rows="3"';
-                        if (attribute.required) fieldHtml += ' required';
-                        fieldHtml += ' placeholder="Enter ' + attribute.name + '"></textarea>';
-                    } else if (attribute.type === 'number') {
-                        fieldHtml += '<input type="number" class="form-control" id="attribute_' + attribute.id + '" name="attributes[' + attribute.id + ']"';
-                        if (attribute.required) fieldHtml += ' required';
-                        fieldHtml += ' placeholder="Enter ' + attribute.name + '">';
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success && data.attributes && data.attributes.length > 0) {
+                        renderAttributes(data.attributes);
                     } else {
-                        fieldHtml += '<input type="text" class="form-control" id="attribute_' + attribute.id + '" name="attributes[' + attribute.id + ']"';
-                        if (attribute.required) fieldHtml += ' required';
-                        fieldHtml += ' placeholder="Enter ' + attribute.name + '">';
+                        container.innerHTML = '<div class="alert alert-info">No attributes found for this category</div>';
                     }
-                    
-                    fieldHtml += '</div>';
-                    attributesFields.append(fieldHtml);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    container.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle"></i> 
+                            Error loading attributes. Please try again.
+                        </div>
+                    `;
                 });
-            })
-            .fail(function() {
-                attributesFields.html('<div class="text-danger">Error loading attributes</div>');
+        }
+
+        function renderAttributes(attributes) {
+            const container = document.getElementById('attributes-container');
+            let html = '<h5>Product Attributes</h5>';
+            
+            attributes.forEach(attr => {
+                html += `
+                    <div class="form-group attribute-field" data-attribute-id="${attr.id}">
+                        <label for="attribute_${attr.id}">
+                            ${attr.name} ${attr.required ? '<span class="text-danger">*</span>' : ''}
+                        </label>
+                        ${renderAttributeField(attr)}
+                        ${attr.required ? '<small class="form-text text-muted">This field is required</small>' : ''}
+                    </div>
+                `;
             });
-    });
-});
-</script>
+            
+            container.innerHTML = html;
+        }
+
+        function renderAttributeField(attribute) {
+            // Check if attribute has values
+            const hasValues = attribute.active_values && attribute.active_values.length > 0;
+            
+            switch(attribute.type) {
+                case 'select':
+                    if (!hasValues) {
+                        return '<div class="alert alert-warning">No options available for this attribute</div>';
+                    }
+                    return `
+                        <select name="attributes[${attribute.id}]" id="attribute_${attribute.id}" 
+                                class="form-control" ${attribute.required ? 'required' : ''}>
+                            <option value="">Select ${attribute.name}</option>
+                            ${attribute.active_values.map(value => `
+                                <option value="${value.id}">${value.display_value || value.value}</option>
+                            `).join('')}
+                        </select>
+                    `;
+                
+                case 'checkbox':
+                    return `
+                        <div class="form-check">
+                            <input type="checkbox" name="attributes[${attribute.id}]" 
+                                id="attribute_${attribute.id}" value="1" class="form-check-input"
+                                ${attribute.required ? 'required' : ''}>
+                            <label class="form-check-label" for="attribute_${attribute.id}">Yes</label>
+                        </div>
+                    `;
+                
+                case 'radio':
+                    if (!hasValues) {
+                        return '<div class="alert alert-warning">No options available for this attribute</div>';
+                    }
+                    return attribute.active_values.map(value => `
+                        <div class="form-check form-check-inline">
+                            <input type="radio" name="attributes[${attribute.id}]" 
+                                id="attribute_${attribute.id}_${value.id}" 
+                                value="${value.id}" class="form-check-input"
+                                ${attribute.required ? 'required' : ''}>
+                            <label class="form-check-label" for="attribute_${attribute.id}_${value.id}">
+                                ${value.display_value || value.value}
+                            </label>
+                        </div>
+                    `).join('');
+                
+                case 'text':
+                default:
+                    return `
+                        <input type="text" name="attributes[${attribute.id}]" id="attribute_${attribute.id}" 
+                            class="form-control" ${attribute.required ? 'required' : ''} 
+                            placeholder="Enter ${attribute.name}">
+                    `;
+            }
+        }
+
+        // Load attributes on page load if category is already selected
+        document.addEventListener('DOMContentLoaded', function() {
+            const categorySelect = document.getElementById('category_id');
+            if (categorySelect && categorySelect.value) {
+                // Small delay to ensure DOM is fully loaded
+                setTimeout(() => {
+                    loadCategoryAttributes(categorySelect.value);
+                }, 100);
+            }
+        });
+    </script>
 @endpush

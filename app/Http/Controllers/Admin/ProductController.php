@@ -12,25 +12,19 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
-        $perPage = $request->get('per_page', 15);
+        $perPage = request('per_page', 15);
         
         $products = Product::with([
             'brand:id,name',
-            'category:id,name',
-            'productAttributes' => function($query) {
-                $query->select('id', 'product_id', 'attribute_id', 'attribute_value_id', 'value')
-                      ->with([
-                          'attribute:id,name,type',
-                          'attributeValue:id,value,display_value'
-                      ]);
-            }
+            'category:id,name'
         ])
-        ->select('id', 'name', 'price', 'sale_price', 'image', 'category_id', 'brand_id', 'created_at')
+        ->select('id', 'name', 'description', 'price', 'sale_price', 'stock', 'image', 
+                'category_id', 'brand_id', 'status', 'featured', 'created_at')
         ->orderBy('created_at', 'desc')
         ->paginate($perPage);
-        
+
         return view('admin.products.index', compact('products'));
     }
 
@@ -202,5 +196,33 @@ class ProductController extends Controller
                               ->get();
         
         return response()->json($attributes);
+    }
+
+    // In your CategoryController or ProductController
+    public function getCategoryAttributes($categoryId)
+    {
+        try {
+            $category = Category::findOrFail($categoryId);
+            $attributes = Attribute::with(['activeValues' => function($query) {
+                    $query->orderBy('sort_order');
+                }])
+                ->where('category_id', $categoryId)
+                ->active()
+                ->orderBy('sort_order')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'attributes' => $attributes,
+                'category' => $category->name
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load attributes',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }
