@@ -83,8 +83,8 @@
                         </div>
                         
                         <div class="col-md-6">
-                            @if($attribute->type === 'select' && $attribute->attributeValues->count() > 0)
-                                <h6>Predefined Values ({{ $attribute->attributeValues->count() }})</h6>
+                            @if($attribute->type === 'select' && $attribute->values->count() > 0)
+                                <h6>Predefined Values ({{ $attribute->values->count() }})</h6>
                                 <div class="table-responsive">
                                     <table class="table table-sm table-striped">
                                         <thead>
@@ -96,7 +96,7 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach($attribute->attributeValues as $value)
+                                            @foreach($attribute->values as $value)
                                             <tr>
                                                 <td><code>{{ $value->value }}</code></td>
                                                 <td>{{ $value->display_value ?: '-' }}</td>

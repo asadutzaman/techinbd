@@ -191,7 +191,7 @@ class ProductController extends Controller
         
         $attributes = Attribute::where('category_id', $categoryId)
                               ->where('status', true)
-                              ->with('activeAttributeValues')
+                              ->with('activeValues')
                               ->orderBy('sort_order')
                               ->get();
         

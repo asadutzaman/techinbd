@@ -15,8 +15,8 @@ class AttributeController extends Controller
      */
     public function index()
     {
-        $attributes = Attribute::with(['category', 'attributeValues'])
-                              ->withCount('attributeValues')
+        $attributes = Attribute::with(['category', 'values'])
+                              ->withCount('values')
                               ->paginate(15);
         return view('admin.attributes.index', compact('attributes'));
     }
@@ -63,7 +63,7 @@ class AttributeController extends Controller
      */
     public function show($id)
     {
-        $attribute = Attribute::with(['category', 'attributeValues'])->findOrFail($id);
+        $attribute = Attribute::with(['category', 'values'])->findOrFail($id);
         return view('admin.attributes.show', compact('attribute'));
     }
 
@@ -122,7 +122,7 @@ class AttributeController extends Controller
      */
     public function manageValues($id)
     {
-        $attribute = Attribute::with('attributeValues')->findOrFail($id);
+        $attribute = Attribute::with('values')->findOrFail($id);
         return view('admin.attributes.values', compact('attribute'));
     }
 

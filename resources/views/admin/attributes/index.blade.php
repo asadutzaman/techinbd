@@ -51,7 +51,7 @@
                                         <span class="badge badge-info">{{ ucfirst($attribute->type) }}</span>
                                     </td>
                                     <td>
-                                        <span class="badge badge-primary">{{ $attribute->attribute_values_count }}</span>
+                                        <span class="badge badge-primary">{{ $attribute->values_count }}</span>
                                     </td>
                                     <td>
                                         @if($attribute->required)
