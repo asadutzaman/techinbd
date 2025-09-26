@@ -37,6 +37,13 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
+        // Debug: Log the incoming request
+        \Log::info('Product store - incoming request:', [
+            'all_data' => $request->all(),
+            'has_attributes' => $request->has('attributes'),
+            'attributes_data' => $request->get('attributes')
+        ]);
+        
         $request->merge([
             'status' => $request->has('status') ? true : false,
             'featured' => $request->has('featured') ? true : false,
@@ -54,7 +61,7 @@ class ProductController extends Controller
             'status' => 'boolean',
             'featured' => 'boolean',
             'attributes' => 'nullable|array',
-            'attributes.*' => 'nullable|string'
+            'attributes.*' => 'nullable|string|max:255'
         ]);
 
         $data = $request->all();
@@ -70,16 +77,42 @@ class ProductController extends Controller
         $product = Product::create($data);
 
         // Handle attributes
-        if ($request->has('attributes') && is_array($request->attributes)) {
-            foreach ($request->attributes as $attributeId => $value) {
+        $attributesData = $request->input('attributes', []);
+        \Log::info('Processing attributes after product creation:', [
+            'product_id' => $product->id,
+            'has_attributes' => $request->has('attributes'),
+            'attributes_data' => $attributesData,
+            'is_array' => is_array($attributesData)
+        ]);
+        
+        if ($request->has('attributes') && is_array($attributesData)) {
+            \Log::info('Attributes array found, processing...');
+            foreach ($attributesData as $attributeId => $value) {
+                \Log::info('Processing attribute:', [
+                    'attribute_id' => $attributeId,
+                    'value' => $value,
+                    'is_empty' => empty($value),
+                    'value_type' => gettype($value)
+                ]);
+                
                 if (!empty($value)) {
-                    ProductAttribute::create([
-                        'product_id' => $product->id,
-                        'attribute_id' => $attributeId,
-                        'value' => $value
-                    ]);
+                    try {
+                        $productAttribute = ProductAttribute::create([
+                            'product_id' => $product->id,
+                            'attribute_id' => $attributeId,
+                            'attribute_value_id' => null, // Set to null for custom values
+                            'value' => $value
+                        ]);
+                        \Log::info('ProductAttribute created successfully:', ['id' => $productAttribute->id]);
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to create ProductAttribute:', ['error' => $e->getMessage()]);
+                    }
+                } else {
+                    \Log::info('Skipping empty attribute value');
                 }
             }
+        } else {
+            \Log::info('No attributes to process or not an array');
         }
 
         return redirect()->route('admin.products.index')->with('success', 'Product created successfully!');
@@ -87,7 +120,14 @@ class ProductController extends Controller
 
     public function show($id)
     {
-        $product = Product::findOrFail($id);
+        $product = Product::with([
+            'category.attributes' => function($query) {
+                $query->where('status', true)->orderBy('sort_order');
+            },
+            'brand', 
+            'productAttributes.attribute'
+        ])->findOrFail($id);
+        
         return view('admin.products.show', compact('product'));
     }
 
@@ -149,12 +189,14 @@ class ProductController extends Controller
         // Handle attributes - delete existing and create new ones
         $product->productAttributes()->delete();
         
-        if ($request->has('attributes') && is_array($request->attributes)) {
-            foreach ($request->attributes as $attributeId => $value) {
+        $attributesData = $request->input('attributes', []);
+        if ($request->has('attributes') && is_array($attributesData)) {
+            foreach ($attributesData as $attributeId => $value) {
                 if (!empty($value)) {
                     ProductAttribute::create([
                         'product_id' => $product->id,
                         'attribute_id' => $attributeId,
+                        'attribute_value_id' => null, // Set to null for custom values
                         'value' => $value
                     ]);
                 }

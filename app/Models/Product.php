@@ -88,7 +88,7 @@ class Product extends Model
             'brand:id,name,slug',
             'category:id,name,slug',
             'productAttributes.attribute:id,name,slug,type',
-            'productAttributes.attributeValue:id,value,display_value'
+            'productAttributes'
         ]);
     }
 

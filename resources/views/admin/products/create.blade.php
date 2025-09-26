@@ -18,7 +18,7 @@
                 </div>
                 <!-- /.card-header -->
                 <!-- form start -->
-                <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data">
+                <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data" onsubmit="console.log('Form submitted'); return true;">
                     @csrf
                     <div class="card-body">
                         @if ($errors->any())
@@ -70,9 +70,6 @@
                                         </select>
                                     </div>
 
-                                    <div id="attributes-container">
-                                        <!-- Attributes will be loaded here dynamically -->
-                                    </div>
                             </div>
                         </div>
                         
@@ -95,9 +92,8 @@
                             </div>
                             <div class="col-md-6">
                                 <!-- Attributes will be loaded here dynamically -->
-                                <div id="attributes-container" style="display: none;">
-                                    <h6 class="text-primary">Product Attributes</h6>
-                                    <div id="attributes-fields"></div>
+                                <div id="attributes-container">
+                                    <div class="alert alert-info">Please select a category to see attributes</div>
                                 </div>
                             </div>
                         </div>
@@ -190,6 +186,7 @@
     <script>
         function loadCategoryAttributes(categoryId) {
             const container = document.getElementById('attributes-container');
+            console.log('Loading attributes for category:', categoryId);
             
             if (!categoryId) {
                 container.innerHTML = '<div class="alert alert-info">Please select a category to see attributes</div>';
@@ -215,6 +212,7 @@
                     return response.json();
                 })
                 .then(data => {
+                    console.log('Attributes loaded:', data);
                     if (data.success && data.attributes && data.attributes.length > 0) {
                         renderAttributes(data.attributes);
                     } else {
@@ -252,8 +250,14 @@
         }
 
         function renderAttributeField(attribute) {
-            // Check if attribute has values
-            const hasValues = attribute.active_values && attribute.active_values.length > 0;
+            
+            // Check if attribute has values - try different property names
+            const hasValues = (attribute.active_values && attribute.active_values.length > 0) ||
+                             (attribute.activeValues && attribute.activeValues.length > 0) ||
+                             (attribute.values && attribute.values.length > 0);
+            
+            // Get the actual values array (prioritize active_values since that's what the API returns)
+            const values = attribute.active_values || attribute.activeValues || attribute.values || [];
             
             switch(attribute.type) {
                 case 'select':
@@ -264,8 +268,8 @@
                         <select name="attributes[${attribute.id}]" id="attribute_${attribute.id}" 
                                 class="form-control" ${attribute.required ? 'required' : ''}>
                             <option value="">Select ${attribute.name}</option>
-                            ${attribute.active_values.map(value => `
-                                <option value="${value.id}">${value.display_value || value.value}</option>
+                            ${values.map(value => `
+                                <option value="${value.value}">${value.display_value || value.value}</option>
                             `).join('')}
                         </select>
                     `;
@@ -284,11 +288,11 @@
                     if (!hasValues) {
                         return '<div class="alert alert-warning">No options available for this attribute</div>';
                     }
-                    return attribute.active_values.map(value => `
+                    return values.map(value => `
                         <div class="form-check form-check-inline">
                             <input type="radio" name="attributes[${attribute.id}]" 
                                 id="attribute_${attribute.id}_${value.id}" 
-                                value="${value.id}" class="form-check-input"
+                                value="${value.value}" class="form-check-input"
                                 ${attribute.required ? 'required' : ''}>
                             <label class="form-check-label" for="attribute_${attribute.id}_${value.id}">
                                 ${value.display_value || value.value}

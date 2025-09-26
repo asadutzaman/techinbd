@@ -71,5 +71,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('attributes/{id}/values', [App\Http\Controllers\Admin\AttributeController::class, 'storeValue'])->name('attributes.values.store');
     Route::put('attributes/{attributeId}/values/{valueId}', [App\Http\Controllers\Admin\AttributeController::class, 'updateValue'])->name('attributes.values.update');
     Route::delete('attributes/{attributeId}/values/{valueId}', [App\Http\Controllers\Admin\AttributeController::class, 'destroyValue'])->name('attributes.values.destroy');
+    
+
+
+
 
 });

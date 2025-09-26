@@ -28,22 +28,15 @@ class ProductAttribute extends Model
         return $this->belongsTo(Attribute::class);
     }
 
-    public function attributeValue(): BelongsTo
-    {
-        return $this->belongsTo(AttributeValue::class);
-    }
+
 
     // Accessors
     public function getFormattedValueAttribute()
     {
-        // If there's a predefined attribute value, use its display name
-        if ($this->attributeValue) {
-            return $this->attributeValue->display_value ?: $this->attributeValue->value;
-        }
-
         // Format based on attribute type
         switch ($this->attribute->type ?? 'text') {
             case 'boolean':
+            case 'checkbox':
                 return (bool)$this->value ? 'Yes' : 'No';
             case 'number':
                 return is_numeric($this->value) ? number_format($this->value, 2) : $this->value;
