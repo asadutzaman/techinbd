@@ -18,7 +18,7 @@
                 </div>
                 <!-- /.card-header -->
                 <!-- form start -->
-                <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data" onsubmit="console.log('Form submitted'); return true;">
+                <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <div class="card-body">
                         @if ($errors->any())
@@ -186,7 +186,6 @@
     <script>
         function loadCategoryAttributes(categoryId) {
             const container = document.getElementById('attributes-container');
-            console.log('Loading attributes for category:', categoryId);
             
             if (!categoryId) {
                 container.innerHTML = '<div class="alert alert-info">Please select a category to see attributes</div>';
@@ -212,7 +211,6 @@
                     return response.json();
                 })
                 .then(data => {
-                    console.log('Attributes loaded:', data);
                     if (data.success && data.attributes && data.attributes.length > 0) {
                         renderAttributes(data.attributes);
                     } else {

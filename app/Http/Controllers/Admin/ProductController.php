@@ -37,12 +37,7 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
-        // Debug: Log the incoming request
-        \Log::info('Product store - incoming request:', [
-            'all_data' => $request->all(),
-            'has_attributes' => $request->has('attributes'),
-            'attributes_data' => $request->get('attributes')
-        ]);
+
         
         $request->merge([
             'status' => $request->has('status') ? true : false,
@@ -78,41 +73,17 @@ class ProductController extends Controller
 
         // Handle attributes
         $attributesData = $request->input('attributes', []);
-        \Log::info('Processing attributes after product creation:', [
-            'product_id' => $product->id,
-            'has_attributes' => $request->has('attributes'),
-            'attributes_data' => $attributesData,
-            'is_array' => is_array($attributesData)
-        ]);
-        
         if ($request->has('attributes') && is_array($attributesData)) {
-            \Log::info('Attributes array found, processing...');
             foreach ($attributesData as $attributeId => $value) {
-                \Log::info('Processing attribute:', [
-                    'attribute_id' => $attributeId,
-                    'value' => $value,
-                    'is_empty' => empty($value),
-                    'value_type' => gettype($value)
-                ]);
-                
                 if (!empty($value)) {
-                    try {
-                        $productAttribute = ProductAttribute::create([
-                            'product_id' => $product->id,
-                            'attribute_id' => $attributeId,
-                            'attribute_value_id' => null, // Set to null for custom values
-                            'value' => $value
-                        ]);
-                        \Log::info('ProductAttribute created successfully:', ['id' => $productAttribute->id]);
-                    } catch (\Exception $e) {
-                        \Log::error('Failed to create ProductAttribute:', ['error' => $e->getMessage()]);
-                    }
-                } else {
-                    \Log::info('Skipping empty attribute value');
+                    ProductAttribute::create([
+                        'product_id' => $product->id,
+                        'attribute_id' => $attributeId,
+                        'attribute_value_id' => null, // Set to null for custom values
+                        'value' => $value
+                    ]);
                 }
             }
-        } else {
-            \Log::info('No attributes to process or not an array');
         }
 
         return redirect()->route('admin.products.index')->with('success', 'Product created successfully!');
