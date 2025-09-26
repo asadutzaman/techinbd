@@ -4,6 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Product;
+use App\Models\Category;
+use App\Models\Brand;
+use App\Models\Attribute;
+use App\Models\ProductAttribute;
 
 class ShopController extends Controller
 {
@@ -16,7 +20,7 @@ class ShopController extends Controller
             $perPage = 9;
         }
         
-        $query = Product::where('status', 1);
+        $query = Product::with(['category', 'brand', 'productAttributes.attribute'])->where('status', 1);
         $searchTerm = null;
         $isSearching = false;
         
@@ -34,15 +38,39 @@ class ShopController extends Controller
                   // Category match
                   ->orWhereHas('category', function ($query) use ($searchTerm) {
                       $query->where('name', 'LIKE', '%' . $searchTerm . '%');
+                  })
+                  // Brand match
+                  ->orWhereHas('brand', function ($query) use ($searchTerm) {
+                      $query->where('name', 'LIKE', '%' . $searchTerm . '%');
                   });
             });
-            
-            
         }
         
         // Handle category filter
         if ($request->has('category') && !empty($request->category)) {
             $query->where('category_id', $request->category);
+        }
+        
+        // Handle brand filter
+        if ($request->has('brand') && !empty($request->brand)) {
+            $query->where('brand_id', $request->brand);
+        }
+        
+        // Handle product attributes filters
+        $attributeFilters = $request->get('attributes', []);
+        if (!empty($attributeFilters)) {
+            foreach ($attributeFilters as $attributeId => $values) {
+                if (!empty($values)) {
+                    $query->whereHas('productAttributes', function($q) use ($attributeId, $values) {
+                        $q->where('attribute_id', $attributeId);
+                        if (is_array($values)) {
+                            $q->whereIn('value', $values);
+                        } else {
+                            $q->where('value', $values);
+                        }
+                    });
+                }
+            }
         }
         
         // Handle price range filter
@@ -95,10 +123,22 @@ class ShopController extends Controller
             $suggestions = $this->getSearchSuggestions($searchTerm);
         }
         
-        // Get available categories for filter
-        $categories = \App\Models\Category::where('status', 1)->orderBy('name')->get();
+        // Get filter data
+        $categories = Category::where('status', 1)->orderBy('name')->get();
+        $brands = Brand::where('status', 1)->orderBy('name')->get();
         
-        return view('shop', compact('products', 'searchTerm', 'isSearching', 'suggestions', 'categories'));
+        // Get filterable attributes with their values
+        $filterableAttributes = $this->getFilterableAttributes($request);
+        
+        return view('shop', compact(
+            'products', 
+            'searchTerm', 
+            'isSearching', 
+            'suggestions', 
+            'categories', 
+            'brands',
+            'filterableAttributes'
+        ));
     }
     
     /**
@@ -129,6 +169,56 @@ class ShopController extends Controller
     }
     
     /**
+     * Get filterable attributes with their available values
+     */
+    private function getFilterableAttributes(Request $request)
+    {
+        $selectedCategory = $request->get('category');
+        
+        // Get attributes that are filterable
+        $attributesQuery = Attribute::where('status', 1)
+            ->where('filterable', 1)
+            ->with(['activeValues']);
+        
+        // If category is selected, get attributes for that category
+        if ($selectedCategory) {
+            $attributesQuery->where('category_id', $selectedCategory);
+        }
+        
+        $attributes = $attributesQuery->orderBy('sort_order')->get();
+        
+        // For each attribute, get the actual values used in products
+        $filterableAttributes = [];
+        foreach ($attributes as $attribute) {
+            $usedValues = ProductAttribute::where('attribute_id', $attribute->id)
+                ->whereHas('product', function($q) use ($request, $selectedCategory) {
+                    $q->where('status', 1);
+                    if ($selectedCategory) {
+                        $q->where('category_id', $selectedCategory);
+                    }
+                })
+                ->select('value')
+                ->distinct()
+                ->pluck('value')
+                ->filter()
+                ->sort()
+                ->values();
+            
+            if ($usedValues->count() > 0) {
+                $filterableAttributes[] = [
+                    'id' => $attribute->id,
+                    'name' => $attribute->name,
+                    'slug' => $attribute->slug,
+                    'type' => $attribute->type,
+                    'values' => $usedValues
+                ];
+            }
+        }
+        
+        return $filterableAttributes;
+    }
+
+    /**
      * AJAX endpoint for search suggestions
      */
     public function searchSuggestions(Request $request)
@@ -144,6 +234,9 @@ class ShopController extends Controller
                 $q->where('name', 'LIKE', '%' . $searchTerm . '%')
                   ->orWhereHas('category', function ($query) use ($searchTerm) {
                       $query->where('name', 'LIKE', '%' . $searchTerm . '%');
+                  })
+                  ->orWhereHas('brand', function ($query) use ($searchTerm) {
+                      $query->where('name', 'LIKE', '%' . $searchTerm . '%');
                   });
             })
             ->select('name', 'id')
@@ -158,5 +251,23 @@ class ShopController extends Controller
             });
             
         return response()->json($suggestions);
+    }
+
+    /**
+     * AJAX endpoint to get attributes for a specific category
+     */
+    public function getAttributesByCategory(Request $request)
+    {
+        $categoryId = $request->get('category_id');
+        
+        if (!$categoryId) {
+            return response()->json([]);
+        }
+        
+        // Create a mock request with the category to reuse the existing method
+        $mockRequest = new Request(['category' => $categoryId]);
+        $attributes = $this->getFilterableAttributes($mockRequest);
+        
+        return response()->json($attributes);
     }
 }

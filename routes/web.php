@@ -30,6 +30,9 @@ Route::get('/order/success/{id}', [CheckoutController::class, 'success'])->name(
 // Search Routes
 Route::get('/search/suggestions', [ShopController::class, 'searchSuggestions'])->name('search.suggestions');
 
+// Filter Routes
+Route::get('/shop/attributes-by-category', [ShopController::class, 'getAttributesByCategory'])->name('shop.attributes-by-category');
+
 // Admin Routes
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [App\Http\Controllers\Admin\AdminController::class, 'dashboard'])->name('dashboard');

@@ -77,17 +77,102 @@
                             <input type="radio" class="custom-control-input" name="category" value="" id="category-all" 
                                    {{ !request('category') ? 'checked' : '' }}>
                             <label class="custom-control-label" for="category-all">All Categories</label>
+                            <span class="badge badge-secondary badge-pill">{{ \App\Models\Product::where('status', 1)->count() }}</span>
                         </div>
-                        @foreach($categories as $cat)
+                        @foreach($categories as $category)
                         <div class="custom-control custom-radio d-flex align-items-center justify-content-between mb-3">
-                            <input type="radio" class="custom-control-input" name="category" value="{{ $cat }}" 
-                                   id="category-{{ $loop->index }}" {{ request('category') == $cat ? 'checked' : '' }}>
-                            <label class="custom-control-label" for="category-{{ $loop->index }}">{{ ucfirst($cat) }}</label>
+                            <input type="radio" class="custom-control-input" name="category" value="{{ $category->id }}" 
+                                   id="category-{{ $category->id }}" {{ request('category') == $category->id ? 'checked' : '' }}>
+                            <label class="custom-control-label" for="category-{{ $category->id }}">{{ $category->name }}</label>
+                            <span class="badge badge-secondary badge-pill">{{ $category->products()->where('status', 1)->count() }}</span>
                         </div>
                         @endforeach
                     </div>
                     @endif
                     <!-- Categories Filter End -->
+                    
+                    <!-- Brands Filter Start -->
+                    @if($brands->count() > 0)
+                    <h5 class="section-title position-relative text-uppercase mb-3"><span class="bg-secondary pr-3">Brands</span></h5>
+                    <div class="bg-light p-4 mb-30">
+                        <div class="custom-control custom-radio d-flex align-items-center justify-content-between mb-3">
+                            <input type="radio" class="custom-control-input" name="brand" value="" id="brand-all" 
+                                   {{ !request('brand') ? 'checked' : '' }}>
+                            <label class="custom-control-label" for="brand-all">All Brands</label>
+                        </div>
+                        @foreach($brands as $brand)
+                        <div class="custom-control custom-radio d-flex align-items-center justify-content-between mb-3">
+                            <input type="radio" class="custom-control-input" name="brand" value="{{ $brand->id }}" 
+                                   id="brand-{{ $brand->id }}" {{ request('brand') == $brand->id ? 'checked' : '' }}>
+                            <label class="custom-control-label" for="brand-{{ $brand->id }}">{{ $brand->name }}</label>
+                            <span class="badge badge-secondary badge-pill">{{ $brand->products()->where('status', 1)->count() }}</span>
+                        </div>
+                        @endforeach
+                    </div>
+                    @endif
+                    <!-- Brands Filter End -->
+                    
+                    <!-- Product Attributes Filters Start -->
+                    @if(!empty($filterableAttributes))
+                        @foreach($filterableAttributes as $attribute)
+                        <h5 class="section-title position-relative text-uppercase mb-3">
+                            <span class="bg-secondary pr-3">{{ $attribute['name'] }}</span>
+                        </h5>
+                        <div class="bg-light p-4 mb-30">
+                            @if($attribute['type'] === 'color')
+                                <!-- Color attribute with color swatches -->
+                                <div class="d-flex flex-wrap">
+                                    @foreach($attribute['values'] as $value)
+                                    <div class="custom-control custom-checkbox mr-2 mb-2">
+                                        <input type="checkbox" class="custom-control-input" 
+                                               name="attributes[{{ $attribute['id'] }}][]" 
+                                               value="{{ $value }}" 
+                                               id="attr-{{ $attribute['id'] }}-{{ $loop->index }}"
+                                               {{ in_array($value, (array) request('attributes.'.$attribute['id'], [])) ? 'checked' : '' }}>
+                                        <label class="custom-control-label d-flex align-items-center" 
+                                               for="attr-{{ $attribute['id'] }}-{{ $loop->index }}">
+                                            <span class="color-swatch mr-2" 
+                                                  style="width: 20px; height: 20px; background-color: {{ $value }}; border: 1px solid #ddd; border-radius: 3px; display: inline-block;"></span>
+                                            {{ ucfirst($value) }}
+                                        </label>
+                                    </div>
+                                    @endforeach
+                                </div>
+                            @elseif($attribute['type'] === 'size')
+                                <!-- Size attribute with size boxes -->
+                                <div class="d-flex flex-wrap">
+                                    @foreach($attribute['values'] as $value)
+                                    <div class="custom-control custom-checkbox mr-2 mb-2">
+                                        <input type="checkbox" class="custom-control-input" 
+                                               name="attributes[{{ $attribute['id'] }}][]" 
+                                               value="{{ $value }}" 
+                                               id="attr-{{ $attribute['id'] }}-{{ $loop->index }}"
+                                               {{ in_array($value, (array) request('attributes.'.$attribute['id'], [])) ? 'checked' : '' }}>
+                                        <label class="custom-control-label" for="attr-{{ $attribute['id'] }}-{{ $loop->index }}">
+                                            <span class="size-box px-2 py-1 border rounded">{{ strtoupper($value) }}</span>
+                                        </label>
+                                    </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <!-- Default checkbox list for other attributes -->
+                                @foreach($attribute['values'] as $value)
+                                <div class="custom-control custom-checkbox d-flex align-items-center justify-content-between mb-2">
+                                    <input type="checkbox" class="custom-control-input" 
+                                           name="attributes[{{ $attribute['id'] }}][]" 
+                                           value="{{ $value }}" 
+                                           id="attr-{{ $attribute['id'] }}-{{ $loop->index }}"
+                                           {{ in_array($value, (array) request('attributes.'.$attribute['id'], [])) ? 'checked' : '' }}>
+                                    <label class="custom-control-label" for="attr-{{ $attribute['id'] }}-{{ $loop->index }}">
+                                        {{ ucfirst($value) }}
+                                    </label>
+                                </div>
+                                @endforeach
+                            @endif
+                        </div>
+                        @endforeach
+                    @endif
+                    <!-- Product Attributes Filters End -->
                     
                     <!-- Price Range Filter Start -->
                     <h5 class="section-title position-relative text-uppercase mb-3"><span class="bg-secondary pr-3">Price Range</span></h5>
@@ -146,14 +231,35 @@
                     </div>
                     <!-- Additional Filters End -->
                     
+                    <!-- Active Filters Display -->
+                    @php
+                        $activeFilters = 0;
+                        if(request('category')) $activeFilters++;
+                        if(request('brand')) $activeFilters++;
+                        if(request('min_price') || request('max_price')) $activeFilters++;
+                        if(request('sale')) $activeFilters++;
+                        if(request('in_stock')) $activeFilters++;
+                        if(request('attributes')) {
+                            foreach(request('attributes', []) as $attrValues) {
+                                if(!empty($attrValues)) $activeFilters++;
+                            }
+                        }
+                    @endphp
+                    
+                    @if($activeFilters > 0)
+                    <div class="bg-primary text-white p-3 mb-3 rounded">
+                        <small><i class="fas fa-filter mr-1"></i>{{ $activeFilters }} filter(s) active</small>
+                    </div>
+                    @endif
+                    
                     <!-- Filter Actions -->
                     <div class="mb-30">
                         <button type="submit" class="btn btn-primary btn-block mb-2">
                             <i class="fas fa-filter mr-1"></i>Apply Filters
                         </button>
-                        <a href="{{ route('shop') }}" class="btn btn-outline-secondary btn-block">
+                        <button type="button" id="clear-all-filters" class="btn btn-outline-secondary btn-block">
                             <i class="fas fa-times mr-1"></i>Clear All
-                        </a>
+                        </button>
                     </div>
                 </form>
             </div>
@@ -264,6 +370,69 @@
     </div>
     <!-- Shop End -->
 @endsection
+
+@push('styles')
+<style>
+.color-swatch {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ddd;
+    border-radius: 3px;
+    display: inline-block;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.custom-control-input:checked ~ .custom-control-label .color-swatch {
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.size-box {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6 !important;
+    transition: all 0.3s ease;
+    min-width: 35px;
+    text-align: center;
+}
+
+.custom-control-input:checked ~ .custom-control-label .size-box {
+    background: #007bff;
+    color: white;
+    border-color: #007bff !important;
+}
+
+.filter-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 10px;
+    border-radius: 5px;
+    z-index: 10;
+}
+
+.badge-pill {
+    font-size: 0.75em;
+}
+
+/* Hide default checkbox for color and size attributes */
+.custom-control-input[name*="attributes"] {
+    position: absolute;
+    opacity: 0;
+}
+
+.custom-control-input[name*="attributes"] + .custom-control-label {
+    cursor: pointer;
+}
+
+.custom-control-input[name*="attributes"] + .custom-control-label::before,
+.custom-control-input[name*="attributes"] + .custom-control-label::after {
+    display: none;
+}
+</style>
+@endpush
 
 @push('scripts')
 <script>
@@ -376,8 +545,103 @@ $(document).ready(function() {
         $('#filter-form').submit();
     });
     
-    // Auto-submit form when filters change
-    $('#filter-form input[type="radio"], #filter-form input[type="checkbox"]').on('change', function() {
+    // Handle category change to load dynamic attributes
+    $('input[name="category"]').on('change', function() {
+        var categoryId = $(this).val();
+        
+        if (categoryId) {
+            loadAttributesForCategory(categoryId);
+        } else {
+            // If "All Categories" selected, remove attribute filters
+            $('.attribute-filter-section').remove();
+            $('#filter-form').submit();
+        }
+    });
+    
+    // Function to load attributes for selected category
+    function loadAttributesForCategory(categoryId) {
+        // Show loading state
+        showAttributeLoading();
+        
+        $.ajax({
+            url: '{{ route("shop.attributes-by-category") }}',
+            method: 'GET',
+            data: { category_id: categoryId },
+            success: function(attributes) {
+                // Remove existing attribute filters
+                $('.attribute-filter-section').remove();
+                
+                // Add new attribute filters
+                if (attributes.length > 0) {
+                    var attributeHtml = '';
+                    
+                    attributes.forEach(function(attribute) {
+                        attributeHtml += buildAttributeFilterHtml(attribute);
+                    });
+                    
+                    // Insert after brands filter
+                    $('.bg-light.p-4.mb-30').last().after(attributeHtml);
+                }
+                
+                // Submit form to apply category filter
+                $('#filter-form').submit();
+            },
+            error: function() {
+                console.error('Failed to load attributes');
+                $('#filter-form').submit();
+            }
+        });
+    }
+    
+    // Function to build HTML for attribute filter
+    function buildAttributeFilterHtml(attribute) {
+        var html = '<h5 class="section-title position-relative text-uppercase mb-3 attribute-filter-section">';
+        html += '<span class="bg-secondary pr-3">' + attribute.name + '</span></h5>';
+        html += '<div class="bg-light p-4 mb-30 attribute-filter-section">';
+        
+        if (attribute.type === 'color') {
+            html += '<div class="d-flex flex-wrap">';
+            attribute.values.forEach(function(value, index) {
+                html += '<div class="custom-control custom-checkbox mr-2 mb-2">';
+                html += '<input type="checkbox" class="custom-control-input" name="attributes[' + attribute.id + '][]" value="' + value + '" id="attr-' + attribute.id + '-' + index + '">';
+                html += '<label class="custom-control-label d-flex align-items-center" for="attr-' + attribute.id + '-' + index + '">';
+                html += '<span class="color-swatch mr-2" style="width: 20px; height: 20px; background-color: ' + value + '; border: 1px solid #ddd; border-radius: 3px; display: inline-block;"></span>';
+                html += value.charAt(0).toUpperCase() + value.slice(1) + '</label></div>';
+            });
+            html += '</div>';
+        } else if (attribute.type === 'size') {
+            html += '<div class="d-flex flex-wrap">';
+            attribute.values.forEach(function(value, index) {
+                html += '<div class="custom-control custom-checkbox mr-2 mb-2">';
+                html += '<input type="checkbox" class="custom-control-input" name="attributes[' + attribute.id + '][]" value="' + value + '" id="attr-' + attribute.id + '-' + index + '">';
+                html += '<label class="custom-control-label" for="attr-' + attribute.id + '-' + index + '">';
+                html += '<span class="size-box px-2 py-1 border rounded">' + value.toUpperCase() + '</span></label></div>';
+            });
+            html += '</div>';
+        } else {
+            attribute.values.forEach(function(value, index) {
+                html += '<div class="custom-control custom-checkbox d-flex align-items-center justify-content-between mb-2">';
+                html += '<input type="checkbox" class="custom-control-input" name="attributes[' + attribute.id + '][]" value="' + value + '" id="attr-' + attribute.id + '-' + index + '">';
+                html += '<label class="custom-control-label" for="attr-' + attribute.id + '-' + index + '">';
+                html += value.charAt(0).toUpperCase() + value.slice(1) + '</label></div>';
+            });
+        }
+        
+        html += '</div>';
+        return html;
+    }
+    
+    // Function to show loading state for attributes
+    function showAttributeLoading() {
+        $('.attribute-filter-section').remove();
+        var loadingHtml = '<div class="attribute-filter-section text-center p-4 mb-30 bg-light">';
+        loadingHtml += '<i class="fa fa-spinner fa-spin mr-2"></i>Loading attributes...';
+        loadingHtml += '</div>';
+        $('.bg-light.p-4.mb-30').last().after(loadingHtml);
+    }
+    
+    // Auto-submit form when other filters change
+    $(document).on('change', '#filter-form input[type="radio"]:not([name="category"]), #filter-form input[type="checkbox"]', function() {
         $('#filter-form').submit();
     });
     
@@ -392,6 +656,18 @@ $(document).ready(function() {
         if (currentMin == btnMin && (currentMax == btnMax || (btnMax === '' && currentMax === ''))) {
             $(this).removeClass('btn-outline-primary').addClass('btn-primary');
         }
+    });
+    
+    // Clear all filters functionality
+    $('#clear-all-filters').on('click', function() {
+        // Reset all form inputs
+        $('#filter-form')[0].reset();
+        
+        // Remove dynamic attribute filters
+        $('.attribute-filter-section').remove();
+        
+        // Redirect to clean shop page
+        window.location.href = '{{ route("shop") }}';
     });
     
     // Load cart count on page load
