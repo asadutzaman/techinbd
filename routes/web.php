@@ -37,16 +37,18 @@ Route::get('/shop/attributes-by-category', [ShopController::class, 'getAttribute
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [App\Http\Controllers\Admin\AdminController::class, 'dashboard'])->name('dashboard');
 
+    // Products Routes (Optimized)
+    Route::get('/products', [App\Http\Controllers\Admin\ProductOptimizedController::class, 'index'])->name('products.index');
+    Route::get('/products/create', [App\Http\Controllers\Admin\ProductOptimizedController::class, 'create'])->name('products.create');
+    Route::post('/products', [App\Http\Controllers\Admin\ProductOptimizedController::class, 'store'])->name('products.store');
+    Route::get('/products/{id}', [App\Http\Controllers\Admin\ProductOptimizedController::class, 'show'])->name('products.show');
+    Route::get('/products/{id}/edit', [App\Http\Controllers\Admin\ProductOptimizedController::class, 'edit'])->name('products.edit');
+    Route::put('/products/{id}', [App\Http\Controllers\Admin\ProductOptimizedController::class, 'update'])->name('products.update');
+    Route::delete('/products/{id}', [App\Http\Controllers\Admin\ProductOptimizedController::class, 'destroy'])->name('products.destroy');
+    
     // AJAX endpoints
-    Route::get('products/attributes-by-category', [App\Http\Controllers\Admin\ProductController::class, 'getAttributesByCategory'])->name('products.attributes-by-category');
-
-    Route::get('/products', [App\Http\Controllers\Admin\ProductController::class, 'index'])->name('products.index');
-    Route::get('/products/create', [App\Http\Controllers\Admin\ProductController::class, 'create'])->name('products.create');
-    Route::post('/products', [App\Http\Controllers\Admin\ProductController::class, 'store'])->name('products.store');
-    Route::get('/products/{id}', [App\Http\Controllers\Admin\ProductController::class, 'show'])->name('products.show');
-    Route::get('/products/{id}/edit', [App\Http\Controllers\Admin\ProductController::class, 'edit'])->name('products.edit');
-    Route::put('/products/{id}', [App\Http\Controllers\Admin\ProductController::class, 'update'])->name('products.update');
-    Route::delete('/products/{id}', [App\Http\Controllers\Admin\ProductController::class, 'destroy'])->name('products.destroy');
+    Route::get('/products/categories/{categoryId}/attributes', [App\Http\Controllers\Admin\ProductOptimizedController::class, 'getCategoryAttributes']);
+    Route::delete('/products/images/{imageId}', [App\Http\Controllers\Admin\ProductOptimizedController::class, 'deleteImage'])->name('products.images.delete');
     
     Route::get('/categories/{category}/attributes', [CategoryAttributeController::class, 'getAttributes']);
     
@@ -75,8 +77,5 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::put('attributes/{attributeId}/values/{valueId}', [App\Http\Controllers\Admin\AttributeController::class, 'updateValue'])->name('attributes.values.update');
     Route::delete('attributes/{attributeId}/values/{valueId}', [App\Http\Controllers\Admin\AttributeController::class, 'destroyValue'])->name('attributes.values.destroy');
     
-
-
-
 
 });

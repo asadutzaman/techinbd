@@ -1,6 +1,6 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Product Details - MultiShop Admin')
+@section('title', 'View Product - MultiShop Admin')
 @section('page-title', 'Product Details')
 
 @section('breadcrumb')
@@ -9,277 +9,355 @@
     <li class="breadcrumb-item active">{{ $product->name }}</li>
 @endsection
 
+@push('styles')
+<style>
+    .product-image {
+        max-width: 200px;
+        max-height: 200px;
+        object-fit: cover;
+        border-radius: 8px;
+        margin: 5px;
+    }
+    .main-image {
+        border: 3px solid #007bff;
+    }
+    .attribute-badge {
+        margin: 2px;
+    }
+    .spec-item {
+        border-bottom: 1px solid #eee;
+        padding: 8px 0;
+    }
+    .spec-item:last-child {
+        border-bottom: none;
+    }
+</style>
+@endpush
+
 @section('content')
     <div class="row">
+        <!-- Product Information -->
         <div class="col-md-8">
-            <div class="card">
+            <div class="card card-primary">
                 <div class="card-header">
                     <h3 class="card-title">Product Information</h3>
                     <div class="card-tools">
-                        <a href="{{ route('admin.products.edit', $product->id) }}" class="btn btn-primary btn-sm">
+                        <a href="{{ route('admin.products.edit', $product->id) }}" class="btn btn-warning btn-sm">
                             <i class="fas fa-edit"></i> Edit Product
                         </a>
                     </div>
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-4">
-                            @if($product->image)
-                                <img src="{{ asset('img/' . $product->image) }}" alt="{{ $product->name }}" class="img-fluid rounded">
-                            @else
-                                <div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 200px;">
-                                    <i class="fas fa-image fa-3x text-muted"></i>
-                                </div>
-                            @endif
-                        </div>
-                        <div class="col-md-8">
+                        <div class="col-md-6">
                             <h4>{{ $product->name }}</h4>
-                            <p class="text-muted">{{ $product->description }}</p>
+                            <p class="text-muted">{{ $product->short_description }}</p>
                             
-                            <div class="row">
-                                <div class="col-sm-6">
-                                    <strong>Category:</strong> 
-                                    @if($product->category)
-                                        <span class="badge badge-secondary">{{ $product->category->name }}</span>
-                                    @else
-                                        <span class="text-muted">No category</span>
-                                    @endif
-                                </div>
-                                <div class="col-sm-6">
-                                    <strong>Brand:</strong> 
-                                    @if($product->brand)
-                                        <span class="badge badge-info">{{ $product->brand->name }}</span>
-                                    @else
-                                        <span class="text-muted">No brand</span>
-                                    @endif
-                                </div>
-                            </div>
-                            
-                            <hr>
-                            
-                            <div class="row">
-                                <div class="col-sm-6">
-                                    <strong>Price:</strong>
-                                    @if($product->sale_price)
-                                        <span class="text-success font-weight-bold">${{ number_format($product->sale_price, 2) }}</span>
-                                        <br><small class="text-muted"><del>${{ number_format($product->price, 2) }}</del></small>
-                                    @else
-                                        <span class="font-weight-bold">${{ number_format($product->price, 2) }}</span>
-                                    @endif
-                                </div>
-                                <div class="col-sm-6">
-                                    <strong>Stock:</strong>
-                                    @if($product->stock > 10)
-                                        <span class="badge badge-success">{{ $product->stock }} in stock</span>
-                                    @elseif($product->stock > 0)
-                                        <span class="badge badge-warning">{{ $product->stock }} in stock</span>
-                                    @else
-                                        <span class="badge badge-danger">Out of Stock</span>
-                                    @endif
-                                </div>
-                            </div>
-                            
-                            <hr>
-                            
-                            <div class="row">
-                                <div class="col-sm-6">
-                                    <strong>Status:</strong>
-                                    @if($product->status)
-                                        <span class="badge badge-success">Active</span>
-                                    @else
-                                        <span class="badge badge-secondary">Inactive</span>
-                                    @endif
-                                </div>
-                                <div class="col-sm-6">
-                                    <strong>Featured:</strong>
-                                    @if($product->featured)
-                                        <span class="badge badge-warning"><i class="fas fa-star"></i> Featured</span>
-                                    @else
-                                        <span class="badge badge-light">Regular</span>
-                                    @endif
-                                </div>
-                            </div>
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>SKU:</strong></td>
+                                    <td><code>{{ $product->sku ?: 'N/A' }}</code></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Slug:</strong></td>
+                                    <td><code>{{ $product->slug }}</code></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Category:</strong></td>
+                                    <td>{{ $product->category->name ?? 'N/A' }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Brand:</strong></td>
+                                    <td>{{ $product->brand->name ?? 'N/A' }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Status:</strong></td>
+                                    <td>
+                                        <span class="badge {{ $product->status ? 'badge-success' : 'badge-secondary' }}">
+                                            {{ $product->status ? 'Active' : 'Draft' }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Pricing & Inventory</h5>
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Base Price:</strong></td>
+                                    <td class="text-success font-weight-bold">{{ $product->currency }} {{ number_format($product->base_price, 2) }}</td>
+                                </tr>
+                                @if($product->cost_price)
+                                <tr>
+                                    <td><strong>Cost Price:</strong></td>
+                                    <td>{{ $product->currency }} {{ number_format($product->cost_price, 2) }}</td>
+                                </tr>
+                                @endif
+                                <tr>
+                                    <td><strong>Stock Status:</strong></td>
+                                    <td>
+                                        <span class="badge 
+                                            @if($product->stock_status === 'in_stock') badge-success
+                                            @elseif($product->stock_status === 'out_of_stock') badge-danger
+                                            @else badge-warning @endif">
+                                            {{ ucfirst(str_replace('_', ' ', $product->stock_status)) }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                @if($product->manage_stock)
+                                <tr>
+                                    <td><strong>Total Stock:</strong></td>
+                                    <td>{{ $product->total_stock }}</td>
+                                </tr>
+                                @endif
+                            </table>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3 class="card-title">Product Attributes</h3>
-                    <div>
-                        @if($product->category)
-                            <small class="text-muted">Category: {{ $product->category->name }}</small>
-                        @endif
+
+                    @if($product->description)
+                    <div class="mt-4">
+                        <h5>Description</h5>
+                        <div class="border p-3 rounded">
+                            {!! $product->description !!}
+                        </div>
                     </div>
-                </div>
-                <div class="card-body">
+                    @endif
+
                     @if($product->productAttributes->count() > 0)
+                    <div class="mt-4">
+                        <h5>Product Attributes</h5>
+                        <div class="row">
+                            @foreach($product->productAttributes as $productAttribute)
+                                <div class="col-md-6 mb-3">
+                                    <div class="spec-item">
+                                        <strong>{{ $productAttribute->attribute->name }}:</strong>
+                                        <span class="ml-2">{!! $productAttribute->display_value !!}</span>
+                                        @if($productAttribute->attribute->unit)
+                                            <small class="text-muted">{{ $productAttribute->attribute->unit }}</small>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+
+                    @if($product->variants->count() > 0)
+                    <div class="mt-4">
+                        <h5>Product Variants</h5>
                         <div class="table-responsive">
-                            <table class="table table-sm table-borderless">
-                                <tbody>
-                                    @foreach($product->productAttributes as $productAttribute)
+                            <table class="table table-bordered">
+                                <thead>
                                     <tr>
-                                        <td class="font-weight-bold" style="width: 40%;">{{ $productAttribute->attribute->name }}:</td>
-                                        <td>
-                                            @if($productAttribute->attribute->type === 'boolean')
-                                                @if($productAttribute->value == '1' || strtolower($productAttribute->value) === 'yes' || strtolower($productAttribute->value) === 'true')
-                                                    <span class="badge badge-success">Yes</span>
-                                                @else
-                                                    <span class="badge badge-secondary">No</span>
-                                                @endif
-                                            @elseif($productAttribute->attribute->type === 'select')
-                                                <span class="badge badge-info">{{ $productAttribute->value }}</span>
-                                            @elseif($productAttribute->attribute->type === 'number')
-                                                <code>{{ $productAttribute->value }}</code>
-                                            @else
-                                                {{ $productAttribute->value }}
-                                            @endif
-                                        </td>
+                                        <th>Name</th>
+                                        <th>SKU</th>
+                                        <th>Price</th>
+                                        <th>Stock</th>
+                                        <th>Default</th>
                                     </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($product->variants as $variant)
+                                        <tr>
+                                            <td>{{ $variant->name ?: 'Default Variant' }}</td>
+                                            <td><code>{{ $variant->sku ?: 'N/A' }}</code></td>
+                                            <td>
+                                                @if($variant->price)
+                                                    {{ $product->currency }} {{ number_format($variant->price, 2) }}
+                                                @else
+                                                    <span class="text-muted">Uses base price</span>
+                                                @endif
+                                            </td>
+                                            <td>{{ $variant->stock }}</td>
+                                            <td>
+                                                @if($variant->is_default)
+                                                    <span class="badge badge-primary">Default</span>
+                                                @endif
+                                            </td>
+                                        </tr>
                                     @endforeach
                                 </tbody>
                             </table>
                         </div>
-                        
-                        <div class="mt-3 pt-3 border-top">
-                            <small class="text-muted">
-                                <i class="fas fa-info-circle"></i> 
-                                {{ $product->productAttributes->count() }} attribute(s) defined for this product
-                            </small>
-                        </div>
-                    @else
-                        <div class="text-center py-4">
-                            <i class="fas fa-tags fa-2x text-muted mb-3"></i>
-                            <h6 class="text-muted">No Attributes Defined</h6>
-                            <p class="text-muted mb-3">This product doesn't have any custom attributes yet.</p>
-                            @if($product->category)
-                                <p class="text-muted">
-                                    <small>
-                                        <i class="fas fa-lightbulb"></i> 
-                                        You can add attributes by editing this product and selecting from the available 
-                                        <strong>{{ $product->category->name }}</strong> category attributes.
-                                    </small>
-                                </p>
-                            @endif
-                            <a href="{{ route('admin.products.edit', $product->id) }}" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-edit mr-1"></i>Edit Product
-                            </a>
-                        </div>
+                    </div>
                     @endif
                 </div>
             </div>
-            
-            @if($product->category && $product->category->attributes->count() > 0)
-            <div class="card">
+
+            @if($product->images->count() > 0)
+            <div class="card card-success">
                 <div class="card-header">
-                    <h3 class="card-title">Available Category Attributes</h3>
+                    <h3 class="card-title">Product Images</h3>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted mb-3">
-                        <small>Attributes available for <strong>{{ $product->category->name }}</strong> category:</small>
-                    </p>
-                    
-                    @php
-                        $usedAttributeIds = $product->productAttributes->pluck('attribute_id')->toArray();
-                    @endphp
-                    
                     <div class="row">
-                        @foreach($product->category->attributes->where('status', true) as $attribute)
-                        <div class="col-12 mb-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <span class="badge badge-{{ in_array($attribute->id, $usedAttributeIds) ? 'success' : 'light' }}">
-                                        {{ $attribute->name }}
-                                    </span>
-                                    <small class="text-muted">({{ ucfirst($attribute->type) }})</small>
-                                    @if($attribute->required)
-                                        <span class="badge badge-danger badge-sm">Required</span>
-                                    @endif
-                                </div>
-                                <div>
-                                    @if(in_array($attribute->id, $usedAttributeIds))
-                                        <i class="fas fa-check text-success" title="Used"></i>
-                                    @else
-                                        <i class="fas fa-minus text-muted" title="Not used"></i>
-                                    @endif
-                                </div>
+                        @foreach($product->images as $image)
+                            <div class="col-md-3 text-center">
+                                <img src="{{ asset('storage/' . $image->url) }}" 
+                                     alt="{{ $image->alt_text }}" 
+                                     class="product-image {{ $image->is_main ? 'main-image' : '' }}">
+                                @if($image->is_main)
+                                    <br><small class="badge badge-primary">Main Image</small>
+                                @endif
+                                <br><small class="text-muted">Sort: {{ $image->sort_order }}</small>
                             </div>
-                        </div>
                         @endforeach
-                    </div>
-                    
-                    <div class="mt-3 pt-3 border-top">
-                        <a href="{{ route('admin.products.edit', $product->id) }}" class="btn btn-sm btn-primary">
-                            <i class="fas fa-edit mr-1"></i>Edit Attributes
-                        </a>
-                        @if($product->category)
-                            <a href="{{ route('admin.attributes.index') }}?category={{ $product->category->id }}" class="btn btn-sm btn-outline-secondary">
-                                <i class="fas fa-cog mr-1"></i>Manage Category Attributes
-                            </a>
-                        @endif
                     </div>
                 </div>
             </div>
             @endif
-            
-            <div class="card">
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Physical Properties -->
+            @if($product->weight || $product->dimensions || $product->warranty)
+            <div class="card card-info">
                 <div class="card-header">
-                    <h3 class="card-title">Product Meta</h3>
+                    <h3 class="card-title">Physical Properties</h3>
                 </div>
                 <div class="card-body">
-                    <p><strong>Created:</strong> {{ $product->created_at->format('M d, Y \a\t g:i A') }}</p>
-                    <p><strong>Updated:</strong> {{ $product->updated_at->format('M d, Y \a\t g:i A') }}</p>
-                    <p><strong>ID:</strong> #{{ $product->id }}</p>
-                    @if($product->category)
-                        <p><strong>Category ID:</strong> {{ $product->category->id }}</p>
+                    @if($product->weight)
+                        <div class="spec-item">
+                            <strong>Weight:</strong> {{ $product->weight }} kg
+                        </div>
                     @endif
+                    @if($product->dimensions)
+                        <div class="spec-item">
+                            <strong>Dimensions:</strong> {{ $product->dimensions }}
+                        </div>
+                    @endif
+                    @if($product->warranty)
+                        <div class="spec-item">
+                            <strong>Warranty:</strong> {{ $product->warranty }}
+                        </div>
+                    @endif
+                </div>
+            </div>
+            @endif
+
+            <!-- Additional Information -->
+            @if($product->manufacturer_part_no || $product->ean_upc)
+            <div class="card card-secondary">
+                <div class="card-header">
+                    <h3 class="card-title">Additional Information</h3>
+                </div>
+                <div class="card-body">
+                    @if($product->manufacturer_part_no)
+                        <div class="spec-item">
+                            <strong>Manufacturer Part No:</strong><br>
+                            <code>{{ $product->manufacturer_part_no }}</code>
+                        </div>
+                    @endif
+                    @if($product->ean_upc)
+                        <div class="spec-item">
+                            <strong>EAN/UPC:</strong><br>
+                            <code>{{ $product->ean_upc }}</code>
+                        </div>
+                    @endif
+                </div>
+            </div>
+            @endif
+
+            <!-- SEO Information -->
+            @if($product->meta_title || $product->meta_description || $product->meta_keywords)
+            <div class="card card-warning">
+                <div class="card-header">
+                    <h3 class="card-title">SEO Information</h3>
+                </div>
+                <div class="card-body">
+                    @if($product->meta_title)
+                        <div class="spec-item">
+                            <strong>Meta Title:</strong><br>
+                            <small>{{ $product->meta_title }}</small>
+                        </div>
+                    @endif
+                    @if($product->meta_description)
+                        <div class="spec-item">
+                            <strong>Meta Description:</strong><br>
+                            <small>{{ $product->meta_description }}</small>
+                        </div>
+                    @endif
+                    @if($product->meta_keywords)
+                        <div class="spec-item">
+                            <strong>Meta Keywords:</strong><br>
+                            <small>{{ $product->meta_keywords }}</small>
+                        </div>
+                    @endif
+                </div>
+            </div>
+            @endif
+
+            <!-- Actions -->
+            <div class="card card-primary">
+                <div class="card-header">
+                    <h3 class="card-title">Actions</h3>
+                </div>
+                <div class="card-body">
+                    <a href="{{ route('admin.products.edit', $product->id) }}" class="btn btn-warning btn-block">
+                        <i class="fas fa-edit"></i> Edit Product
+                    </a>
+                    <a href="{{ route('admin.products.index') }}" class="btn btn-secondary btn-block">
+                        <i class="fas fa-list"></i> Back to Products
+                    </a>
+                    <button type="button" class="btn btn-danger btn-block" onclick="deleteProduct({{ $product->id }})">
+                        <i class="fas fa-trash"></i> Delete Product
+                    </button>
+                </div>
+            </div>
+
+            <!-- Timestamps -->
+            <div class="card card-dark">
+                <div class="card-header">
+                    <h3 class="card-title">Timestamps</h3>
+                </div>
+                <div class="card-body">
+                    <div class="spec-item">
+                        <strong>Created:</strong><br>
+                        <small>{{ $product->created_at->format('M d, Y H:i:s') }}</small>
+                    </div>
+                    <div class="spec-item">
+                        <strong>Updated:</strong><br>
+                        <small>{{ $product->updated_at->format('M d, Y H:i:s') }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this product? This action cannot be undone.</p>
+                    <p><strong>Product:</strong> {{ $product->name }}</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <form id="deleteForm" method="POST" style="display: inline;">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
 @endsection
-@push(
-'styles')
-<style>
-.attribute-badge {
-    font-size: 0.875rem;
-    padding: 0.375rem 0.75rem;
-}
 
-.attribute-used {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-}
-
-.attribute-unused {
-    background-color: #f8f9fa;
-    color: #6c757d;
-    border: 1px solid #dee2e6;
-}
-
-.attribute-required {
-    position: relative;
-}
-
-.attribute-required::after {
-    content: "*";
-    color: #dc3545;
-    font-weight: bold;
-    margin-left: 2px;
-}
-
-.color-swatch {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border-radius: 3px;
-    border: 1px solid #dee2e6;
-    vertical-align: middle;
-    margin-right: 5px;
-}
-</style>
+@push('scripts')
+<script>
+    function deleteProduct(productId) {
+        const form = document.getElementById('deleteForm');
+        form.action = `/admin/products/${productId}`;
+        $('#deleteModal').modal('show');
+    }
+</script>
 @endpush
