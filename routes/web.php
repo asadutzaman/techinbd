@@ -70,12 +70,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
     // Brands
     Route::resource('brands', App\Http\Controllers\Admin\BrandController::class);
     
-    // Attributes
-    Route::resource('attributes', App\Http\Controllers\Admin\AttributeController::class);
-    Route::get('attributes/{id}/values', [App\Http\Controllers\Admin\AttributeController::class, 'manageValues'])->name('attributes.values');
-    Route::post('attributes/{id}/values', [App\Http\Controllers\Admin\AttributeController::class, 'storeValue'])->name('attributes.values.store');
-    Route::put('attributes/{attributeId}/values/{valueId}', [App\Http\Controllers\Admin\AttributeController::class, 'updateValue'])->name('attributes.values.update');
-    Route::delete('attributes/{attributeId}/values/{valueId}', [App\Http\Controllers\Admin\AttributeController::class, 'destroyValue'])->name('attributes.values.destroy');
+    // Attributes (Optimized)
+    Route::resource('attributes', App\Http\Controllers\Admin\AttributeOptimizedController::class);
+    Route::get('attributes/{id}/values', [App\Http\Controllers\Admin\AttributeOptimizedController::class, 'manageValues'])->name('attributes.values');
+    Route::post('attributes/{id}/values', [App\Http\Controllers\Admin\AttributeOptimizedController::class, 'storeValue'])->name('attributes.values.store');
+    Route::put('attributes/{attributeId}/values/{valueId}', [App\Http\Controllers\Admin\AttributeOptimizedController::class, 'updateValue'])->name('attributes.values.update');
+    Route::delete('attributes/{attributeId}/values/{valueId}', [App\Http\Controllers\Admin\AttributeOptimizedController::class, 'destroyValue'])->name('attributes.values.destroy');
     
 
 });
