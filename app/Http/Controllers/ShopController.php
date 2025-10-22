@@ -3,11 +3,11 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Product;
+use App\Models\ProductOptimized;
 use App\Models\Category;
 use App\Models\Brand;
-use App\Models\Attribute;
-use App\Models\ProductAttribute;
+use App\Models\AttributeOptimized;
+use App\Models\ProductAttributeOptimized;
 
 class ShopController extends Controller
 {
@@ -20,7 +20,7 @@ class ShopController extends Controller
             $perPage = 9;
         }
         
-        $query = Product::with(['category', 'brand', 'productAttributes.attribute'])->where('status', 1);
+        $query = ProductOptimized::with(['category', 'brand', 'productAttributes.attribute', 'mainImage'])->active();
         $searchTerm = null;
         $isSearching = false;
         
@@ -75,21 +75,21 @@ class ShopController extends Controller
         
         // Handle price range filter
         if ($request->has('min_price') && !empty($request->min_price)) {
-            $query->whereRaw('COALESCE(sale_price, price) >= ?', [$request->min_price]);
+            $query->where('base_price', '>=', $request->min_price);
         }
         
         if ($request->has('max_price') && !empty($request->max_price)) {
-            $query->whereRaw('COALESCE(sale_price, price) <= ?', [$request->max_price]);
+            $query->where('base_price', '<=', $request->max_price);
         }
         
-        // Handle sale filter
-        if ($request->has('sale') && $request->sale == '1') {
-            $query->whereNotNull('sale_price');
+        // Handle featured filter
+        if ($request->has('featured') && $request->featured == '1') {
+            $query->featured();
         }
         
         // Handle stock filter
         if ($request->has('in_stock') && $request->in_stock == '1') {
-            $query->where('stock', '>', 0);
+            $query->inStock();
         }
         
         // Handle sorting (only if not searching, as search has its own relevance ordering)
@@ -97,10 +97,10 @@ class ShopController extends Controller
             $sortBy = $request->get('sort', 'latest');
             switch ($sortBy) {
                 case 'price_low':
-                    $query->orderByRaw('COALESCE(sale_price, price) ASC');
+                    $query->orderBy('base_price', 'ASC');
                     break;
                 case 'price_high':
-                    $query->orderByRaw('COALESCE(sale_price, price) DESC');
+                    $query->orderBy('base_price', 'DESC');
                     break;
                 case 'name':
                     $query->orderBy('name', 'ASC');
@@ -147,7 +147,7 @@ class ShopController extends Controller
     private function getSearchSuggestions($searchTerm)
     {
         // Get similar product names
-        $suggestions = Product::where('status', 1)
+        $suggestions = ProductOptimized::active()
             ->where(function($q) use ($searchTerm) {
                 $q->where('name', 'LIKE', '%' . $searchTerm . '%')
                   ->orWhereHas('category', function ($query) use ($searchTerm) {
@@ -176,13 +176,13 @@ class ShopController extends Controller
         $selectedCategory = $request->get('category');
         
         // Get attributes that are filterable
-        $attributesQuery = Attribute::where('status', 1)
-            ->where('filterable', 1)
+        $attributesQuery = AttributeOptimized::active()
+            ->filterable()
             ->with(['activeValues']);
         
         // If category is selected, get attributes for that category
         if ($selectedCategory) {
-            $attributesQuery->where('category_id', $selectedCategory);
+            $attributesQuery->forCategory($selectedCategory);
         }
         
         $attributes = $attributesQuery->orderBy('sort_order')->get();
@@ -190,9 +190,9 @@ class ShopController extends Controller
         // For each attribute, get the actual values used in products
         $filterableAttributes = [];
         foreach ($attributes as $attribute) {
-            $usedValues = ProductAttribute::where('attribute_id', $attribute->id)
+            $usedValues = ProductAttributeOptimized::where('attribute_id', $attribute->id)
                 ->whereHas('product', function($q) use ($request, $selectedCategory) {
-                    $q->where('status', 1);
+                    $q->active();
                     if ($selectedCategory) {
                         $q->where('category_id', $selectedCategory);
                     }
@@ -229,7 +229,7 @@ class ShopController extends Controller
             return response()->json([]);
         }
         
-        $suggestions = Product::where('status', 1)
+        $suggestions = ProductOptimized::active()
             ->where(function($q) use ($searchTerm) {
                 $q->where('name', 'LIKE', '%' . $searchTerm . '%')
                   ->orWhereHas('category', function ($query) use ($searchTerm) {

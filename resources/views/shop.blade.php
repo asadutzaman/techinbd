@@ -215,10 +215,10 @@
                     <h5 class="section-title position-relative text-uppercase mb-3"><span class="bg-secondary pr-3">Filters</span></h5>
                     <div class="bg-light p-4 mb-30">
                         <div class="custom-control custom-checkbox mb-3">
-                            <input type="checkbox" class="custom-control-input" name="sale" value="1" 
-                                   id="filter-sale" {{ request('sale') ? 'checked' : '' }}>
-                            <label class="custom-control-label" for="filter-sale">
-                                <i class="fas fa-tag text-danger mr-1"></i>On Sale
+                            <input type="checkbox" class="custom-control-input" name="featured" value="1" 
+                                   id="filter-featured" {{ request('featured') ? 'checked' : '' }}>
+                            <label class="custom-control-label" for="filter-featured">
+                                <i class="fas fa-star text-warning mr-1"></i>Featured Products
                             </label>
                         </div>
                         <div class="custom-control custom-checkbox mb-3">
@@ -237,7 +237,7 @@
                         if(request('category')) $activeFilters++;
                         if(request('brand')) $activeFilters++;
                         if(request('min_price') || request('max_price')) $activeFilters++;
-                        if(request('sale')) $activeFilters++;
+                        if(request('featured')) $activeFilters++;
                         if(request('in_stock')) $activeFilters++;
                         if(request('attributes')) {
                             foreach(request('attributes', []) as $attrValues) {
@@ -311,20 +311,26 @@
                     <div class="col-lg-4 col-md-6 col-sm-6 pb-1">
                         <div class="product-item bg-light mb-4">
                             <div class="product-img position-relative overflow-hidden">
-                                <img class="img-fluid w-100" src="{{ asset('img/' . $product->image) }}" alt="{{ $product->name }}">
+                                @if($product->mainImage->first())
+                                    <img class="img-fluid w-100" src="{{ asset('storage/' . $product->mainImage->first()->url) }}" alt="{{ $product->name }}" style="height: 250px; object-fit: cover;">
+                                @else
+                                    <div class="img-fluid w-100 d-flex align-items-center justify-content-center bg-secondary" style="height: 250px;">
+                                        <i class="fa fa-image fa-3x text-muted"></i>
+                                    </div>
+                                @endif
                                 <div class="product-action">
                                     <button class="btn btn-outline-dark btn-square add-to-cart-btn" 
                                             data-product-id="{{ $product->id }}" 
                                             data-product-name="{{ $product->name }}" 
-                                            data-product-price="{{ $product->display_price }}">
+                                            data-product-price="{{ $product->base_price }}">
                                         <i class="fa fa-shopping-cart"></i>
                                     </button>
                                     <a class="btn btn-outline-dark btn-square" href=""><i class="far fa-heart"></i></a>
                                     <button class="btn btn-outline-dark btn-square add-to-compare-btn" 
                                             data-product-id="{{ $product->id }}" 
                                             data-product-name="{{ $product->name }}" 
-                                            data-product-price="{{ $product->display_price }}"
-                                            data-product-image="{{ asset('img/' . $product->image) }}"
+                                            data-product-price="{{ $product->base_price }}"
+                                            data-product-image="{{ $product->main_image_url }}"
                                             title="Add to Compare">
                                         <i class="fa fa-balance-scale"></i>
                                     </button>
@@ -334,9 +340,9 @@
                             <div class="text-center py-4">
                                 <a class="h6 text-decoration-none text-truncate" href="{{ route('product.detail', $product->id) }}">{{ $product->name }}</a>
                                 <div class="d-flex align-items-center justify-content-center mt-2">
-                                    <h5>${{ number_format($product->display_price, 2) }}</h5>
-                                    @if($product->is_on_sale)
-                                        <h6 class="text-muted ml-2"><del>${{ number_format($product->price, 2) }}</del></h6>
+                                    <h5>{{ $product->currency }} {{ number_format($product->base_price, 2) }}</h5>
+                                    @if($product->variants->where('compare_price', '>', 0)->count() > 0)
+                                        <h6 class="text-muted ml-2"><del>{{ $product->currency }} {{ number_format($product->variants->where('compare_price', '>', 0)->first()->compare_price, 2) }}</del></h6>
                                     @endif
                                 </div>
                                 <div class="d-flex align-items-center justify-content-center mb-1">
