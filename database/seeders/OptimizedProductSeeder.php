@@ -184,12 +184,14 @@ class OptimizedProductSeeder extends Seeder
                 ]);
             }
 
-            // Add sample image
+            // Add sample image - create a placeholder if no real image exists
+            $imagePath = 'products/sample-' . ($product->id % 8 + 1) . '.jpg';
+            
             \App\Models\ProductImageOptimized::firstOrCreate([
                 'product_id' => $product->id,
                 'is_main' => true
             ], [
-                'url' => 'products/sample-' . ($product->id % 8 + 1) . '.jpg',
+                'url' => $imagePath,
                 'alt_text' => $product->name,
                 'sort_order' => 0
             ]);

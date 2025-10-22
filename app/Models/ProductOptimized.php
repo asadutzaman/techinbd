@@ -171,7 +171,17 @@ class ProductOptimized extends Model
     public function getMainImageUrlAttribute()
     {
         $mainImage = $this->mainImage()->first();
-        return $mainImage ? $mainImage->url : '/img/default-product.jpg';
+        if ($mainImage) {
+            // Check if the file exists, if not return a placeholder
+            $imagePath = storage_path('app/public/' . $mainImage->url);
+            if (file_exists($imagePath)) {
+                return asset('storage/' . $mainImage->url);
+            }
+        }
+        
+        // Return a placeholder image based on product ID
+        $placeholderNumber = ($this->id % 8) + 1;
+        return asset('img/product-' . $placeholderNumber . '.jpg');
     }
 
     // Mutators
