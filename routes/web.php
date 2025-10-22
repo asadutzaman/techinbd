@@ -49,6 +49,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     // AJAX endpoints
     Route::get('/products/categories/{categoryId}/attributes', [App\Http\Controllers\Admin\ProductOptimizedController::class, 'getCategoryAttributes']);
     Route::delete('/products/images/{imageId}', [App\Http\Controllers\Admin\ProductOptimizedController::class, 'deleteImage'])->name('products.images.delete');
+    Route::post('/products/images/set-main', [App\Http\Controllers\Admin\ProductOptimizedController::class, 'setMainImage'])->name('products.images.set-main');
     
     Route::get('/categories/{category}/attributes', [CategoryAttributeController::class, 'getAttributes']);
     

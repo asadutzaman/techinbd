@@ -26,6 +26,45 @@ class ProductImageOptimized extends Model
         'is_main' => 'boolean'
     ];
 
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($image) {
+            // If this image is being set as main, unset other main images for the same product/variant
+            if ($image->is_main) {
+                if ($image->product_id) {
+                    static::where('product_id', $image->product_id)
+                          ->where('is_main', true)
+                          ->update(['is_main' => false]);
+                }
+                if ($image->variant_id) {
+                    static::where('variant_id', $image->variant_id)
+                          ->where('is_main', true)
+                          ->update(['is_main' => false]);
+                }
+            }
+        });
+
+        static::updating(function ($image) {
+            // If this image is being set as main, unset other main images for the same product/variant
+            if ($image->is_main && $image->isDirty('is_main')) {
+                if ($image->product_id) {
+                    static::where('product_id', $image->product_id)
+                          ->where('id', '!=', $image->id)
+                          ->where('is_main', true)
+                          ->update(['is_main' => false]);
+                }
+                if ($image->variant_id) {
+                    static::where('variant_id', $image->variant_id)
+                          ->where('id', '!=', $image->id)
+                          ->where('is_main', true)
+                          ->update(['is_main' => false]);
+                }
+            }
+        });
+    }
+
     // Relationships
     public function product(): BelongsTo
     {

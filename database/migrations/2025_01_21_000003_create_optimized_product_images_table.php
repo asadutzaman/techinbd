@@ -31,9 +31,8 @@ return new class extends Migration
             $table->index(['product_id', 'sort_order']); // For ordered product images
             $table->index(['variant_id', 'sort_order']); // For ordered variant images
             
-            // Ensure only one main image per product/variant
-            $table->unique(['product_id', 'is_main'], 'prod_img_main_unique');
-            $table->unique(['variant_id', 'is_main'], 'var_img_main_unique');
+            // Note: Unique constraints for main images will be handled at application level
+            // MySQL unique constraints don't work well with boolean fields and NULLs
         });
     }
 

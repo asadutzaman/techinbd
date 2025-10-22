@@ -242,6 +242,12 @@
                                             </button>
                                             @if($image->is_main)
                                                 <small class="badge badge-primary">Main</small>
+                                            @else
+                                                <button type="button" class="btn btn-sm btn-outline-primary set-main-btn" 
+                                                        onclick="setMainImage({{ $image->id }})" 
+                                                        style="position: absolute; bottom: 5px; left: 5px; font-size: 10px; padding: 2px 6px;">
+                                                    Set Main
+                                                </button>
                                             @endif
                                         </div>
                                     @endforeach
@@ -532,6 +538,33 @@
                 alert('Failed to delete image');
             });
         }
+    }
+
+    // Set image as main
+    function setMainImage(imageId) {
+        fetch('/admin/products/images/set-main', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                image_id: imageId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reload the page to show updated main image status
+                location.reload();
+            } else {
+                alert('Failed to set main image');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to set main image');
+        });
     }
 
     // Load category attributes

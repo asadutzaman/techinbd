@@ -331,6 +331,12 @@ class ProductOptimizedController extends Controller
      */
     private function handleImageUploads($product, $images)
     {
+        // Check if product already has a main image
+        $hasMainImage = $product->images()->where('is_main', true)->exists();
+        
+        // Get the current highest sort order
+        $maxSortOrder = $product->images()->max('sort_order') ?? -1;
+        
         foreach ($images as $index => $image) {
             $path = $image->store('products', 'public');
             
@@ -338,8 +344,8 @@ class ProductOptimizedController extends Controller
                 'product_id' => $product->id,
                 'url' => $path,
                 'alt_text' => $product->name,
-                'sort_order' => $index,
-                'is_main' => $index === 0 // First image is main
+                'sort_order' => $maxSortOrder + $index + 1,
+                'is_main' => !$hasMainImage && $index === 0 // Only set first image as main if no main image exists
             ]);
         }
     }
@@ -393,12 +399,37 @@ class ProductOptimizedController extends Controller
         $imageId = $request->input('image_id');
         $image = ProductImageOptimized::findOrFail($imageId);
         
+        // If this is the main image, set another image as main
+        if ($image->is_main) {
+            $nextMainImage = ProductImageOptimized::where('product_id', $image->product_id)
+                                                  ->where('id', '!=', $image->id)
+                                                  ->orderBy('sort_order')
+                                                  ->first();
+            if ($nextMainImage) {
+                $nextMainImage->update(['is_main' => true]);
+            }
+        }
+        
         // Delete from storage
         if (Storage::disk('public')->exists($image->url)) {
             Storage::disk('public')->delete($image->url);
         }
         
         $image->delete();
+        
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Set image as main
+     */
+    public function setMainImage(Request $request)
+    {
+        $imageId = $request->input('image_id');
+        $image = ProductImageOptimized::findOrFail($imageId);
+        
+        // The model's boot method will handle unsetting other main images
+        $image->update(['is_main' => true]);
         
         return response()->json(['success' => true]);
     }
