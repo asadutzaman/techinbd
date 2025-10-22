@@ -50,6 +50,7 @@ return new class extends Migration
             
             // Status and additional info
             $table->tinyInteger('status')->default(1); // 1=active, 0=draft
+            $table->boolean('featured')->default(false); // Featured product flag
             $table->string('warranty', 128)->nullable();
             $table->string('manufacturer_part_no', 128)->nullable();
             $table->string('ean_upc', 64)->nullable();
@@ -69,11 +70,13 @@ return new class extends Migration
             $table->index(['slug']); // For SEO URLs
             $table->index(['sku']); // For SKU lookups
             $table->index(['total_stock']); // For stock filtering
+            $table->index(['featured', 'status']); // For featured products
             
             // Composite indexes for common queries
             $table->index(['category_id', 'status', 'base_price'], 'prod_cat_status_price_idx'); // Category + price filtering
             $table->index(['brand_id', 'category_id', 'status'], 'prod_brand_cat_status_idx'); // Brand + category filtering
             $table->index(['status', 'stock_status', 'created_at'], 'prod_status_stock_date_idx'); // Active products by date
+            $table->index(['featured', 'status', 'created_at'], 'prod_featured_status_date_idx'); // Featured products
         });
     }
 

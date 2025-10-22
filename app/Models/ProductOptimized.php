@@ -38,6 +38,7 @@ class ProductOptimized extends Model
         'meta_description',
         'meta_keywords',
         'status',
+        'featured',
         'warranty',
         'manufacturer_part_no',
         'ean_upc'
@@ -49,6 +50,7 @@ class ProductOptimized extends Model
         'weight' => 'decimal:3',
         'manage_stock' => 'boolean',
         'status' => 'integer',
+        'featured' => 'boolean',
         'total_stock' => 'integer',
         'specs' => 'array',
         'attributes' => 'array',
@@ -148,6 +150,11 @@ class ProductOptimized extends Model
     public function scopePriceRange($query, $min, $max)
     {
         return $query->whereBetween('base_price', [$min, $max]);
+    }
+
+    public function scopeFeatured($query)
+    {
+        return $query->where('featured', true);
     }
 
     // Accessors

@@ -4,16 +4,21 @@ namespace App\Http\View\Composers;
 
 use Illuminate\View\View;
 use App\Models\Category;
+use App\Models\ProductOptimized;
 
 class MenuComposer
 {
     public function compose(View $view)
     {
-        $menuCategories = Category::where('is_menu', true)
-                                 ->where('status', true)
-                                 ->withCount('products')
+        $menuCategories = Category::where('status', true)
                                  ->orderBy('name')
-                                 ->get();
+                                 ->get()
+                                 ->map(function ($category) {
+                                     $category->products_count = ProductOptimized::where('category_id', $category->id)
+                                                                               ->where('status', 1)
+                                                                               ->count();
+                                     return $category;
+                                 });
         
         $view->with('menuCategories', $menuCategories);
     }

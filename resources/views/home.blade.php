@@ -147,21 +147,21 @@
             <div class="col-lg-3 col-md-4 col-sm-6 pb-1">
                 <div class="product-item bg-light mb-4">
                     <div class="product-img position-relative overflow-hidden">
-                        <img class="img-fluid w-100" src="{{ asset('img/' . $product->image) }}" alt="{{ $product->name }}" style="height: 250px; object-fit: cover;">
+                        <img class="img-fluid w-100" src="{{ $product->main_image_url }}" alt="{{ $product->name }}" style="height: 250px; object-fit: cover;">
                         <div class="product-action">
                             <button class="btn btn-outline-dark btn-square add-to-cart-btn" 
                                     data-product-id="{{ $product->id }}" 
                                     data-product-name="{{ $product->name }}" 
-                                    data-product-price="{{ $product->display_price }}"
-                                    data-product-image="{{ $product->image }}">
+                                    data-product-price="{{ $product->base_price }}"
+                                    data-product-image="{{ $product->main_image_url }}">
                                 <i class="fa fa-shopping-cart"></i>
                             </button>
                             <a class="btn btn-outline-dark btn-square" href="#"><i class="far fa-heart"></i></a>
                             <button class="btn btn-outline-dark btn-square add-to-compare-btn" 
                                     data-product-id="{{ $product->id }}" 
                                     data-product-name="{{ $product->name }}" 
-                                    data-product-price="{{ $product->display_price }}"
-                                    data-product-image="{{ asset('img/' . $product->image) }}"
+                                    data-product-price="{{ $product->base_price }}"
+                                    data-product-image="{{ $product->main_image_url }}"
                                     title="Add to Compare">
                                 <i class="fa fa-balance-scale"></i>
                             </button>
@@ -171,12 +171,7 @@
                     <div class="text-center py-4">
                         <a class="h6 text-decoration-none text-truncate" href="{{ route('product.detail', $product->id) }}">{{ $product->name }}</a>
                         <div class="d-flex align-items-center justify-content-center mt-2">
-                            @if($product->is_on_sale)
-                                <h5>${{ number_format($product->sale_price, 2) }}</h5>
-                                <h6 class="text-muted ml-2"><del>${{ number_format($product->price, 2) }}</del></h6>
-                            @else
-                                <h5>${{ number_format($product->price, 2) }}</h5>
-                            @endif
+                            <h5>{{ $product->currency }} {{ number_format($product->base_price, 2) }}</h5>
                         </div>
                         <div class="d-flex align-items-center justify-content-center mb-1">
                             <small class="fa fa-star text-primary mr-1"></small>

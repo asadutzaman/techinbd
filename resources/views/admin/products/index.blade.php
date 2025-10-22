@@ -171,6 +171,9 @@
                                             <span class="badge {{ $product->status ? 'badge-success' : 'badge-secondary' }}">
                                                 {{ $product->status ? 'Active' : 'Draft' }}
                                             </span>
+                                            @if($product->featured)
+                                                <br><span class="badge badge-warning">Featured</span>
+                                            @endif
                                         </td>
                                         <td>
                                             <small class="text-muted">

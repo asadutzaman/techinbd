@@ -99,6 +99,7 @@ class ProductOptimizedController extends Controller
             'meta_description' => 'nullable|string|max:512',
             'meta_keywords' => 'nullable|string|max:512',
             'status' => 'required|integer|in:0,1',
+            'featured' => 'boolean',
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'attributes' => 'nullable|array',
             'attributes.*' => 'nullable|string|max:255',
@@ -119,7 +120,7 @@ class ProductOptimizedController extends Controller
                 'short_description', 'description', 'base_price', 'cost_price',
                 'currency', 'manage_stock', 'stock_status', 'total_stock',
                 'weight', 'dimensions', 'warranty', 'manufacturer_part_no',
-                'ean_upc', 'meta_title', 'meta_description', 'meta_keywords', 'status'
+                'ean_upc', 'meta_title', 'meta_description', 'meta_keywords', 'status', 'featured'
             ]);
 
             $product = ProductOptimized::create($productData);
@@ -221,6 +222,7 @@ class ProductOptimizedController extends Controller
             'meta_description' => 'nullable|string|max:512',
             'meta_keywords' => 'nullable|string|max:512',
             'status' => 'required|integer|in:0,1',
+            'featured' => 'boolean',
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'attributes' => 'nullable|array',
             'attributes.*' => 'nullable|string|max:255'
@@ -235,7 +237,7 @@ class ProductOptimizedController extends Controller
                 'short_description', 'description', 'base_price', 'cost_price',
                 'currency', 'manage_stock', 'stock_status', 'total_stock',
                 'weight', 'dimensions', 'warranty', 'manufacturer_part_no',
-                'ean_upc', 'meta_title', 'meta_description', 'meta_keywords', 'status'
+                'ean_upc', 'meta_title', 'meta_description', 'meta_keywords', 'status', 'featured'
             ]);
 
             $product->update($productData);

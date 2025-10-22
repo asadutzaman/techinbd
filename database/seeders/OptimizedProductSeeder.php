@@ -115,7 +115,8 @@ class OptimizedProductSeeder extends Seeder
                 'weight' => 0.168,
                 'dimensions' => '147.0 x 70.6 x 7.6 mm',
                 'warranty' => '1 Year',
-                'status' => 1
+                'status' => 1,
+                'featured' => true
             ],
             [
                 'name' => 'iPhone 15 Pro',
@@ -133,7 +134,8 @@ class OptimizedProductSeeder extends Seeder
                 'weight' => 0.187,
                 'dimensions' => '146.6 x 70.6 x 8.25 mm',
                 'warranty' => '1 Year',
-                'status' => 1
+                'status' => 1,
+                'featured' => true
             ],
             [
                 'name' => 'Sony WH-1000XM5',
@@ -151,7 +153,8 @@ class OptimizedProductSeeder extends Seeder
                 'weight' => 0.250,
                 'dimensions' => '254 x 192 x 80 mm',
                 'warranty' => '2 Years',
-                'status' => 1
+                'status' => 1,
+                'featured' => false
             ]
         ];
 
@@ -180,6 +183,16 @@ class OptimizedProductSeeder extends Seeder
                     'numeric_value' => 128
                 ]);
             }
+
+            // Add sample image
+            \App\Models\ProductImageOptimized::firstOrCreate([
+                'product_id' => $product->id,
+                'is_main' => true
+            ], [
+                'url' => 'products/sample-' . ($product->id % 8 + 1) . '.jpg',
+                'alt_text' => $product->name,
+                'sort_order' => 0
+            ]);
 
             // Update search index
             $product->updateSearchIndex();

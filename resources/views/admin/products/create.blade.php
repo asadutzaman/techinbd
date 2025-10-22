@@ -409,6 +409,16 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
+
+                        <div class="form-group">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" 
+                                       id="featured" name="featured" value="1" 
+                                       {{ old('featured') ? 'checked' : '' }}>
+                                <label class="custom-control-label" for="featured">Featured Product</label>
+                            </div>
+                            <small class="form-text text-muted">Featured products appear on homepage</small>
+                        </div>
                     </div>
                 </div>
             </div>
