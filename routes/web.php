@@ -16,6 +16,13 @@ Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::get('/product/{id}', [ProductController::class, 'show'])->name('product.detail');
 
+// Authentication Routes
+Route::get('/login', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');
+Route::post('/login', [App\Http\Controllers\Auth\LoginController::class, 'login']);
+Route::post('/logout', [App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('logout');
+Route::get('/register', [App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])->name('register');
+Route::post('/register', [App\Http\Controllers\Auth\RegisterController::class, 'register']);
+
 
 // Cart Routes
 Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
@@ -32,6 +39,33 @@ Route::get('/search/suggestions', [ShopController::class, 'searchSuggestions'])-
 
 // Filter Routes
 Route::get('/shop/attributes-by-category', [ShopController::class, 'getAttributesByCategory'])->name('shop.attributes-by-category');
+
+// Customer Dashboard Routes (Protected)
+Route::middleware('auth')->prefix('customer')->name('customer.')->group(function () {
+    Route::get('/dashboard', [App\Http\Controllers\Customer\DashboardController::class, 'index'])->name('dashboard');
+    
+    // Profile Routes
+    Route::get('/profile', [App\Http\Controllers\Customer\ProfileController::class, 'show'])->name('profile');
+    Route::put('/profile', [App\Http\Controllers\Customer\ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/change-password', [App\Http\Controllers\Customer\ProfileController::class, 'changePassword'])->name('profile.change-password');
+    
+    // Address Routes
+    Route::resource('addresses', App\Http\Controllers\Customer\AddressController::class);
+    Route::post('/addresses/{address}/set-default', [App\Http\Controllers\Customer\AddressController::class, 'setDefault'])->name('addresses.set-default');
+    
+    // Order Routes
+    Route::get('/orders', [App\Http\Controllers\Customer\OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{order}', [App\Http\Controllers\Customer\OrderController::class, 'show'])->name('orders.show');
+    Route::post('/orders/{order}/reorder', [App\Http\Controllers\Customer\OrderController::class, 'reorder'])->name('orders.reorder');
+    Route::get('/orders/{order}/download-invoice', [App\Http\Controllers\Customer\OrderController::class, 'downloadInvoice'])->name('orders.download-invoice');
+    
+    // Wishlist Routes
+    Route::get('/wishlist', [App\Http\Controllers\Customer\WishlistController::class, 'index'])->name('wishlist.index');
+    Route::post('/wishlist/add', [App\Http\Controllers\Customer\WishlistController::class, 'add'])->name('wishlist.add');
+    Route::post('/wishlist/remove', [App\Http\Controllers\Customer\WishlistController::class, 'remove'])->name('wishlist.remove');
+    Route::post('/wishlist/toggle', [App\Http\Controllers\Customer\WishlistController::class, 'toggle'])->name('wishlist.toggle');
+    Route::post('/wishlist/move-to-cart', [App\Http\Controllers\Customer\WishlistController::class, 'moveToCart'])->name('wishlist.move-to-cart');
+});
 
 // Admin Routes
 Route::prefix('admin')->name('admin.')->group(function () {
