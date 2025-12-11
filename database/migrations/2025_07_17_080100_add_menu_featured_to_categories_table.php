@@ -12,8 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('categories', function (Blueprint $table) {
-            $table->boolean('is_menu')->default(false)->after('status');
-            $table->boolean('is_featured')->default(false)->after('is_menu');
+            if (!Schema::hasColumn('categories', 'is_menu')) {
+                $table->boolean('is_menu')->default(false)->after('status');
+            }
+            if (!Schema::hasColumn('categories', 'is_featured')) {
+                $table->boolean('is_featured')->default(false)->after('is_menu');
+            }
         });
     }
 
@@ -23,7 +27,12 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('categories', function (Blueprint $table) {
-            $table->dropColumn(['is_menu', 'is_featured']);
+            if (Schema::hasColumn('categories', 'is_menu')) {
+                $table->dropColumn('is_menu');
+            }
+            if (Schema::hasColumn('categories', 'is_featured')) {
+                $table->dropColumn('is_featured');
+            }
         });
     }
 };

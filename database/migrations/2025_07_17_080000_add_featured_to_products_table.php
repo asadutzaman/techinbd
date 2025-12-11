@@ -11,9 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-            $table->boolean('featured')->default(false)->after('status');
-        });
+        // Add featured column to both products tables
+        if (Schema::hasTable('products')) {
+            Schema::table('products', function (Blueprint $table) {
+                if (!Schema::hasColumn('products', 'featured')) {
+                    $table->boolean('featured')->default(false)->after('status');
+                }
+            });
+        }
+        
+        if (Schema::hasTable('products_optimized')) {
+            Schema::table('products_optimized', function (Blueprint $table) {
+                if (!Schema::hasColumn('products_optimized', 'featured')) {
+                    $table->boolean('featured')->default(false)->after('status');
+                }
+            });
+        }
     }
 
     /**
@@ -21,8 +34,20 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-            $table->dropColumn('featured');
-        });
+        if (Schema::hasTable('products')) {
+            Schema::table('products', function (Blueprint $table) {
+                if (Schema::hasColumn('products', 'featured')) {
+                    $table->dropColumn('featured');
+                }
+            });
+        }
+        
+        if (Schema::hasTable('products_optimized')) {
+            Schema::table('products_optimized', function (Blueprint $table) {
+                if (Schema::hasColumn('products_optimized', 'featured')) {
+                    $table->dropColumn('featured');
+                }
+            });
+        }
     }
 };

@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::table('carts', function (Blueprint $table) {
             $table->foreignId('user_id')->nullable()->after('id')->constrained()->onDelete('cascade');
-            $table->string('session_id')->nullable()->after('user_id');
+            $table->string('session_id')->nullable()->change();
             
-            // Make sure we can identify cart items by either user_id or session_id
+            // Add indexes for better performance
             $table->index(['user_id']);
             $table->index(['session_id']);
         });
@@ -30,7 +30,8 @@ return new class extends Migration
             $table->dropForeign(['user_id']);
             $table->dropIndex(['user_id']);
             $table->dropIndex(['session_id']);
-            $table->dropColumn(['user_id', 'session_id']);
+            $table->dropColumn('user_id');
+            $table->string('session_id')->nullable(false)->change();
         });
     }
 };
