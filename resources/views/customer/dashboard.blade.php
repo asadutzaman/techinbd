@@ -79,9 +79,9 @@
                                         {{ ucfirst($order->status) }}
                                     </span>
                                 </td>
-                                <td class="align-middle">${{ number_format($order->total_amount, 2) }}</td>
+                                <td class="align-middle">${{ number_format($order->total, 2) }}</td>
                                 <td class="align-middle">
-                                    <a href="{{ route('customer.orders.show', $order) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                    <a href="{{ route('customer.orders.show', $order->order_number) }}" class="btn btn-sm btn-outline-primary">View</a>
                                 </td>
                             </tr>
                             @endforeach

@@ -69,7 +69,7 @@
                                 @foreach($orders as $order)
                                 <tr>
                                     <td class="align-middle">
-                                        <a href="{{ route('customer.orders.show', $order) }}" class="text-primary">
+                                        <a href="{{ route('customer.orders.show', $order->order_number) }}" class="text-primary">
                                             #{{ $order->order_number }}
                                         </a>
                                     </td>
@@ -80,12 +80,12 @@
                                         </span>
                                     </td>
                                     <td class="align-middle">{{ $order->orderItems->count() }} item(s)</td>
-                                    <td class="align-middle">${{ number_format($order->total_amount, 2) }}</td>
+                                    <td class="align-middle">${{ number_format($order->total, 2) }}</td>
                                     <td class="align-middle">
                                         <div class="btn-group" role="group">
-                                            <a href="{{ route('customer.orders.show', $order) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                            <a href="{{ route('customer.orders.show', $order->order_number) }}" class="btn btn-sm btn-outline-primary">View</a>
                                             @if(in_array($order->status, ['delivered', 'completed']))
-                                                <a href="{{ route('customer.orders.reorder', $order) }}" class="btn btn-sm btn-outline-success">Reorder</a>
+                                                <a href="{{ route('customer.orders.reorder', $order->order_number) }}" class="btn btn-sm btn-outline-success">Reorder</a>
                                             @endif
                                         </div>
                                     </td>

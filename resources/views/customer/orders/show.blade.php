@@ -46,16 +46,9 @@
                     </div>
                     <div class="col-md-6">
                         <h6>Billing Address</h6>
-                        <p class="mb-1">{{ $order->billing_first_name }} {{ $order->billing_last_name }}</p>
-                        <p class="mb-1">{{ $order->billing_address_1 }}</p>
-                        @if($order->billing_address_2)
-                            <p class="mb-1">{{ $order->billing_address_2 }}</p>
-                        @endif
-                        <p class="mb-1">{{ $order->billing_city }}, {{ $order->billing_state }} {{ $order->billing_zip }}</p>
-                        <p class="mb-1">{{ $order->billing_country }}</p>
-                        @if($order->billing_phone)
-                            <p class="mb-0"><strong>Phone:</strong> {{ $order->billing_phone }}</p>
-                        @endif
+                        <p class="mb-1">{{ $order->customer_name }}</p>
+                        <p class="mb-1">{{ $order->billing_address }}</p>
+                        <p class="mb-0"><strong>Phone:</strong> {{ $order->customer_phone }}</p>
                     </div>
                 </div>
             </div>
@@ -87,18 +80,18 @@
                                         @endif
                                         <div class="ml-3">
                                             <h6 class="mb-0">{{ $item->product_name }}</h6>
-                                            @if($item->product_size || $item->product_color)
+                                            @if($item->size || $item->color)
                                                 <small class="text-muted">
-                                                    @if($item->product_size) Size: {{ $item->product_size }} @endif
-                                                    @if($item->product_color) Color: {{ $item->product_color }} @endif
+                                                    @if($item->size) Size: {{ $item->size }} @endif
+                                                    @if($item->color) Color: {{ $item->color }} @endif
                                                 </small>
                                             @endif
                                         </div>
                                     </div>
                                 </td>
-                                <td class="align-middle">${{ number_format($item->price, 2) }}</td>
+                                <td class="align-middle">${{ number_format($item->product_price, 2) }}</td>
                                 <td class="align-middle">{{ $item->quantity }}</td>
-                                <td class="align-middle">${{ number_format($item->price * $item->quantity, 2) }}</td>
+                                <td class="align-middle">${{ number_format($item->product_price * $item->quantity, 2) }}</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -113,22 +106,16 @@
                         <h6 class="mb-3">Order Summary</h6>
                         <div class="d-flex justify-content-between mb-2">
                             <span>Subtotal:</span>
-                            <span>${{ number_format($order->subtotal_amount, 2) }}</span>
+                            <span>${{ number_format($order->subtotal, 2) }}</span>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
                             <span>Shipping:</span>
-                            <span>${{ number_format($order->shipping_amount, 2) }}</span>
+                            <span>${{ number_format($order->shipping_cost, 2) }}</span>
                         </div>
-                        @if($order->tax_amount > 0)
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>Tax:</span>
-                            <span>${{ number_format($order->tax_amount, 2) }}</span>
-                        </div>
-                        @endif
                         <hr>
                         <div class="d-flex justify-content-between">
                             <strong>Total:</strong>
-                            <strong>${{ number_format($order->total_amount, 2) }}</strong>
+                            <strong>${{ number_format($order->total, 2) }}</strong>
                         </div>
                     </div>
                 </div>
@@ -137,9 +124,9 @@
             <!-- Actions -->
             <div class="text-center">
                 @if(in_array($order->status, ['delivered', 'completed']))
-                    <a href="{{ route('customer.orders.reorder', $order) }}" class="btn btn-primary mr-2">Reorder</a>
+                    <a href="{{ route('customer.orders.reorder', $order->order_number) }}" class="btn btn-primary mr-2">Reorder</a>
                 @endif
-                <a href="{{ route('customer.orders.download-invoice', $order) }}" class="btn btn-outline-primary mr-2">Download Invoice</a>
+                <a href="{{ route('customer.orders.download-invoice', $order->order_number) }}" class="btn btn-outline-primary mr-2">Download Invoice</a>
                 <a href="{{ route('customer.orders.index') }}" class="btn btn-secondary">Back to Orders</a>
             </div>
         </div>

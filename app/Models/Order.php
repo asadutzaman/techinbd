@@ -10,6 +10,7 @@ class Order extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'order_number',
         'customer_name',
         'customer_email',
@@ -29,6 +30,11 @@ class Order extends Model
         'shipping_cost' => 'decimal:2',
         'total'         => 'decimal:2',
     ];
+
+    public function getRouteKeyName(): string
+    {
+        return 'order_number';
+    }
 
     public function orderItems()
     {
