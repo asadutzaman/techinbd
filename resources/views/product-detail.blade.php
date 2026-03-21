@@ -469,21 +469,45 @@
     $('#add-to-cart-form').submit(function(e) {
         e.preventDefault();
         
-        // Here you can add AJAX call to add product to cart
         var formData = $(this).serialize();
+        var submitButton = $(this).find('button[type="submit"]');
+        var originalText = submitButton.html();
         
-        // For now, just show an alert
-        alert('Product added to cart! (This is a demo - implement actual cart functionality)');
+        // Disable button and show loading
+        submitButton.prop('disabled', true).html('<i class="fa fa-spinner fa-spin mr-1"></i> Adding...');
         
-        // You can implement actual cart functionality here
-        // $.ajax({
-        //     url: '{{ route("cart.add") }}',
-        //     method: 'POST',
-        //     data: formData,
-        //     success: function(response) {
-        //         // Handle success
-        //     }
-        // });
+        $.ajax({
+            url: '{{ route("cart.add") }}',
+            method: 'POST',
+            data: formData,
+            success: function(response) {
+                if (response.success) {
+                    // Show success message
+                    alert('Product added to cart successfully!');
+                    
+                    // Update cart count if you have a cart counter in your layout
+                    if (response.cart_count) {
+                        $('.cart-count').text(response.cart_count);
+                    }
+                } else {
+                    alert('Error: ' + (response.message || 'Failed to add product to cart'));
+                }
+            },
+            error: function(xhr) {
+                var errorMessage = 'Failed to add product to cart';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+                    errorMessage = Object.values(xhr.responseJSON.errors).flat().join(', ');
+                }
+                alert('Error: ' + errorMessage);
+                console.error('Cart add error:', xhr.responseJSON);
+            },
+            complete: function() {
+                // Re-enable button
+                submitButton.prop('disabled', false).html(originalText);
+            }
+        });
     });
 </script>
 @endpush

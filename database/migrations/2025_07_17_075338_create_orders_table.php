@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('customer_name');
             $table->string('customer_email');
             $table->string('customer_phone');
-            $table->text('billing_address');
+            $table->text('billing_address')->nullable();
             $table->text('shipping_address')->nullable();
             $table->decimal('subtotal', 10, 2);
             $table->decimal('shipping_cost', 10, 2)->default(0);

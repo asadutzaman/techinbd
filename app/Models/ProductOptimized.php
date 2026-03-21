@@ -158,6 +158,11 @@ class ProductOptimized extends Model
     }
 
     // Accessors
+    public function getPriceAttribute()
+    {
+        return $this->base_price;
+    }
+
     public function getFormattedPriceAttribute()
     {
         return number_format($this->base_price, 2);

@@ -6,13 +6,22 @@ use Illuminate\Http\Request;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
+use Illuminate\Support\Facades\Auth;
 
 class CheckoutController extends Controller
 {
+    private function getCartItems()
+    {
+        if (Auth::check()) {
+            return Cart::with('product')->where('user_id', Auth::id())->get();
+        }
+        $sessionId = session()->getId();
+        return Cart::with('product')->where('session_id', $sessionId)->whereNull('user_id')->get();
+    }
+
     public function index()
     {
-        $sessionId = session()->getId();
-        $cartItems = Cart::with('product')->where('session_id', $sessionId)->get();
+        $cartItems = $this->getCartItems();
         
         if ($cartItems->isEmpty()) {
             return redirect()->route('cart')->with('error', 'Your cart is empty!');
@@ -44,8 +53,7 @@ class CheckoutController extends Controller
             'payment_method' => 'required|in:paypal,directcheck,banktransfer'
         ]);
 
-        $sessionId = session()->getId();
-        $cartItems = Cart::with('product')->where('session_id', $sessionId)->get();
+        $cartItems = $this->getCartItems();
         
         if ($cartItems->isEmpty()) {
             return redirect()->route('cart')->with('error', 'Your cart is empty!');
@@ -58,25 +66,26 @@ class CheckoutController extends Controller
         $shipping = 10.00;
         $total = $subtotal + $shipping;
 
-        // Create billing address
-        $billingAddress = $request->address_line_1 . ', ' . 
-                         ($request->address_line_2 ? $request->address_line_2 . ', ' : '') .
-                         $request->city . ', ' . $request->state . ' ' . $request->zip_code . ', ' . $request->country;
-
         // Create order
         $order = Order::create([
-            'order_number' => Order::generateOrderNumber(),
-            'customer_name' => $request->first_name . ' ' . $request->last_name,
-            'customer_email' => $request->email,
-            'customer_phone' => $request->phone,
-            'billing_address' => $billingAddress,
-            'shipping_address' => $request->has('ship_to_different') ? $billingAddress : null,
-            'subtotal' => $subtotal,
-            'shipping_cost' => $shipping,
-            'total' => $total,
-            'payment_method' => $request->payment_method,
-            'status' => 'pending',
-            'payment_status' => 'pending'
+            'order_number'    => Order::generateOrderNumber(),
+            'customer_name'   => $request->first_name . ' ' . $request->last_name,
+            'customer_email'  => $request->email,
+            'customer_phone'  => $request->phone,
+            'billing_address' => implode(', ', array_filter([
+                $request->address_line_1,
+                $request->address_line_2,
+                $request->city,
+                $request->state . ' ' . $request->zip_code,
+                $request->country,
+            ])),
+            'shipping_address' => null,
+            'subtotal'        => $subtotal,
+            'shipping_cost'   => $shipping,
+            'total'           => $total,
+            'payment_method'  => $request->payment_method,
+            'status'          => 'pending',
+            'payment_status'  => 'pending',
         ]);
 
         // Create order items
@@ -94,7 +103,11 @@ class CheckoutController extends Controller
         }
 
         // Clear cart
-        Cart::where('session_id', $sessionId)->delete();
+        if (Auth::check()) {
+            Cart::where('user_id', Auth::id())->delete();
+        } else {
+            Cart::where('session_id', session()->getId())->whereNull('user_id')->delete();
+        }
 
         return redirect()->route('order.success', $order->id)->with('success', 'Order placed successfully!');
     }

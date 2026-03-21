@@ -40,14 +40,33 @@ class CartController extends Controller
 
     public function add(Request $request)
     {
-        $request->validate([
-            'product_id' => 'required|exists:products_optimized,id',
-            'quantity' => 'required|integer|min:1',
-            'size' => 'nullable|string',
-            'color' => 'nullable|string'
-        ]);
+        try {
+            $request->validate([
+                'product_id' => 'required|exists:products_optimized,id',
+                'quantity' => 'required|integer|min:1',
+                'size' => 'nullable|string',
+                'color' => 'nullable|string'
+            ]);
 
-        $product = ProductOptimized::findOrFail($request->product_id);
+            $product = ProductOptimized::findOrFail($request->product_id);
+            
+            // Ensure we have a valid price
+            $price = $product->base_price;
+            if (is_null($price) || $price <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Product price is not available'
+                ], 400);
+            }
+            
+            // Debug: Log the product details
+            \Log::info('Adding to cart - Product details:', [
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+                'base_price' => $product->base_price,
+                'price_to_use' => $price,
+                'attributes' => $product->getAttributes()
+            ]);
         
         // Determine cart identification
         $cartQuery = Cart::where('product_id', $request->product_id)
@@ -60,7 +79,7 @@ class CartController extends Controller
                 'user_id' => Auth::id(),
                 'product_id' => $request->product_id,
                 'quantity' => $request->quantity,
-                'price' => $product->price,
+                'price' => $price,
                 'size' => $request->size,
                 'color' => $request->color
             ];
@@ -71,7 +90,7 @@ class CartController extends Controller
                 'session_id' => $sessionId,
                 'product_id' => $request->product_id,
                 'quantity' => $request->quantity,
-                'price' => $product->price,
+                'price' => $price,
                 'size' => $request->size,
                 'color' => $request->color
             ];
@@ -83,6 +102,8 @@ class CartController extends Controller
             $existingItem->quantity += $request->quantity;
             $existingItem->save();
         } else {
+            // Debug: Log the cart data before creating
+            \Log::info('Creating cart item with data:', $cartData);
             Cart::create($cartData);
         }
 
@@ -91,6 +112,19 @@ class CartController extends Controller
             'message' => 'Product added to cart successfully!',
             'cart_count' => $this->getCartCount()
         ]);
+        
+        } catch (\Exception $e) {
+            \Log::error('Error adding to cart:', [
+                'error' => $e->getMessage(),
+                'product_id' => $request->product_id ?? 'unknown',
+                'user_id' => Auth::id() ?? 'guest'
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to add product to cart: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function update(Request $request, $id)

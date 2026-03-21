@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('sku', 100)->unique()->nullable();
             $table->char('uuid', 36)->unique()->nullable();
             $table->string('name', 255);
-            $table->string('slug', 255)->unique();
+            $table->string('slug', 255)->unique()->nullable();
             $table->unsignedBigInteger('brand_id')->nullable();
             $table->unsignedBigInteger('category_id')->nullable();
             $table->string('short_description', 512)->nullable();
