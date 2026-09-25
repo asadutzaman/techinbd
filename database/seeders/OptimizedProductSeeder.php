@@ -47,12 +47,13 @@ class OptimizedProductSeeder extends Seeder
         $laptops = Category::where('slug', 'laptops')->first();
         $headphones = Category::where('slug', 'headphones')->first();
 
-        // Create sample attributes for smartphones
+        // Create sample attributes for smartphones. Slugs are unique across categories, so
+        // reuse the global ones AttributeSeeder may already have created.
         if ($smartphones) {
             $screenSizeAttr = AttributeOptimized::firstOrCreate([
-                'category_id' => $smartphones->id,
                 'slug' => 'screen-size'
             ], [
+                'category_id' => $smartphones->id,
                 'name' => 'Screen Size',
                 'type' => 'select',
                 'unit' => 'inches',
@@ -61,9 +62,9 @@ class OptimizedProductSeeder extends Seeder
             ]);
 
             $storageAttr = AttributeOptimized::firstOrCreate([
-                'category_id' => $smartphones->id,
                 'slug' => 'storage'
             ], [
+                'category_id' => $smartphones->id,
                 'name' => 'Storage',
                 'type' => 'select',
                 'unit' => 'GB',

@@ -27,7 +27,7 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             BrandSeeder::class,
             AttributeSeeder::class,
-            ProductSeeder::class,
+            OptimizedProductSeeder::class,
         ]);
     }
 }
