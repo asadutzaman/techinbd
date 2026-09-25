@@ -24,10 +24,12 @@
     <link href="{{ asset('lib/owlcarousel/assets/owl.carousel.min.css') }}" rel="stylesheet">
 
     <!-- Customized Bootstrap Stylesheet -->
-    <link href="{{ asset('css/style.css') }}" rel="stylesheet">
-    
+    <link href="{{ asset('css/style.min.css') }}" rel="stylesheet">
+
     <!-- Toastr CSS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.css">
+
+    @stack('styles')
 </head>
 
 <body>
@@ -598,15 +600,11 @@
     <script src="{{ asset('lib/easing/easing.min.js') }}"></script>
     <script src="{{ asset('lib/owlcarousel/owl.carousel.min.js') }}"></script>
 
-    <!-- Contact Javascript File -->
-    <script src="{{ asset('mail/jqBootstrapValidation.min.js') }}"></script>
-    <script src="{{ asset('mail/contact.js') }}"></script>
-
     <!-- Template Javascript -->
     <script src="{{ asset('js/main.js') }}"></script>
-    
+
     <!-- Toastr JS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js"></script>
     
     <script>
     $(document).ready(function() {

@@ -1,9 +1,14 @@
 <?php
 
+use App\Models\ProductImageOptimized;
 use App\Models\ProductOptimized;
 use App\Models\User;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
+
+// Needs the scheduler cron in production: * * * * * php artisan schedule:run
+Schedule::command('model:prune')->daily();
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -35,3 +40,15 @@ Artisan::command('products:reindex', function () {
 
     $this->info("Rebuilt the search index for {$count} products.");
 })->purpose('Rebuild product_search_index (run after importing or seeding products)');
+
+Artisan::command('products:thumbnails', function () {
+    $count = 0;
+    ProductImageOptimized::whereNull('thumb_url')->chunkById(100, function ($images) use (&$count) {
+        foreach ($images as $image) {
+            $image->generateThumbnail();
+            $count += $image->thumb_url ? 1 : 0;
+        }
+    });
+
+    $this->info("Generated {$count} thumbnails.");
+})->purpose('Generate card thumbnails for product images uploaded before thumbnails existed');

@@ -170,12 +170,17 @@ class ProductOptimized extends Model
     }
 
     /**
+     * Card-sized image URL (the WebP thumbnail when one exists).
      * Reads the mainImage relation: eager load it (with('mainImage')) when listing products.
      */
     public function getMainImageUrlAttribute()
     {
         $mainImage = $this->mainImage->first();
         if ($mainImage) {
+            // Thumbnails are written at upload time and deleted with the original
+            if ($mainImage->thumb_url) {
+                return $mainImage->card_url;
+            }
             // Remote URLs are used as-is; local files fall back to a placeholder if missing
             if (str_starts_with($mainImage->url, 'http') || file_exists(storage_path('app/public/' . $mainImage->url))) {
                 return $mainImage->full_url;
@@ -220,9 +225,9 @@ class ProductOptimized extends Model
                 'category_names' => $this->category?->name,
                 'attribute_values' => $this->productAttributes->pluck('value')->implode(' '),
                 'price' => $this->base_price,
-                'status' => $this->status,
-                'stock_status' => $this->stock_status,
-                'total_stock' => $this->total_stock,
+                'status' => $this->status ?? 1,
+                'stock_status' => $this->stock_status ?? 'in_stock',
+                'total_stock' => $this->total_stock ?? 0,
             ]
         );
     }

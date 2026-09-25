@@ -3,11 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 
 class Cart extends Model
 {
-    use HasFactory;
+    use HasFactory, MassPrunable;
 
     protected $fillable = [
         'user_id',
@@ -36,5 +37,14 @@ class Cart extends Model
     public function getTotalAttribute()
     {
         return $this->quantity * $this->price;
+    }
+
+    /**
+     * Guest carts are keyed by session id, so they're orphaned once the session expires.
+     * Removed daily by `php artisan model:prune` (see routes/console.php).
+     */
+    public function prunable()
+    {
+        return static::whereNull('user_id')->where('updated_at', '<=', now()->subDays(30));
     }
 }

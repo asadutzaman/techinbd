@@ -90,8 +90,8 @@
                         <div class="row mt-3">
                             @foreach($product->images as $index => $image)
                                 <div class="col-3">
-                                    <img class="w-100 thumbnail-image {{ $index === 0 ? 'active' : '' }}" 
-                                         src="{{ asset('storage/' . $image->url) }}" 
+                                    <img class="w-100 thumbnail-image {{ $index === 0 ? 'active' : '' }}"
+                                         src="{{ $image->card_url }}" loading="lazy"
                                          alt="{{ $image->alt_text ?: $product->name }}"
                                          onclick="changeMainImage({{ $index }})">
                                 </div>
@@ -373,7 +373,7 @@
                     @foreach($relatedProducts as $relatedProduct)
                     <div class="product-item bg-light">
                         <div class="product-img position-relative overflow-hidden">
-                            <img class="img-fluid w-100" src="{{ $relatedProduct->main_image_url }}" alt="{{ $relatedProduct->name }}" style="height: 250px; object-fit: cover;">
+                            <img class="img-fluid w-100" src="{{ $relatedProduct->main_image_url }}" alt="{{ $relatedProduct->name }}" width="400" height="250" loading="lazy" decoding="async" style="height: 250px; object-fit: cover;">
                             <div class="product-action">
                                 <a class="btn btn-outline-dark btn-square" href=""><i class="fa fa-shopping-cart"></i></a>
                                 <a class="btn btn-outline-dark btn-square" href=""><i class="far fa-heart"></i></a>

@@ -13,7 +13,6 @@ use App\Models\AttributeOptimized;
 use App\Models\AttributeValueOptimized;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ProductOptimizedController extends Controller
@@ -122,6 +121,10 @@ class ProductOptimizedController extends Controller
                 'weight', 'dimensions', 'warranty', 'manufacturer_part_no',
                 'ean_upc', 'meta_title', 'meta_description', 'meta_keywords', 'status', 'featured'
             ]);
+            // An emptied stock field arrives as null, but the column is NOT NULL
+            if (array_key_exists('total_stock', $productData)) {
+                $productData['total_stock'] = (int) $productData['total_stock'];
+            }
 
             $product = ProductOptimized::create($productData);
 
@@ -239,6 +242,10 @@ class ProductOptimizedController extends Controller
                 'weight', 'dimensions', 'warranty', 'manufacturer_part_no',
                 'ean_upc', 'meta_title', 'meta_description', 'meta_keywords', 'status', 'featured'
             ]);
+            // An emptied stock field arrives as null, but the column is NOT NULL
+            if (array_key_exists('total_stock', $productData)) {
+                $productData['total_stock'] = (int) $productData['total_stock'];
+            }
 
             $product->update($productData);
 
@@ -275,11 +282,9 @@ class ProductOptimizedController extends Controller
         DB::beginTransaction();
 
         try {
-            // Delete associated images from storage
+            // Delete associated images (originals and thumbnails) from storage
             foreach ($product->images as $image) {
-                if (Storage::disk('public')->exists($image->url)) {
-                    Storage::disk('public')->delete($image->url);
-                }
+                $image->deleteFiles();
             }
 
             $product->delete();
@@ -339,14 +344,17 @@ class ProductOptimizedController extends Controller
         
         foreach ($images as $index => $image) {
             $path = $image->store('products', 'public');
-            
-            ProductImageOptimized::create([
+
+            $productImage = ProductImageOptimized::create([
                 'product_id' => $product->id,
                 'url' => $path,
                 'alt_text' => $product->name,
                 'sort_order' => $maxSortOrder + $index + 1,
                 'is_main' => !$hasMainImage && $index === 0 // Only set first image as main if no main image exists
             ]);
+
+            // Small WebP copy for product cards (uploads can be up to 2 MB)
+            $productImage->generateThumbnail();
         }
     }
 
@@ -410,11 +418,9 @@ class ProductOptimizedController extends Controller
             }
         }
         
-        // Delete from storage
-        if (Storage::disk('public')->exists($image->url)) {
-            Storage::disk('public')->delete($image->url);
-        }
-        
+        // Delete original and thumbnail from storage
+        $image->deleteFiles();
+
         $image->delete();
         
         return response()->json(['success' => true]);

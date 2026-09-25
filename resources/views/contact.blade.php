@@ -60,3 +60,9 @@
     </div>
     <!-- Contact End -->
 @endsection
+
+@push('scripts')
+    <!-- Contact form validation (only needed on this page) -->
+    <script src="{{ asset('mail/jqBootstrapValidation.min.js') }}"></script>
+    <script src="{{ asset('mail/contact.js') }}"></script>
+@endpush

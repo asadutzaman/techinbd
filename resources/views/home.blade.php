@@ -147,7 +147,7 @@
             <div class="col-lg-3 col-md-4 col-sm-6 pb-1">
                 <div class="product-item bg-light mb-4">
                     <div class="product-img position-relative overflow-hidden">
-                        <img class="img-fluid w-100" src="{{ $product->main_image_url }}" alt="{{ $product->name }}" style="height: 250px; object-fit: cover;">
+                        <img class="img-fluid w-100" src="{{ $product->main_image_url }}" alt="{{ $product->name }}" width="400" height="250" loading="lazy" decoding="async" style="height: 250px; object-fit: cover;">
                         <div class="product-action">
                             <button class="btn btn-outline-dark btn-square add-to-cart-btn" 
                                     data-product-id="{{ $product->id }}" 
