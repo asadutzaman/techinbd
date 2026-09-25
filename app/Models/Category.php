@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BustsCatalogCache;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Category extends Model
 {
-    use HasFactory;
+    use HasFactory, BustsCatalogCache;
 
     protected $fillable = [
         'name',
@@ -27,6 +28,17 @@ class Category extends Model
     public function products()
     {
         return $this->hasMany(ProductOptimized::class);
+    }
+
+    /**
+     * Active categories with `products_count` of their active products (menu, shop sidebar, home).
+     */
+    public static function activeWithProductCounts()
+    {
+        return static::where('status', true)
+            ->withCount(['products' => fn ($query) => $query->where('status', 1)])
+            ->orderBy('name')
+            ->get();
     }
 
     /**

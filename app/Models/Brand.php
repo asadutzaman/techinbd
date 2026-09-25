@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BustsCatalogCache;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 class Brand extends Model
 {
-    use HasFactory;
+    use HasFactory, BustsCatalogCache;
 
     protected $fillable = [
         'name',

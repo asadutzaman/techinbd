@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BustsCatalogCache;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +12,7 @@ use Illuminate\Support\Str;
 
 class ProductOptimized extends Model
 {
-    use HasFactory;
+    use HasFactory, BustsCatalogCache;
 
     protected $table = 'products_optimized';
 
@@ -196,6 +197,9 @@ class ProductOptimized extends Model
     // Helper methods
     public function updateSearchIndex()
     {
+        // Fresh load: callers usually change brand/category/attributes just before indexing
+        $this->load(['brand', 'category', 'productAttributes']);
+
         // Update the denormalized search index
         $searchableContent = collect([
             $this->name,
@@ -213,7 +217,7 @@ class ProductOptimized extends Model
                 'sku' => $this->sku,
                 'name' => $this->name,
                 'brand_name' => $this->brand?->name,
-                'category_names' => $this->categories->pluck('name')->implode(', '),
+                'category_names' => $this->category?->name,
                 'attribute_values' => $this->productAttributes->pluck('value')->implode(' '),
                 'price' => $this->base_price,
                 'status' => $this->status,

@@ -2,60 +2,60 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use App\Models\ProductOptimized;
 use App\Models\Category;
 use App\Models\Brand;
 use App\Models\AttributeOptimized;
 use App\Models\ProductAttributeOptimized;
+use App\Models\ProductSearchIndex;
+use App\Support\CatalogCache;
 
 class ShopController extends Controller
 {
+    /**
+     * InnoDB's default FULLTEXT stopwords: required (+word) stopwords would match nothing.
+     */
+    private const FULLTEXT_STOPWORDS = ['about', 'are', 'com', 'for', 'from', 'how', 'that', 'the', 'this', 'was', 'what', 'when', 'where', 'who', 'will', 'with', 'und', 'www'];
+
+    public function __construct(private CatalogCache $catalogCache)
+    {
+    }
+
     public function index(Request $request)
     {
         $perPage = $request->get('per_page', 9); // Default to 9 products per page
-        
+
         // Validate per_page parameter
         if (!in_array($perPage, [9, 15, 21])) {
             $perPage = 9;
         }
-        
-        $query = ProductOptimized::with(['category', 'brand', 'productAttributes.attribute', 'mainImage'])->active();
+
+        // Only what the product cards render
+        $query = ProductOptimized::with('mainImage')
+            ->withMax('variants', 'compare_price')
+            ->active();
         $searchTerm = null;
         $isSearching = false;
-        
+
         // Handle search functionality
         if ($request->has('search') && !empty($request->search)) {
             $searchTerm = trim($request->search);
             $isSearching = true;
-            
-            // Enhanced search with relevance scoring
-            $query->where(function($q) use ($searchTerm) {
-                // Exact name match gets highest priority
-                $q->where('name', 'LIKE', '%' . $searchTerm . '%')
-                  // Description match
-                  ->orWhere('description', 'LIKE', '%' . $searchTerm . '%')
-                  // Category match
-                  ->orWhereHas('category', function ($query) use ($searchTerm) {
-                      $query->where('name', 'LIKE', '%' . $searchTerm . '%');
-                  })
-                  // Brand match
-                  ->orWhereHas('brand', function ($query) use ($searchTerm) {
-                      $query->where('name', 'LIKE', '%' . $searchTerm . '%');
-                  });
-            });
+            $this->applySearch($query, $searchTerm);
         }
-        
+
         // Handle category filter
         if ($request->has('category') && !empty($request->category)) {
             $query->where('category_id', $request->category);
         }
-        
+
         // Handle brand filter
         if ($request->has('brand') && !empty($request->brand)) {
             $query->where('brand_id', $request->brand);
         }
-        
+
         // Handle product attributes filters
         $attributeFilters = $request->get('attributes', []);
         if (!empty($attributeFilters)) {
@@ -72,26 +72,26 @@ class ShopController extends Controller
                 }
             }
         }
-        
+
         // Handle price range filter
         if ($request->has('min_price') && !empty($request->min_price)) {
             $query->where('base_price', '>=', $request->min_price);
         }
-        
+
         if ($request->has('max_price') && !empty($request->max_price)) {
             $query->where('base_price', '<=', $request->max_price);
         }
-        
+
         // Handle featured filter
         if ($request->has('featured') && $request->featured == '1') {
             $query->featured();
         }
-        
+
         // Handle stock filter
         if ($request->has('in_stock') && $request->in_stock == '1') {
             $query->inStock();
         }
-        
+
         // Handle sorting (only if not searching, as search has its own relevance ordering)
         if (!$isSearching) {
             $sortBy = $request->get('sort', 'latest');
@@ -111,111 +111,140 @@ class ShopController extends Controller
                     break;
             }
         }
-        
+
         $products = $query->paginate($perPage);
-        
+
         // Append query parameters to pagination links
         $products->appends($request->query());
-        
+
         // Get search suggestions if searching
-        $suggestions = [];
+        $suggestions = collect();
         if ($isSearching && $products->count() < 5) {
             $suggestions = $this->getSearchSuggestions($searchTerm);
         }
-        
-        // Get filter data
-        $categories = Category::where('status', 1)->orderBy('name')->get();
-        $brands = Brand::where('status', 1)->orderBy('name')->get();
-        
+
+        // Sidebar data doesn't depend on the current filters, so it's cached with the catalog
+        $categories = $this->catalogCache->remember('active-categories', 600, fn () => Category::activeWithProductCounts());
+        $brands = $this->catalogCache->remember('active-brands', 600, fn () => Brand::where('status', 1)
+            ->withCount(['products' => fn ($q) => $q->where('status', 1)])
+            ->orderBy('name')
+            ->get());
+        $totalActiveProducts = $this->catalogCache->remember('active-product-count', 600, fn () => ProductOptimized::active()->count());
+
         // Get filterable attributes with their values
-        $filterableAttributes = $this->getFilterableAttributes($request);
-        
+        $filterableAttributes = $this->getFilterableAttributes($request->get('category'));
+
         return view('shop', compact(
-            'products', 
-            'searchTerm', 
-            'isSearching', 
-            'suggestions', 
-            'categories', 
+            'products',
+            'searchTerm',
+            'isSearching',
+            'suggestions',
+            'categories',
             'brands',
+            'totalActiveProducts',
             'filterableAttributes'
         ));
     }
-    
+
+    /**
+     * Match products against the search term. On MySQL this uses the FULLTEXT index on
+     * product_search_index (kept up to date by ProductOptimized::updateSearchIndex());
+     * other drivers, and terms with no indexable words, fall back to LIKE.
+     */
+    private function applySearch(Builder $query, string $searchTerm): void
+    {
+        if ($query->getConnection()->getDriverName() === 'mysql') {
+            $words = preg_split('/\s+/', preg_replace('/[^\p{L}\p{N}]+/u', ' ', mb_strtolower($searchTerm)), -1, PREG_SPLIT_NO_EMPTY);
+            // InnoDB doesn't index words shorter than 3 characters or stopwords
+            $words = array_filter($words, fn ($word) => mb_strlen($word) >= 3 && !in_array($word, self::FULLTEXT_STOPWORDS));
+
+            if ($words) {
+                $booleanQuery = implode(' ', array_map(fn ($word) => '+' . $word . '*', $words));
+                $query->whereIn('id', ProductSearchIndex::select('product_id')->whereFullText(
+                    ['searchable_content', 'name', 'brand_name', 'attribute_values'],
+                    $booleanQuery,
+                    ['mode' => 'boolean']
+                ));
+
+                return;
+            }
+        }
+
+        $query->where(function ($q) use ($searchTerm) {
+            $q->where('name', 'LIKE', '%' . $searchTerm . '%')
+              ->orWhere('description', 'LIKE', '%' . $searchTerm . '%')
+              ->orWhereHas('category', fn ($category) => $category->where('name', 'LIKE', '%' . $searchTerm . '%'))
+              ->orWhereHas('brand', fn ($brand) => $brand->where('name', 'LIKE', '%' . $searchTerm . '%'));
+        });
+    }
+
     /**
      * Get search suggestions based on search term
      */
     private function getSearchSuggestions($searchTerm)
     {
-        // Get similar product names
-        $suggestions = ProductOptimized::active()
-            ->where(function($q) use ($searchTerm) {
-                $q->where('name', 'LIKE', '%' . $searchTerm . '%')
-                  ->orWhereHas('category', function ($query) use ($searchTerm) {
-                      $query->where('name', 'LIKE', '%' . $searchTerm . '%');
-                  });
-            })
-            ->select('name')
-            ->limit(5)
-            ->get()
-            ->map(function($product) {
-                return [
-                    'name' => $product->name
-                ];
-            })
+        $query = ProductOptimized::active()->select('name')->limit(5);
+        $this->applySearch($query, $searchTerm);
+
+        return $query->get()
+            ->map(fn ($product) => ['name' => $product->name])
             ->unique('name')
             ->take(3);
-            
-        return $suggestions;
     }
-    
+
     /**
-     * Get filterable attributes with their available values
+     * Get filterable attributes with the values actually used by active products
      */
-    private function getFilterableAttributes(Request $request)
+    private function getFilterableAttributes($selectedCategory)
     {
-        $selectedCategory = $request->get('category');
-        
-        // Get attributes that are filterable
-        $attributesQuery = AttributeOptimized::active()
-            ->filterable()
-            ->with(['activeValues']);
-        
-        // If category is selected, get attributes for that category
-        if ($selectedCategory) {
-            $attributesQuery->forCategory($selectedCategory);
-        }
-        
-        $attributes = $attributesQuery->orderBy('sort_order')->get();
-        
-        // For each attribute, get the actual values used in products
-        $filterableAttributes = [];
-        foreach ($attributes as $attribute) {
-            $usedValues = ProductAttributeOptimized::where('attribute_id', $attribute->id)
-                ->whereHas('product', function($q) use ($request, $selectedCategory) {
+        $selectedCategory = (int) $selectedCategory ?: null;
+
+        return $this->catalogCache->remember('shop-filters:' . ($selectedCategory ?? 'all'), 600, function () use ($selectedCategory) {
+            $attributesQuery = AttributeOptimized::active()->filterable();
+
+            // If category is selected, get attributes for that category
+            if ($selectedCategory) {
+                $attributesQuery->forCategory($selectedCategory);
+            }
+
+            $attributes = $attributesQuery->orderBy('sort_order')->get();
+            if ($attributes->isEmpty()) {
+                return [];
+            }
+
+            // One query for the used values of every attribute
+            $usedValues = ProductAttributeOptimized::whereIn('attribute_id', $attributes->pluck('id'))
+                ->whereHas('product', function ($q) use ($selectedCategory) {
                     $q->active();
                     if ($selectedCategory) {
                         $q->where('category_id', $selectedCategory);
                     }
                 })
-                ->select('value')
                 ->distinct()
-                ->pluck('value')
-                ->filter()
-                ->sort()
-                ->values();
-            
-            if ($usedValues->count() > 0) {
-                $filterableAttributes[] = [
-                    'id' => $attribute->id,
-                    'name' => $attribute->name,
-                    'slug' => $attribute->slug,
-                    'type' => $attribute->type,
-                    'values' => $usedValues
-                ];
+                ->get(['attribute_id', 'value'])
+                ->groupBy('attribute_id');
+
+            $filterableAttributes = [];
+            foreach ($attributes as $attribute) {
+                $values = collect($usedValues->get($attribute->id))
+                    ->pluck('value')
+                    ->filter()
+                    ->sort()
+                    ->values();
+
+                if ($values->isNotEmpty()) {
+                    $filterableAttributes[] = [
+                        'id' => $attribute->id,
+                        'name' => $attribute->name,
+                        'slug' => $attribute->slug,
+                        'type' => $attribute->type,
+                        'values' => $values
+                    ];
+                }
             }
-        }
-        
-        return $filterableAttributes;
+
+            return $filterableAttributes;
+        });
     }
 
     /**
@@ -223,33 +252,25 @@ class ShopController extends Controller
      */
     public function searchSuggestions(Request $request)
     {
-        $searchTerm = $request->get('q', '');
-        
+        $searchTerm = trim((string) $request->get('q', ''));
+
         if (strlen($searchTerm) < 2) {
             return response()->json([]);
         }
-        
-        $suggestions = ProductOptimized::active()
-            ->where(function($q) use ($searchTerm) {
-                $q->where('name', 'LIKE', '%' . $searchTerm . '%')
-                  ->orWhereHas('category', function ($query) use ($searchTerm) {
-                      $query->where('name', 'LIKE', '%' . $searchTerm . '%');
-                  })
-                  ->orWhereHas('brand', function ($query) use ($searchTerm) {
-                      $query->where('name', 'LIKE', '%' . $searchTerm . '%');
-                  });
-            })
-            ->select('name', 'id')
-            ->limit(8)
-            ->get()
-            ->map(function($product) {
-                return [
-                    'id' => $product->id,
-                    'name' => $product->name,
-                    'url' => route('product.detail', $product->id)
-                ];
-            });
-            
+
+        $query = ProductOptimized::active()
+            ->with('category:id,name')
+            ->select('id', 'name', 'category_id')
+            ->limit(8);
+        $this->applySearch($query, $searchTerm);
+
+        $suggestions = $query->get()->map(fn ($product) => [
+            'id' => $product->id,
+            'name' => $product->name,
+            'category' => $product->category?->name,
+            'url' => route('product.detail', $product->id)
+        ]);
+
         return response()->json($suggestions);
     }
 
@@ -259,15 +280,11 @@ class ShopController extends Controller
     public function getAttributesByCategory(Request $request)
     {
         $categoryId = $request->get('category_id');
-        
+
         if (!$categoryId) {
             return response()->json([]);
         }
-        
-        // Create a mock request with the category to reuse the existing method
-        $mockRequest = new Request(['category' => $categoryId]);
-        $attributes = $this->getFilterableAttributes($mockRequest);
-        
-        return response()->json($attributes);
+
+        return response()->json($this->getFilterableAttributes($categoryId));
     }
 }

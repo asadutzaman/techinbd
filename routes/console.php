@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\ProductOptimized;
 use App\Models\User;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -22,3 +23,15 @@ Artisan::command('admin:grant {email} {--revoke : Remove admin access instead}',
 
     $this->info($user->is_admin ? "{$email} is now an admin." : "{$email} is no longer an admin.");
 })->purpose('Grant (or --revoke) admin panel access for a user');
+
+Artisan::command('products:reindex', function () {
+    $count = 0;
+    ProductOptimized::query()->chunkById(200, function ($products) use (&$count) {
+        foreach ($products as $product) {
+            $product->updateSearchIndex();
+            $count++;
+        }
+    });
+
+    $this->info("Rebuilt the search index for {$count} products.");
+})->purpose('Rebuild product_search_index (run after importing or seeding products)');

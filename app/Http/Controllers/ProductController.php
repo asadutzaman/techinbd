@@ -23,7 +23,8 @@ class ProductController extends Controller
         ])->where('status', 1)->findOrFail($id);
 
         // Get related products from the same category
-        $relatedProducts = ProductOptimized::with(['brand', 'mainImage'])
+        $relatedProducts = ProductOptimized::with('mainImage')
+            ->withMax('variants', 'compare_price')
             ->where('category_id', $product->category_id)
             ->where('id', '!=', $product->id)
             ->where('status', 1)

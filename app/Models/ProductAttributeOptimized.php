@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BustsCatalogCache;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProductAttributeOptimized extends Model
 {
-    use HasFactory;
+    use HasFactory, BustsCatalogCache;
 
     protected $table = 'product_attributes_optimized';
 
@@ -35,10 +36,8 @@ class ProductAttributeOptimized extends Model
             }
         });
 
-        static::saved(function ($productAttribute) {
-            // Update product search index when attributes change
-            $productAttribute->product->updateSearchIndex();
-        });
+        // The search index is rebuilt once per product by whoever writes the attributes
+        // (ProductOptimizedController, seeders) via ProductOptimized::updateSearchIndex().
     }
 
     // Relationships

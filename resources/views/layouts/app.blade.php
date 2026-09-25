@@ -138,7 +138,7 @@
                 <nav class="collapse position-absolute navbar navbar-vertical navbar-light align-items-start p-0 bg-light" id="navbar-vertical" style="width: calc(100% - 30px); z-index: 999;">
                     <div class="navbar-nav w-100">
                         @forelse($menuCategories ?? [] as $category)
-                            <a href="{{ route('shop', ['category' => strtolower($category->name)]) }}" class="nav-item nav-link">
+                            <a href="{{ route('shop', ['category' => $category->id]) }}" class="nav-item nav-link">
                                 {{ $category->name }}
                                 @if($category->products_count > 0)
                                     <small class="text-muted">({{ $category->products_count }})</small>
@@ -190,7 +190,7 @@
                             @auth
                                 <a href="{{ route('customer.wishlist.index') }}" class="btn px-0">
                                     <i class="fas fa-heart text-primary"></i>
-                                    <span class="badge text-secondary border border-secondary rounded-circle wishlist-count" style="padding-bottom: 2px;">{{ Auth::user()->wishlistItems()->count() }}</span>
+                                    <span class="badge text-secondary border border-secondary rounded-circle wishlist-count" style="padding-bottom: 2px;">{{ $wishlistCount }}</span>
                                 </a>
                             @else
                                 <a href="{{ route('login') }}" class="btn px-0" title="Login to view wishlist">
@@ -200,7 +200,7 @@
                             @endauth
                             <a href="{{ route('cart') }}" class="btn px-0 ml-3">
                                 <i class="fas fa-shopping-cart text-primary"></i>
-                                <span class="badge text-secondary border border-secondary rounded-circle cart-count" style="padding-bottom: 2px;">0</span>
+                                <span class="badge text-secondary border border-secondary rounded-circle cart-count" style="padding-bottom: 2px;">{{ $cartCount }}</span>
                             </a>
                         </div>
                     </div>
@@ -897,18 +897,12 @@
             }
         });
 
-        // Update cart count on page load
-        updateCartCount();
-
-        function updateCartCount() {
-            $.get('{{ route("cart.count") }}', function(data) {
-                $('.cart-count').text(data.count);
-            }).fail(function() {
-                // If cart count route doesn't exist, set to 0
-                $('.cart-count').text('0');
-            });
-        }
     });
+
+    // The cart badge is rendered server-side; cart endpoints return cart_count to keep it current
+    window.setCartCount = function(count) {
+        $('.cart-count').text(count);
+    };
     </script>
     
     @stack('scripts')

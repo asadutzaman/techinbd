@@ -238,15 +238,14 @@ $(document).ready(function() {
             data: {
                 _token: '{{ csrf_token() }}',
                 product_id: productId,
-                quantity: 1,
-                price: productPrice
+                quantity: 1
             },
             success: function(response) {
                 // Show success message
                 toastr.success('Product added to cart successfully!');
-                
+
                 // Update cart count in navbar
-                updateCartCount();
+                setCartCount(response.cart_count);
                 
                 // Re-enable button
                 button.prop('disabled', false);
@@ -284,13 +283,6 @@ $(document).ready(function() {
             toastr.error('Compare functionality not available');
         }
     });
-    
-    // Function to update cart count
-    function updateCartCount() {
-        $.get('{{ route("cart.count") }}', function(data) {
-            $('.cart-count').text(data.count);
-        });
-    }
 });
 </script>
 @endpush

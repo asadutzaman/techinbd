@@ -373,13 +373,7 @@
                     @foreach($relatedProducts as $relatedProduct)
                     <div class="product-item bg-light">
                         <div class="product-img position-relative overflow-hidden">
-                            @if($relatedProduct->mainImage->first())
-                                <img class="img-fluid w-100" src="{{ asset('storage/' . $relatedProduct->mainImage->first()->url) }}" alt="{{ $relatedProduct->name }}" style="height: 250px; object-fit: cover;">
-                            @else
-                                <div class="img-fluid w-100 d-flex align-items-center justify-content-center bg-light" style="height: 250px;">
-                                    <i class="fa fa-image fa-3x text-muted"></i>
-                                </div>
-                            @endif
+                            <img class="img-fluid w-100" src="{{ $relatedProduct->main_image_url }}" alt="{{ $relatedProduct->name }}" style="height: 250px; object-fit: cover;">
                             <div class="product-action">
                                 <a class="btn btn-outline-dark btn-square" href=""><i class="fa fa-shopping-cart"></i></a>
                                 <a class="btn btn-outline-dark btn-square" href=""><i class="far fa-heart"></i></a>
@@ -391,8 +385,8 @@
                             <a class="h6 text-decoration-none text-truncate" href="{{ route('product.detail', $relatedProduct->id) }}">{{ $relatedProduct->name }}</a>
                             <div class="d-flex align-items-center justify-content-center mt-2">
                                 <h5>{{ $relatedProduct->currency }} {{ number_format($relatedProduct->base_price, 2) }}</h5>
-                                @if($relatedProduct->variants->where('compare_price', '>', 0)->count() > 0)
-                                    <h6 class="text-muted ml-2"><del>{{ $relatedProduct->currency }} {{ number_format($relatedProduct->variants->where('compare_price', '>', 0)->first()->compare_price, 2) }}</del></h6>
+                                @if($relatedProduct->variants_max_compare_price > 0)
+                                    <h6 class="text-muted ml-2"><del>{{ $relatedProduct->currency }} {{ number_format($relatedProduct->variants_max_compare_price, 2) }}</del></h6>
                                 @endif
                             </div>
                             <div class="d-flex align-items-center justify-content-center mb-1">
@@ -478,7 +472,7 @@
             data: $(this).serialize(),
             success: function(response) {
                 toastr.success(response.message);
-                $('.cart-count').text(response.cart_count);
+                setCartCount(response.cart_count);
             },
             error: function(xhr) {
                 toastr.error(xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Failed to add product to cart. Please try again.');

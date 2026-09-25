@@ -77,14 +77,14 @@
                             <input type="radio" class="custom-control-input" name="category" value="" id="category-all" 
                                    {{ !request('category') ? 'checked' : '' }}>
                             <label class="custom-control-label" for="category-all">All Categories</label>
-                            <span class="badge badge-secondary badge-pill">{{ \App\Models\Product::where('status', 1)->count() }}</span>
+                            <span class="badge badge-secondary badge-pill">{{ $totalActiveProducts }}</span>
                         </div>
                         @foreach($categories as $category)
                         <div class="custom-control custom-radio d-flex align-items-center justify-content-between mb-3">
                             <input type="radio" class="custom-control-input" name="category" value="{{ $category->id }}" 
                                    id="category-{{ $category->id }}" {{ request('category') == $category->id ? 'checked' : '' }}>
                             <label class="custom-control-label" for="category-{{ $category->id }}">{{ $category->name }}</label>
-                            <span class="badge badge-secondary badge-pill">{{ $category->products()->where('status', 1)->count() }}</span>
+                            <span class="badge badge-secondary badge-pill">{{ $category->products_count }}</span>
                         </div>
                         @endforeach
                     </div>
@@ -105,7 +105,7 @@
                             <input type="radio" class="custom-control-input" name="brand" value="{{ $brand->id }}" 
                                    id="brand-{{ $brand->id }}" {{ request('brand') == $brand->id ? 'checked' : '' }}>
                             <label class="custom-control-label" for="brand-{{ $brand->id }}">{{ $brand->name }}</label>
-                            <span class="badge badge-secondary badge-pill">{{ $brand->products()->where('status', 1)->count() }}</span>
+                            <span class="badge badge-secondary badge-pill">{{ $brand->products_count }}</span>
                         </div>
                         @endforeach
                     </div>
@@ -311,13 +311,7 @@
                     <div class="col-lg-4 col-md-6 col-sm-6 pb-1">
                         <div class="product-item bg-light mb-4">
                             <div class="product-img position-relative overflow-hidden">
-                                @if($product->mainImage->first())
-                                    <img class="img-fluid w-100" src="{{ asset('storage/' . $product->mainImage->first()->url) }}" alt="{{ $product->name }}" style="height: 250px; object-fit: cover;">
-                                @else
-                                    <div class="img-fluid w-100 d-flex align-items-center justify-content-center bg-secondary" style="height: 250px;">
-                                        <i class="fa fa-image fa-3x text-muted"></i>
-                                    </div>
-                                @endif
+                                <img class="img-fluid w-100" src="{{ $product->main_image_url }}" alt="{{ $product->name }}" style="height: 250px; object-fit: cover;">
                                 <div class="product-action">
                                     <button class="btn btn-outline-dark btn-square add-to-cart-btn" 
                                             data-product-id="{{ $product->id }}" 
@@ -341,8 +335,8 @@
                                 <a class="h6 text-decoration-none text-truncate" href="{{ route('product.detail', $product->id) }}">{{ $product->name }}</a>
                                 <div class="d-flex align-items-center justify-content-center mt-2">
                                     <h5>{{ $product->currency }} {{ number_format($product->base_price, 2) }}</h5>
-                                    @if($product->variants->where('compare_price', '>', 0)->count() > 0)
-                                        <h6 class="text-muted ml-2"><del>{{ $product->currency }} {{ number_format($product->variants->where('compare_price', '>', 0)->first()->compare_price, 2) }}</del></h6>
+                                    @if($product->variants_max_compare_price > 0)
+                                        <h6 class="text-muted ml-2"><del>{{ $product->currency }} {{ number_format($product->variants_max_compare_price, 2) }}</del></h6>
                                     @endif
                                 </div>
                                 <div class="d-flex align-items-center justify-content-center mb-1">
@@ -472,7 +466,7 @@ $(document).ready(function() {
                     showNotification('success', response.message);
                     
                     // Update cart count
-                    updateCartCount();
+                    setCartCount(response.cart_count);
                 } else {
                     showNotification('error', 'Failed to add product to cart');
                 }
@@ -503,18 +497,6 @@ $(document).ready(function() {
         setTimeout(function() {
             notification.alert('close');
         }, 3000);
-    }
-    
-    // Function to update cart count
-    function updateCartCount() {
-        $.ajax({
-            url: '{{ route("cart.count") }}',
-            method: 'GET',
-            success: function(response) {
-                // Update cart badge in navbar
-                $('.navbar-nav .badge').text(response.count);
-            }
-        });
     }
     
     // Add to compare functionality
@@ -675,9 +657,6 @@ $(document).ready(function() {
         // Redirect to clean shop page
         window.location.href = '{{ route("shop") }}';
     });
-    
-    // Load cart count on page load
-    updateCartCount();
 });
 </script>
 @endpush

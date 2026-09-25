@@ -12,7 +12,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->scoped(\App\Support\CatalogCache::class);
     }
 
     /**
@@ -28,7 +28,8 @@ class AppServiceProvider extends ServiceProvider
             });
         }
 
-        // Register view composer for menu categories
+        // Storefront layout data: menu categories and header badge counts
         view()->composer('layouts.app', \App\Http\View\Composers\MenuComposer::class);
+        view()->composer('layouts.app', \App\Http\View\Composers\HeaderCountsComposer::class);
     }
 }

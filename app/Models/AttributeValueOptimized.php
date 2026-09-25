@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BustsCatalogCache;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +10,7 @@ use Illuminate\Support\Str;
 
 class AttributeValueOptimized extends Model
 {
-    use HasFactory;
+    use HasFactory, BustsCatalogCache;
 
     protected $table = 'attribute_values_optimized';
 
