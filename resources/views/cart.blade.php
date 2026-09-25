@@ -35,7 +35,7 @@
                         @forelse($cartItems as $item)
                         <tr>
                             <td class="align-middle">
-                                <img src="{{ asset('img/' . $item->product->image) }}" alt="{{ $item->product->name }}" style="width: 50px;">
+                                <img src="{{ $item->product->main_image_url }}" alt="{{ $item->product->name }}" style="width: 50px;">
                                 {{ $item->product->name }}
                                 @if($item->size)
                                     <br><small class="text-muted">Size: {{ $item->size }}</small>

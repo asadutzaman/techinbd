@@ -168,17 +168,19 @@ class ProductOptimized extends Model
         return $this->status === 1;
     }
 
+    /**
+     * Reads the mainImage relation: eager load it (with('mainImage')) when listing products.
+     */
     public function getMainImageUrlAttribute()
     {
-        $mainImage = $this->mainImage()->first();
+        $mainImage = $this->mainImage->first();
         if ($mainImage) {
-            // Check if the file exists, if not return a placeholder
-            $imagePath = storage_path('app/public/' . $mainImage->url);
-            if (file_exists($imagePath)) {
-                return asset('storage/' . $mainImage->url);
+            // Remote URLs are used as-is; local files fall back to a placeholder if missing
+            if (str_starts_with($mainImage->url, 'http') || file_exists(storage_path('app/public/' . $mainImage->url))) {
+                return $mainImage->full_url;
             }
         }
-        
+
         // Return a placeholder image based on product ID
         $placeholderNumber = ($this->id % 8) + 1;
         return asset('img/product-' . $placeholderNumber . '.jpg');

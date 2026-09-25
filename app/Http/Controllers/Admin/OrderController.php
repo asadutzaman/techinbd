@@ -10,13 +10,19 @@ class OrderController extends Controller
 {
     public function index()
     {
-        $orders = Order::with('orderItems')->orderBy('created_at', 'desc')->paginate(15);
-        return view('admin.orders.index', compact('orders'));
+        $orders = Order::orderBy('created_at', 'desc')->paginate(15);
+
+        // Stats cover all orders, not just the current page
+        $statusCounts = Order::selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        return view('admin.orders.index', compact('orders', 'statusCounts'));
     }
 
     public function show($id)
     {
-        $order = Order::with('orderItems.product')->findOrFail($id);
+        $order = Order::with('orderItems.product.mainImage')->findOrFail($id);
         return view('admin.orders.show', compact('order'));
     }
 

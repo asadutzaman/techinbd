@@ -16,11 +16,11 @@ class DashboardController extends Controller
         
         // Get recent orders
         $recentOrders = $user->orders()
-                            ->with(['orderItems.product'])
                             ->orderBy('created_at', 'desc')
                             ->limit(5)
                             ->get();
-        
+        $ordersCount = $user->orders()->count();
+
         // Get wishlist count
         $wishlistCount = $user->wishlistItems()->count();
         
@@ -29,7 +29,8 @@ class DashboardController extends Controller
         
         return view('customer.dashboard', compact(
             'user', 
-            'recentOrders', 
+            'recentOrders',
+            'ordersCount',
             'wishlistCount', 
             'addressesCount'
         ));

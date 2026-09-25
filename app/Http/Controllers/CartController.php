@@ -3,39 +3,23 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Cart;
-use App\Models\Product;
-use App\Models\ProductOptimized;
-use Illuminate\Support\Facades\Auth;
+use App\Services\CartService;
 
 class CartController extends Controller
 {
-    public function index()
+    public function __construct(private CartService $cart)
     {
-        $cartItems = $this->getCartItems();
-        
-        $subtotal = $cartItems->sum(function($item) {
-            return $item->quantity * $item->price;
-        });
-        
-        $shipping = 10.00; // Fixed shipping cost
-        $total = $subtotal + $shipping;
-        
-        return view('cart', compact('cartItems', 'subtotal', 'shipping', 'total'));
     }
 
-    private function getCartItems()
+    public function index()
     {
-        if (Auth::check()) {
-            return Cart::with(['product' => function($query) {
-                $query->with(['images', 'brand']);
-            }])->where('user_id', Auth::id())->get();
-        } else {
-            $sessionId = session()->getId();
-            return Cart::with(['product' => function($query) {
-                $query->with(['images', 'brand']);
-            }])->where('session_id', $sessionId)->whereNull('user_id')->get();
-        }
+        $cartItems = $this->cart->items();
+
+        $subtotal = $this->cart->subtotal($cartItems);
+        $shipping = CartService::SHIPPING_FLAT;
+        $total = $subtotal + $shipping;
+
+        return view('cart', compact('cartItems', 'subtotal', 'shipping', 'total'));
     }
 
     public function add(Request $request)
@@ -47,49 +31,17 @@ class CartController extends Controller
             'color' => 'nullable|string'
         ]);
 
-        $product = ProductOptimized::findOrFail($request->product_id);
-        
-        // Determine cart identification
-        $cartQuery = Cart::where('product_id', $request->product_id)
-                        ->where('size', $request->size)
-                        ->where('color', $request->color);
-
-        if (Auth::check()) {
-            $cartQuery->where('user_id', Auth::id());
-            $cartData = [
-                'user_id' => Auth::id(),
-                'product_id' => $request->product_id,
-                'quantity' => $request->quantity,
-                'price' => $product->price,
-                'size' => $request->size,
-                'color' => $request->color
-            ];
-        } else {
-            $sessionId = session()->getId();
-            $cartQuery->where('session_id', $sessionId)->whereNull('user_id');
-            $cartData = [
-                'session_id' => $sessionId,
-                'product_id' => $request->product_id,
-                'quantity' => $request->quantity,
-                'price' => $product->price,
-                'size' => $request->size,
-                'color' => $request->color
-            ];
-        }
-
-        $existingItem = $cartQuery->first();
-
-        if ($existingItem) {
-            $existingItem->quantity += $request->quantity;
-            $existingItem->save();
-        } else {
-            Cart::create($cartData);
-        }
+        $this->cart->add(
+            (int) $request->product_id,
+            (int) $request->quantity,
+            $request->size,
+            $request->color
+        );
 
         return response()->json([
             'success' => true,
             'message' => 'Product added to cart successfully!',
-            'cart_count' => $this->getCartCount()
+            'cart_count' => $this->cart->count()
         ]);
     }
 
@@ -99,51 +51,30 @@ class CartController extends Controller
             'quantity' => 'required|integer|min:1'
         ]);
 
-        $cartItem = $this->findCartItem($id);
+        $cartItem = $this->cart->find($id);
         $cartItem->quantity = $request->quantity;
         $cartItem->save();
 
         return response()->json([
             'success' => true,
             'message' => 'Cart updated successfully!',
-            'cart_count' => $this->getCartCount()
+            'cart_count' => $this->cart->count()
         ]);
     }
 
     public function remove($id)
     {
-        $cartItem = $this->findCartItem($id);
-        $cartItem->delete();
+        $this->cart->find($id)->delete();
 
         return response()->json([
             'success' => true,
             'message' => 'Item removed from cart!',
-            'cart_count' => $this->getCartCount()
+            'cart_count' => $this->cart->count()
         ]);
     }
 
     public function count()
     {
-        return response()->json(['count' => $this->getCartCount()]);
-    }
-
-    private function findCartItem($id)
-    {
-        if (Auth::check()) {
-            return Cart::where('user_id', Auth::id())->findOrFail($id);
-        } else {
-            $sessionId = session()->getId();
-            return Cart::where('session_id', $sessionId)->whereNull('user_id')->findOrFail($id);
-        }
-    }
-
-    private function getCartCount()
-    {
-        if (Auth::check()) {
-            return Cart::where('user_id', Auth::id())->sum('quantity');
-        } else {
-            $sessionId = session()->getId();
-            return Cart::where('session_id', $sessionId)->whereNull('user_id')->sum('quantity');
-        }
+        return response()->json(['count' => $this->cart->count()]);
     }
 }

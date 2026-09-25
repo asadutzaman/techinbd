@@ -468,22 +468,25 @@
     // Add to cart form submission
     $('#add-to-cart-form').submit(function(e) {
         e.preventDefault();
-        
-        // Here you can add AJAX call to add product to cart
-        var formData = $(this).serialize();
-        
-        // For now, just show an alert
-        alert('Product added to cart! (This is a demo - implement actual cart functionality)');
-        
-        // You can implement actual cart functionality here
-        // $.ajax({
-        //     url: '{{ route("cart.add") }}',
-        //     method: 'POST',
-        //     data: formData,
-        //     success: function(response) {
-        //         // Handle success
-        //     }
-        // });
+
+        var button = $(this).find('button[type="submit"]');
+        button.prop('disabled', true);
+
+        $.ajax({
+            url: '{{ route("cart.add") }}',
+            method: 'POST',
+            data: $(this).serialize(),
+            success: function(response) {
+                toastr.success(response.message);
+                $('.cart-count').text(response.cart_count);
+            },
+            error: function(xhr) {
+                toastr.error(xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Failed to add product to cart. Please try again.');
+            },
+            complete: function() {
+                button.prop('disabled', false);
+            }
+        });
     });
 </script>
 @endpush

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use App\Services\CartService;
 
 class LoginController extends Controller
 {
@@ -15,7 +16,7 @@ class LoginController extends Controller
         return view('auth.login');
     }
 
-    public function login(Request $request)
+    public function login(Request $request, CartService $cart)
     {
         $request->validate([
             'email' => 'required|email',
@@ -25,13 +26,16 @@ class LoginController extends Controller
         $credentials = $request->only('email', 'password');
         $remember = $request->has('remember');
 
+        // Auth::attempt() rotates the session id, so capture the guest cart's id first
+        $guestSessionId = $request->session()->getId();
+
         if (Auth::attempt($credentials, $remember)) {
             // Update last login time
             Auth::user()->update(['last_login_at' => now()]);
-            
+
             // Merge guest cart with user cart if exists
-            $this->mergeGuestCart();
-            
+            $cart->mergeGuestCart($guestSessionId, Auth::id());
+
             $request->session()->regenerate();
             
             return redirect()->intended(route('home'))->with('success', 'Welcome back!');
@@ -50,37 +54,5 @@ class LoginController extends Controller
         $request->session()->regenerateToken();
         
         return redirect()->route('home')->with('success', 'You have been logged out successfully.');
-    }
-
-    private function mergeGuestCart()
-    {
-        $sessionId = session()->getId();
-        $userId = Auth::id();
-        
-        // Get guest cart items
-        $guestCartItems = \App\Models\Cart::where('session_id', $sessionId)
-                                         ->whereNull('user_id')
-                                         ->get();
-        
-        foreach ($guestCartItems as $guestItem) {
-            // Check if user already has this product in cart
-            $existingItem = \App\Models\Cart::where('user_id', $userId)
-                                           ->where('product_id', $guestItem->product_id)
-                                           ->first();
-            
-            if ($existingItem) {
-                // Update quantity
-                $existingItem->update([
-                    'quantity' => $existingItem->quantity + $guestItem->quantity
-                ]);
-                $guestItem->delete();
-            } else {
-                // Transfer to user
-                $guestItem->update([
-                    'user_id' => $userId,
-                    'session_id' => null
-                ]);
-            }
-        }
     }
 }

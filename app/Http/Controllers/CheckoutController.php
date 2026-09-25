@@ -3,28 +3,29 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Cart;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Models\Order;
-use App\Models\OrderItem;
+use App\Services\CartService;
 
 class CheckoutController extends Controller
 {
+    public function __construct(private CartService $cart)
+    {
+    }
+
     public function index()
     {
-        $sessionId = session()->getId();
-        $cartItems = Cart::with('product')->where('session_id', $sessionId)->get();
-        
+        $cartItems = $this->cart->items();
+
         if ($cartItems->isEmpty()) {
             return redirect()->route('cart')->with('error', 'Your cart is empty!');
         }
-        
-        $subtotal = $cartItems->sum(function($item) {
-            return $item->quantity * $item->price;
-        });
-        
-        $shipping = 10.00;
+
+        $subtotal = $this->cart->subtotal($cartItems);
+        $shipping = CartService::SHIPPING_FLAT;
         $total = $subtotal + $shipping;
-        
+
         return view('checkout', compact('cartItems', 'subtotal', 'shipping', 'total'));
     }
 
@@ -44,45 +45,38 @@ class CheckoutController extends Controller
             'payment_method' => 'required|in:paypal,directcheck,banktransfer'
         ]);
 
-        $sessionId = session()->getId();
-        $cartItems = Cart::with('product')->where('session_id', $sessionId)->get();
-        
+        $cartItems = $this->cart->items();
+
         if ($cartItems->isEmpty()) {
             return redirect()->route('cart')->with('error', 'Your cart is empty!');
         }
 
-        $subtotal = $cartItems->sum(function($item) {
-            return $item->quantity * $item->price;
-        });
-        
-        $shipping = 10.00;
-        $total = $subtotal + $shipping;
+        $subtotal = $this->cart->subtotal($cartItems);
+        $shipping = CartService::SHIPPING_FLAT;
 
-        // Create billing address
-        $billingAddress = $request->address_line_1 . ', ' . 
+        $billingAddress = $request->address_line_1 . ', ' .
                          ($request->address_line_2 ? $request->address_line_2 . ', ' : '') .
                          $request->city . ', ' . $request->state . ' ' . $request->zip_code . ', ' . $request->country;
 
-        // Create order
-        $order = Order::create([
-            'order_number' => Order::generateOrderNumber(),
-            'customer_name' => $request->first_name . ' ' . $request->last_name,
-            'customer_email' => $request->email,
-            'customer_phone' => $request->phone,
-            'billing_address' => $billingAddress,
-            'shipping_address' => $request->has('ship_to_different') ? $billingAddress : null,
-            'subtotal' => $subtotal,
-            'shipping_cost' => $shipping,
-            'total' => $total,
-            'payment_method' => $request->payment_method,
-            'status' => 'pending',
-            'payment_status' => 'pending'
-        ]);
+        $order = DB::transaction(function () use ($request, $cartItems, $subtotal, $shipping, $billingAddress) {
+            $order = Order::create([
+                'user_id' => Auth::id(),
+                'order_number' => Order::generateOrderNumber(),
+                'customer_name' => $request->first_name . ' ' . $request->last_name,
+                'customer_email' => $request->email,
+                'customer_phone' => $request->phone,
+                'billing_address' => $billingAddress,
+                // The checkout form has no separate shipping fields
+                'shipping_address' => $billingAddress,
+                'subtotal' => $subtotal,
+                'shipping_cost' => $shipping,
+                'total' => $subtotal + $shipping,
+                'payment_method' => $request->payment_method,
+                'status' => 'pending',
+                'payment_status' => 'pending'
+            ]);
 
-        // Create order items
-        foreach ($cartItems as $cartItem) {
-            OrderItem::create([
-                'order_id' => $order->id,
+            $order->orderItems()->createMany($cartItems->map(fn ($cartItem) => [
                 'product_id' => $cartItem->product_id,
                 'product_name' => $cartItem->product->name,
                 'product_price' => $cartItem->price,
@@ -90,18 +84,27 @@ class CheckoutController extends Controller
                 'size' => $cartItem->size,
                 'color' => $cartItem->color,
                 'total' => $cartItem->quantity * $cartItem->price
-            ]);
-        }
+            ])->all());
 
-        // Clear cart
-        Cart::where('session_id', $sessionId)->delete();
+            $this->cart->clear();
+
+            return $order;
+        });
+
+        // Lets a guest see their own confirmation page, and only that one
+        $request->session()->put('last_order_id', $order->id);
 
         return redirect()->route('order.success', $order->id)->with('success', 'Order placed successfully!');
     }
 
-    public function success($orderId)
+    public function success(Request $request, $orderId)
     {
-        $order = Order::with('orderItems.product')->findOrFail($orderId);
+        $order = Order::with('orderItems')->findOrFail($orderId);
+
+        $placedThisSession = (int) $request->session()->get('last_order_id') === $order->id;
+        $ownsOrder = Auth::check() && $order->user_id === Auth::id();
+        abort_unless($placedThisSession || $ownsOrder, 403);
+
         return view('order-success', compact('order'));
     }
 }

@@ -34,11 +34,7 @@
                             <tr>
                                 <td>
                                     <div class="d-flex align-items-center">
-                                        @if($item->product && $item->product->image)
-                                            <img src="{{ asset('img/' . $item->product->image) }}" alt="{{ $item->product_name }}" class="img-thumbnail mr-2" style="width: 50px; height: 50px;">
-                                        @else
-                                            <img src="{{ asset('img/product-1.jpg') }}" alt="{{ $item->product_name }}" class="img-thumbnail mr-2" style="width: 50px; height: 50px;">
-                                        @endif
+                                        <img src="{{ $item->product ? $item->product->main_image_url : asset('img/product-1.jpg') }}" alt="{{ $item->product_name }}" class="img-thumbnail mr-2" style="width: 50px; height: 50px;">
                                         <span>{{ $item->product_name }}</span>
                                     </div>
                                 </td>

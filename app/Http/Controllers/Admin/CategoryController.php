@@ -105,7 +105,7 @@ class CategoryController extends Controller
         $category = \App\Models\Category::findOrFail($id);
         
         // Check if category has products
-        $productCount = \App\Models\Product::where('category', $category->name)->count();
+        $productCount = $category->products()->count();
         if ($productCount > 0) {
             return redirect()->route('admin.categories.index')->with('error', 'Cannot delete category. It has ' . $productCount . ' products associated with it.');
         }

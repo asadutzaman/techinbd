@@ -126,7 +126,7 @@
         <div class="col-lg-3 col-6">
             <div class="small-box bg-info">
                 <div class="inner">
-                    <h3>{{ $orders->where('status', 'pending')->count() }}</h3>
+                    <h3>{{ $statusCounts['pending'] ?? 0 }}</h3>
                     <p>Pending Orders</p>
                 </div>
                 <div class="icon">
@@ -137,7 +137,7 @@
         <div class="col-lg-3 col-6">
             <div class="small-box bg-warning">
                 <div class="inner">
-                    <h3>{{ $orders->where('status', 'processing')->count() }}</h3>
+                    <h3>{{ $statusCounts['processing'] ?? 0 }}</h3>
                     <p>Processing Orders</p>
                 </div>
                 <div class="icon">
@@ -148,7 +148,7 @@
         <div class="col-lg-3 col-6">
             <div class="small-box bg-primary">
                 <div class="inner">
-                    <h3>{{ $orders->where('status', 'shipped')->count() }}</h3>
+                    <h3>{{ $statusCounts['shipped'] ?? 0 }}</h3>
                     <p>Shipped Orders</p>
                 </div>
                 <div class="icon">
@@ -159,7 +159,7 @@
         <div class="col-lg-3 col-6">
             <div class="small-box bg-success">
                 <div class="inner">
-                    <h3>{{ $orders->where('status', 'delivered')->count() }}</h3>
+                    <h3>{{ $statusCounts['delivered'] ?? 0 }}</h3>
                     <p>Delivered Orders</p>
                 </div>
                 <div class="icon">

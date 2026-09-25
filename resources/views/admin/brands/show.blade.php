@@ -111,9 +111,9 @@
                                     @foreach($brand->products as $product)
                                     <tr>
                                         <td>{{ $product->name }}</td>
-                                        <td>{{ $product->category }}</td>
-                                        <td>${{ number_format($product->display_price, 2) }}</td>
-                                        <td>{{ $product->stock }}</td>
+                                        <td>{{ $product->category?->name }}</td>
+                                        <td>{{ $product->currency }} {{ number_format($product->base_price, 2) }}</td>
+                                        <td>{{ $product->total_stock }}</td>
                                         <td>
                                             @if($product->status)
                                                 <span class="badge badge-success">Active</span>

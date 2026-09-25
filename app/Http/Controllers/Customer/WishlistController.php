@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Wishlist;
 use App\Models\ProductOptimized;
+use App\Services\CartService;
 
 class WishlistController extends Controller
 {
@@ -15,7 +16,7 @@ class WishlistController extends Controller
     public function index()
     {
         $wishlistItems = Auth::user()->wishlistItems()
-                            ->with(['product.images', 'product.brand'])
+                            ->with(['product.mainImage', 'product.brand'])
                             ->orderBy('created_at', 'desc')
                             ->get();
 
@@ -118,7 +119,7 @@ class WishlistController extends Controller
         ]);
     }
 
-    public function moveToCart(Request $request)
+    public function moveToCart(Request $request, CartService $cart)
     {
         $request->validate([
             'product_id' => 'required|exists:products_optimized,id'
@@ -139,28 +140,21 @@ class WishlistController extends Controller
             ]);
         }
 
-        // Add to cart
-        $cartController = new \App\Http\Controllers\CartController();
-        $cartRequest = new Request([
-            'product_id' => $productId,
-            'quantity' => 1
-        ]);
-        
-        $cartResponse = $cartController->add($cartRequest);
-        
-        if ($cartResponse->getData()->success) {
-            $wishlistItem->delete();
-            
+        if (! ProductOptimized::active()->whereKey($productId)->exists()) {
             return response()->json([
-                'success' => true,
-                'message' => 'Product moved to cart!',
-                'wishlist_count' => Auth::user()->wishlistItems()->count()
+                'success' => false,
+                'message' => 'This product is no longer available.'
             ]);
         }
 
+        $cart->add($productId);
+        $wishlistItem->delete();
+
         return response()->json([
-            'success' => false,
-            'message' => 'Failed to move product to cart!'
+            'success' => true,
+            'message' => 'Product moved to cart!',
+            'wishlist_count' => Auth::user()->wishlistItems()->count(),
+            'cart_count' => $cart->count()
         ]);
     }
 }

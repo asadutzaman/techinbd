@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use App\Services\CartService;
 
 class RegisterController extends Controller
 {
@@ -15,7 +16,7 @@ class RegisterController extends Controller
         return view('auth.register');
     }
 
-    public function register(Request $request)
+    public function register(Request $request, CartService $cart)
     {
         $request->validate([
             'name' => 'required|string|max:255',
@@ -36,25 +37,13 @@ class RegisterController extends Controller
             'last_login_at' => now(),
         ]);
 
+        // Auth::login() rotates the session id, so capture the guest cart's id first
+        $guestSessionId = $request->session()->getId();
+
         Auth::login($user);
 
-        // Merge guest cart with new user account
-        $this->mergeGuestCart();
+        $cart->mergeGuestCart($guestSessionId, $user->id);
 
         return redirect()->route('home')->with('success', 'Registration successful! Welcome to our store.');
-    }
-
-    private function mergeGuestCart()
-    {
-        $sessionId = session()->getId();
-        $userId = Auth::id();
-        
-        // Transfer guest cart items to user
-        \App\Models\Cart::where('session_id', $sessionId)
-                       ->whereNull('user_id')
-                       ->update([
-                           'user_id' => $userId,
-                           'session_id' => null
-                       ]);
     }
 }

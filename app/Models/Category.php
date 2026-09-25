@@ -26,7 +26,7 @@ class Category extends Model
 
     public function products()
     {
-        return $this->hasMany(Product::class);
+        return $this->hasMany(ProductOptimized::class);
     }
 
     /**
@@ -34,6 +34,6 @@ class Category extends Model
      */
     public function attributes()
     {
-        return $this->hasMany(Attribute::class);
+        return $this->hasMany(AttributeOptimized::class);
     }
 }

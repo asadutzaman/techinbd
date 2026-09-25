@@ -79,8 +79,8 @@
                                             {{ ucfirst($order->status) }}
                                         </span>
                                     </td>
-                                    <td class="align-middle">{{ $order->orderItems->count() }} item(s)</td>
-                                    <td class="align-middle">${{ number_format($order->total_amount, 2) }}</td>
+                                    <td class="align-middle">{{ $order->order_items_count }} item(s)</td>
+                                    <td class="align-middle">${{ number_format($order->total, 2) }}</td>
                                     <td class="align-middle">
                                         <div class="btn-group" role="group">
                                             <a href="{{ route('customer.orders.show', $order) }}" class="btn btn-sm btn-outline-primary">View</a>

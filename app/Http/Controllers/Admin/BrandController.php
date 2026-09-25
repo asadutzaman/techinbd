@@ -68,7 +68,7 @@ class BrandController extends Controller
      */
     public function show($id)
     {
-        $brand = Brand::with('products')->findOrFail($id);
+        $brand = Brand::with('products.category')->findOrFail($id);
         return view('admin.brands.show', compact('brand'));
     }
 

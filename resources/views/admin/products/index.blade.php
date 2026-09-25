@@ -124,13 +124,8 @@
                                 @foreach($products as $product)
                                     <tr>
                                         <td>
-                                            @if($product->mainImage->first())
-                                                <img src="{{ asset('storage/' . $product->mainImage->first()->url) }}" 
-                                                     alt="{{ $product->name }}" class="product-image">
-                                            @else
-                                                <img src="{{ asset('img/default-product.jpg') }}" 
-                                                     alt="No image" class="product-image">
-                                            @endif
+                                            <img src="{{ $product->main_image_url }}"
+                                                 alt="{{ $product->name }}" class="product-image">
                                         </td>
                                         <td>
                                             <div>

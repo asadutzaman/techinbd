@@ -43,13 +43,8 @@
                                 <tr id="wishlist-item-{{ $item->id }}">
                                     <td class="align-middle">
                                         <div class="d-flex align-items-center">
-                                            @if($item->product->images->count() > 0)
-                                                <img src="{{ asset('storage/' . $item->product->images->first()->image_path) }}" 
-                                                     alt="{{ $item->product->name }}" style="width: 50px;">
-                                            @else
-                                                <img src="{{ asset('img/product-1.jpg') }}" 
-                                                     alt="{{ $item->product->name }}" style="width: 50px;">
-                                            @endif
+                                            <img src="{{ $item->product->main_image_url }}"
+                                                 alt="{{ $item->product->name }}" style="width: 50px;">
                                             <div class="ml-3 text-left">
                                                 <h6 class="mb-1">{{ $item->product->name }}</h6>
                                                 @if($item->product->brand)
@@ -58,16 +53,16 @@
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="align-middle">${{ number_format($item->product->price, 2) }}</td>
+                                    <td class="align-middle">{{ $item->product->currency }} {{ number_format($item->product->base_price, 2) }}</td>
                                     <td class="align-middle">
-                                        @if($item->product->stock_quantity > 0)
+                                        @if($item->product->is_active && $item->product->stock_status === 'in_stock')
                                             <span class="badge badge-success">In Stock</span>
                                         @else
                                             <span class="badge badge-danger">Out of Stock</span>
                                         @endif
                                     </td>
                                     <td class="align-middle">
-                                        @if($item->product->stock_quantity > 0)
+                                        @if($item->product->is_active && $item->product->stock_status === 'in_stock')
                                             <button class="btn btn-sm btn-primary mr-2" onclick="moveToCart({{ $item->product->id }})">
                                                 <i class="fa fa-shopping-cart"></i> Add to Cart
                                             </button>
