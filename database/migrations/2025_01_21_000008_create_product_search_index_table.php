@@ -32,8 +32,10 @@ return new class extends Migration
             // Foreign key
             $table->foreign('product_id')->references('id')->on('products_optimized')->onDelete('cascade');
             
-            // Full-text search index
-            $table->fullText(['searchable_content', 'name', 'brand_name', 'attribute_values'], 'prod_search_fulltext');
+            // Full-text search index (MySQL only; SQLite, used by the test suite, has no FULLTEXT)
+            if (Schema::getConnection()->getDriverName() === 'mysql') {
+                $table->fullText(['searchable_content', 'name', 'brand_name', 'attribute_values'], 'prod_search_fulltext');
+            }
             
             // Regular indexes for filtering
             $table->index(['status', 'stock_status']); // Active products
