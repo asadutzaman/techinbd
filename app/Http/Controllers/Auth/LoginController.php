@@ -38,7 +38,9 @@ class LoginController extends Controller
 
             $request->session()->regenerate();
             
-            return redirect()->intended(route('home'))->with('success', 'Welcome back!');
+            $home = Auth::user()->is_admin ? route('admin.dashboard') : route('home');
+
+            return redirect()->intended($home)->with('success', 'Welcome back!');
         }
 
         return back()->withErrors([

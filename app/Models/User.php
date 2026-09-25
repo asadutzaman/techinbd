@@ -50,6 +50,8 @@ class User extends Authenticatable
             'password' => 'hashed',
             'date_of_birth' => 'date',
             'last_login_at' => 'datetime',
+            // Deliberately not fillable: grant with `php artisan admin:grant {email}`
+            'is_admin' => 'boolean',
         ];
     }
 

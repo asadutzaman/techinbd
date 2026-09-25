@@ -7,7 +7,6 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ContactController;
-use App\Http\Controllers\CategoryAttributeController;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/shop', [ShopController::class, 'index'])->name('shop');
@@ -18,7 +17,7 @@ Route::get('/product/{id}', [ProductController::class, 'show'])->name('product.d
 
 // Authentication Routes
 Route::get('/login', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [App\Http\Controllers\Auth\LoginController::class, 'login']);
+Route::post('/login', [App\Http\Controllers\Auth\LoginController::class, 'login'])->middleware('throttle:5,1');
 Route::post('/logout', [App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('logout');
 Route::get('/register', [App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])->name('register');
 Route::post('/register', [App\Http\Controllers\Auth\RegisterController::class, 'register']);
@@ -67,8 +66,8 @@ Route::middleware('auth')->prefix('customer')->name('customer.')->group(function
     Route::post('/wishlist/move-to-cart', [App\Http\Controllers\Customer\WishlistController::class, 'moveToCart'])->name('wishlist.move-to-cart');
 });
 
-// Admin Routes
-Route::prefix('admin')->name('admin.')->group(function () {
+// Admin Routes (grant access with `php artisan admin:grant {email}`)
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [App\Http\Controllers\Admin\AdminController::class, 'dashboard'])->name('dashboard');
 
     // Products Routes (Optimized)
@@ -84,9 +83,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/products/categories/{categoryId}/attributes', [App\Http\Controllers\Admin\ProductOptimizedController::class, 'getCategoryAttributes']);
     Route::delete('/products/images/{imageId}', [App\Http\Controllers\Admin\ProductOptimizedController::class, 'deleteImage'])->name('products.images.delete');
     Route::post('/products/images/set-main', [App\Http\Controllers\Admin\ProductOptimizedController::class, 'setMainImage'])->name('products.images.set-main');
-    
-    Route::get('/categories/{category}/attributes', [CategoryAttributeController::class, 'getAttributes']);
-    
+
     Route::get('/categories', [App\Http\Controllers\Admin\CategoryController::class, 'index'])->name('categories.index');
     Route::get('/categories/create', [App\Http\Controllers\Admin\CategoryController::class, 'create'])->name('categories.create');
     Route::post('/categories', [App\Http\Controllers\Admin\CategoryController::class, 'store'])->name('categories.store');

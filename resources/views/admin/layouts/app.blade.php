@@ -38,6 +38,14 @@
                     <i class="fas fa-expand-arrows-alt"></i>
                 </a>
             </li>
+            <li class="nav-item">
+                <form action="{{ route('logout') }}" method="POST" class="d-inline">
+                    @csrf
+                    <button type="submit" class="btn btn-link nav-link">
+                        <i class="fas fa-sign-out-alt mr-1"></i>Logout
+                    </button>
+                </form>
+            </li>
         </ul>
     </nav>
     <!-- /.navbar -->
@@ -58,7 +66,7 @@
                     <img src="{{ asset('img/user.jpg') }}" class="img-circle elevation-2" alt="User Image">
                 </div>
                 <div class="info">
-                    <a href="#" class="d-block">Administrator</a>
+                    <a href="#" class="d-block">{{ auth()->user()->name }}</a>
                 </div>
             </div>
 
