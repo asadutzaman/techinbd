@@ -48,13 +48,16 @@ class PasswordResetController extends Controller
             'password' => ['required', 'confirmed', PasswordRule::min(8)],
         ]);
 
-        $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
-            function (User $user, string $password) {
-                $user->forceFill(['password' => $password, 'remember_token' => Str::random(60)])->save();
-                event(new PasswordReset($user));
-            }
-        );
+        // Admins can't be reset from the site at all (see User::sendPasswordResetNotification)
+        $status = User::where('email', $request->email)->value('is_admin')
+            ? Password::INVALID_TOKEN
+            : Password::reset(
+                $request->only('email', 'password', 'password_confirmation', 'token'),
+                function (User $user, string $password) {
+                    $user->forceFill(['password' => $password, 'remember_token' => Str::random(60)])->save();
+                    event(new PasswordReset($user));
+                }
+            );
 
         if ($status !== Password::PASSWORD_RESET) {
             return back()->withInput($request->only('email'))

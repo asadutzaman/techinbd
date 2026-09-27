@@ -2,9 +2,7 @@
 
 namespace App\Mail;
 
-use App\Models\Order;
 use App\Support\Money;
-use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Support\Str;
@@ -12,7 +10,7 @@ use Illuminate\Support\Str;
 /**
  * Sent when an order moves on: being prepared, on its way, delivered or cancelled.
  */
-class OrderStatusChanged extends Mailable
+class OrderStatusChanged extends OrderMail
 {
     /**
      * Per status: the subject (with the order number), the heading, and the line after "Hi {name},".
@@ -40,9 +38,9 @@ class OrderStatusChanged extends Mailable
         ],
     ];
 
-    public function __construct(public Order $order)
+    public function kind(): string
     {
-        $order->loadMissing('orderItems');
+        return 'status';
     }
 
     /**

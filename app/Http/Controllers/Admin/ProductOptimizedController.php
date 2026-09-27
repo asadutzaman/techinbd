@@ -11,12 +11,28 @@ use App\Models\Category;
 use App\Models\Brand;
 use App\Models\AttributeOptimized;
 use App\Models\AttributeValueOptimized;
+use App\Models\Order;
+use App\Models\OrderItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class ProductOptimizedController extends Controller
 {
+    /**
+     * The "was" price and the key specs, for both the create and edit forms.
+     */
+    private const SALE_AND_SPEC_RULES = [
+        'compare_price' => 'nullable|numeric|gt:base_price',
+        'specs' => 'nullable|array|max:40',
+        'specs.*.label' => 'nullable|string|max:60',
+        'specs.*.value' => 'nullable|string|max:255',
+    ];
+
+    private const SALE_AND_SPEC_MESSAGES = [
+        'compare_price.gt' => 'The "was" price has to be higher than the price (leave it empty for no sale).',
+    ];
+
     public function index(Request $request)
     {
         $perPage = $request->get('per_page', 15);
@@ -77,7 +93,8 @@ class ProductOptimizedController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:products_optimized,slug',
+            // Not unique: it's made from the name, and product links use the id
+            'slug' => 'nullable|string|max:255',
             'sku' => 'nullable|string|max:100|unique:products_optimized,sku',
             'category_id' => 'required|exists:categories,id',
             'brand_id' => 'nullable|exists:brands,id',
@@ -107,11 +124,11 @@ class ProductOptimizedController extends Controller
             'variants.*.sku' => 'nullable|string|max:100',
             'variants.*.price' => 'nullable|numeric|min:0',
             'variants.*.stock' => 'nullable|integer|min:0',
-            'variants.*.is_default' => 'boolean'
-        ]);
+            'variants.*.is_default' => 'boolean',
+        ] + self::SALE_AND_SPEC_RULES, self::SALE_AND_SPEC_MESSAGES);
 
         DB::beginTransaction();
-        
+
         try {
             // Create product
             $productData = $request->only([
@@ -125,6 +142,10 @@ class ProductOptimizedController extends Controller
             if (array_key_exists('total_stock', $productData)) {
                 $productData['total_stock'] = (int) $productData['total_stock'];
             }
+            // Unticked switches send nothing
+            $productData['manage_stock'] = $request->boolean('manage_stock');
+            $productData['featured'] = $request->boolean('featured');
+            $productData['specs'] = $this->specsFrom($request);
 
             $product = ProductOptimized::create($productData);
 
@@ -143,13 +164,15 @@ class ProductOptimizedController extends Controller
                 $this->handleProductVariants($product, $request->input('variants'));
             }
 
+            $this->saveComparePrice($product, $request->input('compare_price'));
+
             // Update search index
             $product->updateSearchIndex();
 
             DB::commit();
 
-            return redirect()->route('admin.products.index')
-                           ->with('success', 'Product created successfully!');
+            return redirect()->route('admin.products.show', $product->id)
+                           ->with('success', 'Product created. This is how it looks to the shop.');
 
         } catch (\Exception $e) {
             DB::rollback();
@@ -163,18 +186,23 @@ class ProductOptimizedController extends Controller
         $product = ProductOptimized::with([
             'brand',
             'category',
-            'categories',
-            'images' => function($query) {
-                $query->orderBy('sort_order');
-            },
-            'variants' => function($query) {
-                $query->orderBy('is_default', 'desc');
-            },
+            'images' => fn ($query) => $query->orderByDesc('is_main')->orderBy('sort_order')->orderBy('id'),
+            'variants' => fn ($query) => $query->orderByDesc('is_default')->orderBy('price')->orderBy('id'),
             'productAttributes.attribute',
-            'productAttributes.attributeValue'
         ])->findOrFail($id);
 
-        return view('admin.products.show', compact('product'));
+        // Sales so far, leaving out cancelled orders
+        $sales = OrderItem::where('product_id', $product->id)
+            ->whereHas('order', fn ($order) => $order->where('status', '!=', 'cancelled'))
+            ->selectRaw('coalesce(sum(quantity), 0) as units, coalesce(sum(total), 0) as revenue, count(distinct order_id) as orders')
+            ->first();
+        $recentOrders = Order::whereHas('orderItems', fn ($items) => $items->where('product_id', $product->id))
+            ->latest()
+            ->orderByDesc('id')
+            ->take(5)
+            ->get();
+
+        return view('admin.products.show', compact('product', 'sales', 'recentOrders'));
     }
 
     public function edit($id)
@@ -204,7 +232,7 @@ class ProductOptimizedController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:products_optimized,slug,' . $id,
+            'slug' => 'nullable|string|max:255',
             'sku' => 'nullable|string|max:100|unique:products_optimized,sku,' . $id,
             'category_id' => 'required|exists:categories,id',
             'brand_id' => 'nullable|exists:brands,id',
@@ -228,8 +256,8 @@ class ProductOptimizedController extends Controller
             'featured' => 'boolean',
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'attributes' => 'nullable|array',
-            'attributes.*' => 'nullable|string|max:255'
-        ]);
+            'attributes.*' => 'nullable|string|max:255',
+        ] + self::SALE_AND_SPEC_RULES, self::SALE_AND_SPEC_MESSAGES);
 
         DB::beginTransaction();
 
@@ -246,8 +274,13 @@ class ProductOptimizedController extends Controller
             if (array_key_exists('total_stock', $productData)) {
                 $productData['total_stock'] = (int) $productData['total_stock'];
             }
+            // Unticked switches send nothing; without this they could never be turned off
+            $productData['manage_stock'] = $request->boolean('manage_stock');
+            $productData['featured'] = $request->boolean('featured');
+            $productData['specs'] = $this->specsFrom($request);
 
             $product->update($productData);
+            $this->saveComparePrice($product, $request->input('compare_price'));
 
             // Handle new images
             if ($request->hasFile('images')) {
@@ -265,8 +298,8 @@ class ProductOptimizedController extends Controller
 
             DB::commit();
 
-            return redirect()->route('admin.products.index')
-                           ->with('success', 'Product updated successfully!');
+            return redirect()->route('admin.products.show', $product->id)
+                           ->with('success', 'Product saved.');
 
         } catch (\Exception $e) {
             DB::rollback();
@@ -314,7 +347,13 @@ class ProductOptimizedController extends Controller
                 ->forCategory($categoryId)
                 ->active()
                 ->orderBy('sort_order')
-                ->get();
+                ->get()
+                // Only an attribute made for this category can be required: a store-wide one (like the old
+                // fashion "Size") would otherwise stop every laptop and phone from being saved.
+                // (A block, not an arrow function: each() stops at the first callback that returns false.)
+                ->each(function ($attribute) {
+                    $attribute->required = $attribute->required && $attribute->category_id !== null;
+                });
 
             return response()->json([
                 'success' => true,
@@ -328,6 +367,48 @@ class ProductOptimizedController extends Controller
                 'message' => 'Failed to load attributes',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * The key specs from the form as label => value, in the order shown. Rows missing either half are dropped.
+     */
+    private function specsFrom(Request $request): array
+    {
+        return collect($request->input('specs', []))
+            ->filter(fn ($row) => is_array($row) && filled($row['label'] ?? null) && filled($row['value'] ?? null))
+            ->mapWithKeys(fn ($row) => [trim($row['label']) => trim($row['value'])])
+            ->all();
+    }
+
+    /**
+     * The "was" price lives on the product's default option (compare_price): the shop reads it for the struck-out
+     * price, the Save badge and Deals. A product without options gets a "Standard" one to hold it.
+     */
+    private function saveComparePrice(ProductOptimized $product, $comparePrice): void
+    {
+        $comparePrice = filled($comparePrice) ? round((float) $comparePrice, 2) : null;
+        $default = $product->variants()->orderByDesc('is_default')->orderBy('id')->first();
+
+        if ($default) {
+            // Quietly: saving an option recounts the product's stock from its options, which would undo
+            // a stock figure typed in the same form. The product's own save has already refreshed the shop.
+            if ($default->compare_price === null ? $comparePrice !== null : (float) $default->compare_price !== $comparePrice) {
+                $default->updateQuietly(['compare_price' => $comparePrice]);
+            }
+
+            return;
+        }
+
+        if ($comparePrice !== null) {
+            $variant = new ProductVariantOptimized([
+                'name' => 'Standard',
+                'compare_price' => $comparePrice,
+                'stock' => (int) $product->total_stock,
+                'is_default' => true,
+            ]);
+            $variant->product()->associate($product);
+            $variant->save();
         }
     }
 
@@ -402,9 +483,9 @@ class ProductOptimizedController extends Controller
     /**
      * Delete image
      */
-    public function deleteImage(Request $request)
+    public function deleteImage($imageId)
     {
-        $imageId = $request->input('image_id');
+        // The id comes from the URL (DELETE /admin/products/images/{imageId}); the page sends no body
         $image = ProductImageOptimized::findOrFail($imageId);
         
         // If this is the main image, set another image as main

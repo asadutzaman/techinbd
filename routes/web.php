@@ -100,9 +100,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/orders/{id}', [App\Http\Controllers\Admin\OrderController::class, 'show'])->name('orders.show');
     Route::put('/orders/{id}/status', [App\Http\Controllers\Admin\OrderController::class, 'updateStatus'])->name('orders.updateStatus');
     Route::put('/orders/{id}/payment', [App\Http\Controllers\Admin\OrderController::class, 'updatePaymentStatus'])->name('orders.updatePayment');
+    Route::post('/orders/{id}/emails', [App\Http\Controllers\Admin\OrderController::class, 'resendEmail'])->name('orders.resendEmail');
     
     Route::get('/settings', [App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('settings.index');
-    Route::post('/settings', [App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('settings.update');
+    Route::post('/settings/test-email', [App\Http\Controllers\Admin\SettingsController::class, 'testEmail'])->name('settings.test-email');
     
     // Brands
     Route::resource('brands', App\Http\Controllers\Admin\BrandController::class);

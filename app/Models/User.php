@@ -59,9 +59,17 @@ class User extends Authenticatable
 
     /**
      * The "Forgot password?" email goes out after the page has been sent, like the shop's other emails.
+     * Admin accounts never get one: whoever controls an admin's mailbox would get the admin panel, so admins
+     * change passwords with `php artisan admin:password` instead. (The form's answer is the same either way.)
      */
     public function sendPasswordResetNotification($token): void
     {
+        if ($this->is_admin) {
+            logger()->notice("Password reset email not sent to admin account {$this->email}; use php artisan admin:password.");
+
+            return;
+        }
+
         CustomerMail::notify($this, new ResetPassword($token));
     }
 

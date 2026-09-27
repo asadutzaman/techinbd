@@ -1,6 +1,12 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Brands Management')
+@section('title', 'Brands | ' . config('shop.name') . ' Admin')
+@section('page-title', 'Brands')
+
+@section('breadcrumb')
+    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+    <li class="breadcrumb-item active">Brands</li>
+@endsection
 
 @section('content')
 <div class="container-fluid">
@@ -8,21 +14,12 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3 class="card-title">Brands Management</h3>
-                    <a href="{{ route('admin.brands.create') }}" class="btn btn-primary">
+                    <h3 class="card-title">All brands</h3>
+                    <a href="{{ route('admin.brands.create') }}" class="btn btn-primary ml-auto">
                         <i class="fas fa-plus mr-1"></i>Add New Brand
                     </a>
                 </div>
                 <div class="card-body">
-                    @if(session('success'))
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            {{ session('success') }}
-                            <button type="button" class="close" data-dismiss="alert">
-                                <span>&times;</span>
-                            </button>
-                        </div>
-                    @endif
-
                     <div class="table-responsive">
                         <table class="table table-bordered table-striped">
                             <thead>

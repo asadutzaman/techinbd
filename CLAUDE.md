@@ -13,6 +13,7 @@ composer install && cp .env.example .env && php artisan key:generate
 php artisan migrate --seed                 # the demo tech store: 16 categories, 100 products, home banners
 php artisan storage:link                   # product images live on the public disk
 php artisan admin:grant you@example.com    # admin access (--revoke to remove); register the account first
+php artisan admin:password you@example.com # set an admin's password; admins can't reset theirs by email
 php artisan db:seed --class=CustomerSeeder # 5 demo customers, password 12345678, at plus-addresses of MAIL_FROM_ADDRESS
 php artisan serve --port=3000              # http://127.0.0.1:3000, the port the Cloudflare Tunnel forwards to
 
@@ -24,6 +25,7 @@ vendor/bin/pint                                                         # code s
 
 php artisan products:reindex      # rebuild product_search_index after importing/seeding products
 php artisan products:thumbnails   # backfill the card (600px) and gallery (1200px) WebP copies of product images missing either
+php artisan cache:prune-expired   # delete expired cache entries, which the database/file stores keep otherwise (runs daily)
 ```
 
 - `.env` targets MySQL (`DB_DATABASE=rrit`); `.env.example` still says sqlite. Sessions, cache and queue use the `database` driver.
@@ -32,7 +34,7 @@ php artisan products:thumbnails   # backfill the card (600px) and gallery (1200p
 
 ### Production
 
-`composer install --no-dev --optimize-autoloader`, `php artisan migrate --force`, `php artisan storage:link`, `php artisan optimize` (config/route/view/event caches; routes are all controller-based so route caching works). Set `APP_ENV=production`, `APP_DEBUG=false`, `LOG_LEVEL=warning`, and `CACHE_STORE=file` (or `redis`) so cache reads don't hit MySQL. Enable OPcache in `php.ini`. Run the scheduler cron (`* * * * * php artisan schedule:run`): it prunes guest carts older than 30 days daily (`Cart::prunable()` via `model:prune`).
+`composer install --no-dev --optimize-autoloader`, `php artisan migrate --force`, `php artisan storage:link`, `php artisan optimize` (config/route/view/event caches; routes are all controller-based so route caching works). Set `APP_ENV=production`, `APP_DEBUG=false`, `LOG_LEVEL=warning`, and `CACHE_STORE=file` (or `redis`) so cache reads don't hit MySQL. Enable OPcache in `php.ini`. Run the scheduler cron (`* * * * * php artisan schedule:run`): it prunes guest carts older than 30 days daily (`Cart::prunable()` via `model:prune`) and expired cache entries (`cache:prune-expired`).
 
 ## Architecture
 
@@ -42,7 +44,7 @@ Laravel MVC; controllers mostly query Eloquent directly. All routes are in `rout
 
 The catalog models are the `*Optimized` ones: `ProductOptimized` (`products_optimized`), `ProductVariantOptimized`, `ProductImageOptimized`, `AttributeOptimized`, `AttributeValueOptimized`, `ProductAttributeOptimized`, plus `ProductSearchIndex`. The original `products`/`product_variants` tables and their models were removed.
 
-- Price is `base_price`; `status` is an integer 0/1 (`->active()` scope). A product's category is `category_id` (the `product_categories` pivot and `categories()` relation exist but are empty/unused).
+- Price is `base_price`; `status` is an integer 0/1 (`->active()` scope). A product's category is `category_id` (the `product_categories` pivot and `categories()` relation exist but are empty/unused). `slug` is made from the name and isn't unique; no URL uses it (product links use the id), so products can share a name.
 - `main_image_url` reads the `mainImage` relation, so **eager load `mainImage`** wherever products are listed. It returns the WebP card thumbnail when there is one, else the original, else a `public/img/product-N.jpg` placeholder.
 - Each product image has WebP copies written by `ProductImageOptimized::generateVersions()` on upload: `thumb_url` (600px, cards, `card_url`) and `large_url` (1200px, never upscaled, the product page gallery, `gallery_url`/`gallery_srcset`). `deleteFiles()` removes all three files. Use `$image->full_url` only when the original is really needed.
 - `specs` is label → value in entry order. It's stored as a JSON list of `[label, value]` pairs by an accessor/mutator, because MySQL sorts JSON object keys; older rows holding an object still read.
@@ -51,7 +53,7 @@ The catalog models are the `*Optimized` ones: `ProductOptimized` (`products_opti
 
 ### Caching and query discipline
 
-- `App\Support\CatalogCache` caches catalog-derived data (menu categories, shop sidebar counts, attribute filters) under a version number. Models using the `BustsCatalogCache` trait bump the version on save/delete, invalidating every catalog key at once. The file/database cache stores don't support tags, which is why it works this way. New cached catalog data should go through `CatalogCache::remember()`, and new catalog models should use the trait.
+- `App\Support\CatalogCache` caches catalog-derived data (menu categories, shop sidebar counts, attribute filters) under a version number. Models using the `BustsCatalogCache` trait bump the version on save/delete, invalidating every catalog key at once. The file/database cache stores don't support tags, which is why it works this way. Those stores only delete an expired entry when the same key is read again, and an old version's keys never are, so the daily `cache:prune-expired` clears them. New cached catalog data should go through `CatalogCache::remember()`, and new catalog models should use the trait.
 - `Model::preventLazyLoading()` is on outside production (`AppServiceProvider`). Lazy loads **throw in tests** and log a warning locally, so an N+1 shows up as a failing test. `tests/Feature/StorefrontTest` also asserts that home/shop/product query counts don't grow with catalog size.
 
 ### Cart, checkout, orders
@@ -61,14 +63,17 @@ The catalog models are the `*Optimized` ones: `ProductOptimized` (`products_opti
 - `Auth::login()`/`attempt()` rotate the session id, so login and register capture `$request->session()->getId()` **before** authenticating and pass it to `CartService::mergeGuestCart()`.
 - `orders` columns are `subtotal`, `shipping_cost`, `total`, `billing_address`/`shipping_address` (single text fields). Order items snapshot `product_name`/`product_price`; `order_items.product_id` is nullable and set null when a product is deleted, so use `$item->product?->…`.
 - The order confirmation page (`/order/success/{id}`) is only shown to the session that placed the order (`last_order_id`) or the owning user.
-- Order statuses live in `Order::STATUSES`. Change them with `$order->changeStatus($status, $notify)`, which the admin screen uses: it saves only a real change and emails the customer for processing/shipped/delivered/cancelled.
+- Order statuses live in `Order::STATUSES`, and `Order::NEXT_STEPS` gives the admin's buttons for each one (pending → confirm or cancel, processing → ship or cancel, shipped → deliver). `$order->changeStatus($status, $by, $note)` saves only a real change and records an `OrderStatusChange` (from, to, the admin, an optional note) for the order's history. It sends no email; `Admin\OrderController` emails the customer itself.
 - Checkout pre-fills signed-in customers from their default shipping address (`CheckoutController::prefill()`); the shop delivers within Bangladesh only.
 
 ### Email
 
 - `.env` sends through Gmail SMTP (app password; `.env` is gitignored, never put it anywhere else). `APP_URL` is the public site: the mail header and password reset links use it. Tests pin `APP_URL`/`MAIL_MAILER=array` in `phpunit.xml`.
-- Customer emails go through `App\Support\CustomerMail::send()`/`notify()`: sent after the response with `defer()`, and a failure is `report()`ed, never shown. Gmail takes ~6s per email. `SetContentLength` middleware lets Apache/mod_php and multi-worker servers release the page first; on Windows `artisan serve` handles one request at a time, so the next page still waits there.
-- Mailables in `app/Mail` with markdown templates in `resources/views/mail`: `OrderPlaced` (checkout), `OrderStatusChanged`, `Welcome` (registration). `resources/views/vendor/mail/html/header.blade.php` overrides only the header (the two-tone wordmark). The password reset email is set up with `ResetPassword::toMailUsing()` in `AppServiceProvider` and builds its link on `APP_URL`.
+- Customer emails go through `App\Support\CustomerMail`, which `report()`s a failure instead of throwing:
+  - `sendAfterResponse()` and `notify()` send after the response with `defer()`, for customer requests (checkout, registration, password reset), where a failure is never shown. Gmail takes ~6s per email. `SetContentLength` middleware lets Apache/mod_php and multi-worker servers release the page first; on Windows `artisan serve` handles one request at a time, so the next page still waits there.
+  - `send()` sends right away and returns whether it worked, for admin actions, so the flash message can say whether the customer was emailed.
+- Every order email is logged in `order_emails`: kind, order status, recipient, subject, sent or the error, the SMTP message id, and the admin who sent it. The admin order page lists them with "Send again". Creating an `OrderEmail` sets `orders.last_email_failed` from its result (without touching the order's `updated_at`), and `Order::latestEmailFailed()` reads that flag rather than the log (the dashboard warning, the orders list filter and row flag).
+- Mailables in `app/Mail` with markdown templates in `resources/views/mail`: `OrderPlaced` (checkout) and `OrderStatusChanged` extend `OrderMail`, whose `kind()` is the log's kind; `Welcome` (registration); `TestEmail` (Admin → Settings, sent to `MAIL_FROM_ADDRESS`). `resources/views/vendor/mail/html/header.blade.php` overrides only the header (the two-tone wordmark). The password reset email is set up with `ResetPassword::toMailUsing()` in `AppServiceProvider` and builds its link on `APP_URL`.
 - `App\Support\Money::format()` gives plain-text taka for emails; `<x-price>` uses `Money::amount()`.
 
 ### Auth and access control
@@ -76,6 +81,21 @@ The catalog models are the `*Optimized` ones: `ProductOptimized` (`products_opti
 - Hand-written `Auth\LoginController`/`RegisterController`/`PasswordResetController` on the default `web` guard, behind `guest` middleware. `POST /login` and `POST /forgot-password` are throttled to 5/min. New passwords need 8 characters; login doesn't check length, so older short passwords still work. The forgot-password form answers the same whether or not the email has an account.
 - The account pages (`auth/*`) share form styles in `storefront.css` (`.sf-auth*`, `.sf-field*`, `.sf-input`, `.sf-password`), and `storefront.js` handles the Show/Hide password buttons.
 - Admin routes use `['auth', 'admin']`; the `admin` alias (`EnsureUserIsAdmin`, registered in `bootstrap/app.php`) checks `users.is_admin`. `is_admin` is deliberately not mass-assignable, so grant it with `php artisan admin:grant`.
+- Admin accounts can't reset their password by email, so taking over an admin's mailbox doesn't open the admin panel: `User::sendPasswordResetNotification()` skips them and `PasswordResetController::update()` refuses them. Set it on the server with `php artisan admin:password`.
+
+### Admin panel
+
+- AdminLTE 3 / Bootstrap 4 from CDNs, in `resources/views/admin/layouts/app.blade.php`. It carries the `csrf-token` meta tag the AJAX image buttons read. `AppServiceProvider` sets `Paginator::useBootstrapFour()`, because Laravel's default Tailwind pager renders giant arrows under Bootstrap; the shop page passes `'custom-pagination'` for its own pager. A view composer there feeds the sidebar's pending-orders badge.
+- Dashboard (`AdminController`): this month's sales and orders (cancelled left out), orders to confirm and to ship, a 14-day sales chart by day in shop time, the latest orders, products running low (`manage_stock` and 3 or fewer left), and a warning when an order's latest email failed.
+- Orders (`Admin\OrderController`):
+  - The list has status tabs, a search (order number, name, email, phone) and next-step buttons that email the customer and return to the list (`from=list`). Only the open statuses' tabs (the `Order::NEXT_STEPS` keys) show counts; counting delivered and cancelled orders would read most of the table on every visit. The `orders` indexes `(status, created_at)` and `(created_at)` serve the sidebar's pending count and the newest-first lists.
+  - The order page has a progress stepper and the next step: a note for the history, "Email the customer", and "Cash collected" for a cash-on-delivery order being delivered, which marks it paid. It also shows the items, the email log, the history, customer and payment, and a manual status change for corrections.
+- Product form (`ProductOptimizedController`, `admin/products/create|edit`):
+  - `_specs.blade.php` edits the specs as ordered rows (the first 4 are the key features); `_prices.blade.php` holds the price, was price and cost.
+  - The was price is `compare_price` on the default variant (a "Standard" one is created when there's none). It's saved with `updateQuietly()` so the variant's stock recount doesn't overwrite the stock typed in the form.
+  - Switches use `$request->boolean()`, because an unticked checkbox isn't submitted.
+  - The form only marks category-specific attributes as required (`getCategoryAttributes()`); the server doesn't check them. A required store-wide attribute would otherwise block every product.
+- Settings are read-only (`config/shop.php`, `SHOP_*` and `MAIL_*` env). The page can send a test email to the shop's own address.
 
 ### Views
 

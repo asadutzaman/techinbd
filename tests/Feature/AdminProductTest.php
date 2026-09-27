@@ -30,7 +30,7 @@ class AdminProductTest extends TestCase
             'stock_status' => 'in_stock',
             'status' => 1,
             'images' => [UploadedFile::fake()->image('phone.jpg', 1600, 1200)],
-        ])->assertRedirect(route('admin.products.index'));
+        ])->assertRedirect(route('admin.products.show', ProductOptimized::sole()->id));
 
         $image = ProductImageOptimized::sole();
         $disk = Storage::disk('public');

@@ -120,7 +120,7 @@ class CheckoutController extends Controller
             return $order;
         });
 
-        CustomerMail::send($order->customer_email, new OrderPlaced($order));
+        CustomerMail::sendAfterResponse($order->customer_email, new OrderPlaced($order));
 
         // Lets a guest see their own confirmation page, and only that one
         $request->session()->put('last_order_id', $order->id);

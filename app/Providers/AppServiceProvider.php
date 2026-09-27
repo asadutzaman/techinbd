@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 
@@ -31,9 +32,16 @@ class AppServiceProvider extends ServiceProvider
             });
         }
 
+        // Both the admin (AdminLTE) and the storefront theme are Bootstrap 4; Laravel's default pagination
+        // markup is Tailwind, which rendered as page-sized arrows. (The shop uses custom-pagination.)
+        Paginator::useBootstrapFour();
+
         // Storefront layout data: menu categories and header badge counts
         view()->composer('layouts.app', \App\Http\View\Composers\MenuComposer::class);
         view()->composer('layouts.app', \App\Http\View\Composers\HeaderCountsComposer::class);
+
+        // Admin sidebar: how many orders are waiting to be confirmed
+        view()->composer('admin.layouts.app', fn ($view) => $view->with('pendingOrderCount', \App\Models\Order::where('status', 'pending')->count()));
 
         // The password reset email. Its link is built on APP_URL, not on the host the request came in
         // with, so nobody can have a reset link point at another site.

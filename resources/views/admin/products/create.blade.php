@@ -123,45 +123,15 @@
                         <h3 class="card-title">Pricing & Inventory</h3>
                     </div>
                     <div class="card-body">
+                        @include('admin.products._prices', ['priceDefaults' => ['base_price' => null, 'compare_price' => null, 'cost_price' => null]])
+
                         <div class="row">
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="base_price">Base Price *</label>
-                                    <div class="input-group">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text">$</span>
-                                        </div>
-                                        <input type="number" class="form-control @error('base_price') is-invalid @enderror" 
-                                               id="base_price" name="base_price" value="{{ old('base_price') }}" 
-                                               placeholder="0.00" step="0.01" min="0" required>
-                                    </div>
-                                    @error('base_price')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="cost_price">Cost Price</label>
-                                    <div class="input-group">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text">$</span>
-                                        </div>
-                                        <input type="number" class="form-control @error('cost_price') is-invalid @enderror" 
-                                               id="cost_price" name="cost_price" value="{{ old('cost_price') }}" 
-                                               placeholder="0.00" step="0.01" min="0">
-                                    </div>
-                                    @error('cost_price')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <div class="form-group">
                                     <label for="currency">Currency</label>
-                                    <select class="form-control @error('currency') is-invalid @enderror" 
+                                    <select class="form-control @error('currency') is-invalid @enderror"
                                             id="currency" name="currency">
-                                        <option value="BDT" {{ old('currency', 'BDT') == 'BDT' ? 'selected' : '' }}>BDT</option>
+                                        <option value="BDT" {{ old('currency', 'BDT') == 'BDT' ? 'selected' : '' }}>BDT (৳)</option>
                                         <option value="USD" {{ old('currency') == 'USD' ? 'selected' : '' }}>USD</option>
                                         <option value="EUR" {{ old('currency') == 'EUR' ? 'selected' : '' }}>EUR</option>
                                     </select>
@@ -170,10 +140,7 @@
                                     @enderror
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <div class="form-group">
                                     <label for="stock_status">Stock Status *</label>
                                     <select class="form-control @error('stock_status') is-invalid @enderror" 
@@ -187,22 +154,22 @@
                                     @enderror
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <div class="form-group">
                                     <label for="total_stock">Total Stock</label>
-                                    <input type="number" class="form-control @error('total_stock') is-invalid @enderror" 
-                                           id="total_stock" name="total_stock" value="{{ old('total_stock', 0) }}" 
+                                    <input type="number" class="form-control @error('total_stock') is-invalid @enderror"
+                                           id="total_stock" name="total_stock" value="{{ old('total_stock', 0) }}"
                                            min="0">
                                     @error('total_stock')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <div class="form-group">
                                     <div class="custom-control custom-switch mt-4">
-                                        <input type="checkbox" class="custom-control-input" 
-                                               id="manage_stock" name="manage_stock" value="1" 
+                                        <input type="checkbox" class="custom-control-input"
+                                               id="manage_stock" name="manage_stock" value="1"
                                                {{ old('manage_stock', true) ? 'checked' : '' }}>
                                         <label class="custom-control-label" for="manage_stock">Manage Stock</label>
                                     </div>
@@ -211,6 +178,8 @@
                         </div>
                     </div>
                 </div>
+
+                @include('admin.products._specs', ['specRows' => collect(old('specs', array_fill(0, 4, ['label' => '', 'value' => ''])))->map(fn ($row) => ['label' => $row['label'] ?? '', 'value' => $row['value'] ?? ''])->values()->all()])
 
                 <!-- Product Images -->
                 <div class="card card-success">

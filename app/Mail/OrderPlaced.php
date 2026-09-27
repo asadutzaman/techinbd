@@ -2,8 +2,6 @@
 
 namespace App\Mail;
 
-use App\Models\Order;
-use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Support\Str;
@@ -11,11 +9,11 @@ use Illuminate\Support\Str;
 /**
  * Sent to the checkout email once an order is placed.
  */
-class OrderPlaced extends Mailable
+class OrderPlaced extends OrderMail
 {
-    public function __construct(public Order $order)
+    public function kind(): string
     {
-        $order->loadMissing('orderItems');
+        return 'placed';
     }
 
     public function envelope(): Envelope

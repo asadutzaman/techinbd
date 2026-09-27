@@ -1,234 +1,106 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Settings - MultiShop Admin')
-@section('page-title', 'Website Settings')
+@section('title', 'Settings | ' . config('shop.name') . ' Admin')
+@section('page-title', 'Settings')
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
     <li class="breadcrumb-item active">Settings</li>
 @endsection
 
+@php
+    $unset = '<span class="text-muted">not set</span>';
+    $contact = config('shop.contact');
+    $social = config('shop.social');
+@endphp
+
 @section('content')
+    <div class="callout callout-info">
+        <p class="mb-0">
+            These settings live in <code>config/shop.php</code> and the server's <code>.env</code> file (<code>SHOP_*</code> and <code>MAIL_*</code> keys).
+            Change them there; the site picks them up on the next request. Blank contact and social lines are simply left off the shop.
+        </p>
+    </div>
+
     <div class="row">
-        <div class="col-md-12">
-            <div class="card card-primary card-tabs">
-                <div class="card-header p-0 pt-1">
-                    <ul class="nav nav-tabs" id="custom-tabs-one-tab" role="tablist">
-                        <li class="nav-item">
-                            <a class="nav-link active" id="general-tab" data-toggle="pill" href="#general" role="tab" aria-controls="general" aria-selected="true">General</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" id="homepage-tab" data-toggle="pill" href="#homepage" role="tab" aria-controls="homepage" aria-selected="false">Homepage</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" id="contact-tab" data-toggle="pill" href="#contact" role="tab" aria-controls="contact" aria-selected="false">Contact Info</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" id="social-tab" data-toggle="pill" href="#social" role="tab" aria-controls="social" aria-selected="false">Social Media</a>
-                        </li>
-                    </ul>
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-store mr-1"></i> Store</h3>
                 </div>
-                <div class="card-body">
-                    <form action="{{ route('admin.settings.update') }}" method="POST" enctype="multipart/form-data">
+                <div class="card-body p-0">
+                    <table class="table mb-0">
+                        <tr><th style="width: 38%;">Name</th><td>{{ config('shop.name') }} <code class="small">SHOP_NAME</code></td></tr>
+                        <tr><th>Tagline</th><td>{{ config('shop.tagline') }}</td></tr>
+                        <tr><th>Description</th><td>{{ config('shop.description') }}</td></tr>
+                        <tr><th>Currency</th><td>Bangladeshi taka (৳, BDT)</td></tr>
+                        <tr><th>Time zone</th><td>{{ config('shop.timezone') }} <code class="small">SHOP_TIMEZONE</code></td></tr>
+                        <tr><th>Promises</th><td>{{ implode(' · ', config('shop.promises')) }}</td></tr>
+                        <tr><th>Payment methods</th><td>{{ implode(' · ', config('shop.payment_methods')) }}</td></tr>
+                        <tr><th>Public address</th><td><a href="{{ config('app.url') }}" target="_blank" rel="noopener">{{ config('app.url') }}</a> <code class="small">APP_URL</code></td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-address-card mr-1"></i> Contact and social</h3>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table mb-0">
+                        <tr><th style="width: 38%;">Email <code class="small">SHOP_EMAIL</code></th><td>{!! filled($contact['email']) ? e($contact['email']) : $unset !!}</td></tr>
+                        <tr><th>Phone <code class="small">SHOP_PHONE</code></th><td>{!! filled($contact['phone']) ? e($contact['phone']) : $unset !!}</td></tr>
+                        <tr><th>Address <code class="small">SHOP_ADDRESS</code></th><td>{!! filled($contact['address']) ? e($contact['address']) : $unset !!}</td></tr>
+                        @foreach($social as $network => $url)
+                            <tr><th>{{ ucfirst($network) }}</th><td>{!! filled($url) ? '<a href="' . e($url) . '" target="_blank" rel="noopener">' . e($url) . '</a>' : $unset !!}</td></tr>
+                        @endforeach
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card card-outline card-primary">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-envelope mr-1"></i> Email</h3>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table mb-0">
+                        <tr><th style="width: 38%;">Sending with</th><td>{{ $mailer === 'smtp' ? 'SMTP, ' . $smtpHost : ucfirst($mailer) . ($mailer === 'log' ? ' (written to the log, not sent)' : '') }}</td></tr>
+                        <tr><th>From</th><td>{{ $from['name'] }} &lt;{{ $from['address'] }}&gt;</td></tr>
+                        <tr><th>Last 30 days</th><td>{{ $emailsSent }} order {{ Str::plural('email', $emailsSent) }} sent @if($emailsFailed) · <span class="text-danger">{{ $emailsFailed }} failed</span> @endif</td></tr>
+                        @if($lastFailure)
+                            <tr>
+                                <th>Last failure</th>
+                                <td class="small">
+                                    {{ $lastFailure->created_at->timezone(config('shop.timezone'))->format('d M Y, g:i A') }}:
+                                    <span class="text-danger">{{ Str::limit($lastFailure->error, 160) }}</span>
+                                    (<a href="{{ route('admin.orders.show', $lastFailure->order_id) }}#emails">order</a>)
+                                </td>
+                            </tr>
+                        @endif
+                    </table>
+                </div>
+                <div class="card-footer">
+                    <form action="{{ route('admin.settings.test-email') }}" method="POST" class="d-flex align-items-center flex-wrap">
                         @csrf
-                        <div class="tab-content" id="custom-tabs-one-tabContent">
-                            <!-- General Settings -->
-                            <div class="tab-pane fade show active" id="general" role="tabpanel" aria-labelledby="general-tab">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="site_name">Site Name</label>
-                                            <input type="text" class="form-control" id="site_name" name="site_name" value="MultiShop">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="site_tagline">Site Tagline</label>
-                                            <input type="text" class="form-control" id="site_tagline" name="site_tagline" value="Online Shop Website">
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="site_description">Site Description</label>
-                                    <textarea class="form-control" id="site_description" name="site_description" rows="3">Your one-stop shop for all your fashion needs</textarea>
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="currency">Default Currency</label>
-                                            <select class="form-control" id="currency" name="currency">
-                                                <option value="USD" selected>USD ($)</option>
-                                                <option value="EUR">EUR (€)</option>
-                                                <option value="GBP">GBP (£)</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="timezone">Timezone</label>
-                                            <select class="form-control" id="timezone" name="timezone">
-                                                <option value="UTC" selected>UTC</option>
-                                                <option value="America/New_York">Eastern Time</option>
-                                                <option value="America/Chicago">Central Time</option>
-                                                <option value="America/Los_Angeles">Pacific Time</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="logo">Site Logo</label>
-                                    <div class="input-group">
-                                        <div class="custom-file">
-                                            <input type="file" class="custom-file-input" id="logo" name="logo" accept="image/*">
-                                            <label class="custom-file-label" for="logo">Choose file</label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Homepage Settings -->
-                            <div class="tab-pane fade" id="homepage" role="tabpanel" aria-labelledby="homepage-tab">
-                                <div class="form-group">
-                                    <label for="hero_title">Hero Section Title</label>
-                                    <input type="text" class="form-control" id="hero_title" name="hero_title" value="Welcome to MultiShop">
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="hero_subtitle">Hero Section Subtitle</label>
-                                    <textarea class="form-control" id="hero_subtitle" name="hero_subtitle" rows="2">Discover amazing products at unbeatable prices</textarea>
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="featured_categories">Featured Categories (Max 4)</label>
-                                            <input type="number" class="form-control" id="featured_categories" name="featured_categories" value="4" min="1" max="8">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="featured_products">Featured Products (Max 8)</label>
-                                            <input type="number" class="form-control" id="featured_products" name="featured_products" value="8" min="1" max="12">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="form-group">
-                                    <div class="custom-control custom-switch">
-                                        <input type="checkbox" class="custom-control-input" id="show_carousel" name="show_carousel" checked>
-                                        <label class="custom-control-label" for="show_carousel">Show Homepage Carousel</label>
-                                    </div>
-                                </div>
-
-                                <div class="form-group">
-                                    <div class="custom-control custom-switch">
-                                        <input type="checkbox" class="custom-control-input" id="show_vendors" name="show_vendors" checked>
-                                        <label class="custom-control-label" for="show_vendors">Show Vendor Section</label>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Contact Info -->
-                            <div class="tab-pane fade" id="contact" role="tabpanel" aria-labelledby="contact-tab">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="contact_email">Contact Email</label>
-                                            <input type="email" class="form-control" id="contact_email" name="contact_email" value="info@multishop.com">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="contact_phone">Contact Phone</label>
-                                            <input type="text" class="form-control" id="contact_phone" name="contact_phone" value="+012 345 6789">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="contact_address">Contact Address</label>
-                                    <textarea class="form-control" id="contact_address" name="contact_address" rows="3">123 Street, New York, USA</textarea>
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="business_hours">Business Hours</label>
-                                            <input type="text" class="form-control" id="business_hours" name="business_hours" value="Mon - Fri: 9:00 AM - 6:00 PM">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="support_hours">Support Hours</label>
-                                            <input type="text" class="form-control" id="support_hours" name="support_hours" value="24/7 Customer Support">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Social Media -->
-                            <div class="tab-pane fade" id="social" role="tabpanel" aria-labelledby="social-tab">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="facebook_url">Facebook URL</label>
-                                            <input type="url" class="form-control" id="facebook_url" name="facebook_url" placeholder="https://facebook.com/yourpage">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="twitter_url">Twitter URL</label>
-                                            <input type="url" class="form-control" id="twitter_url" name="twitter_url" placeholder="https://twitter.com/yourhandle">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="instagram_url">Instagram URL</label>
-                                            <input type="url" class="form-control" id="instagram_url" name="instagram_url" placeholder="https://instagram.com/yourhandle">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="linkedin_url">LinkedIn URL</label>
-                                            <input type="url" class="form-control" id="linkedin_url" name="linkedin_url" placeholder="https://linkedin.com/company/yourcompany">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="form-group">
-                                    <div class="custom-control custom-switch">
-                                        <input type="checkbox" class="custom-control-input" id="show_social_links" name="show_social_links" checked>
-                                        <label class="custom-control-label" for="show_social_links">Show Social Media Links in Footer</label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card-footer">
-                            <button type="submit" class="btn btn-primary">Save Settings</button>
-                            <button type="reset" class="btn btn-secondary">Reset</button>
-                        </div>
+                        <button type="submit" class="btn btn-primary mr-3"><i class="fas fa-paper-plane mr-1"></i> Send a test email</button>
+                        <span class="text-muted small">Goes to the shop's own address, {{ $from['address'] }}. Gmail takes a few seconds.</span>
                     </form>
                 </div>
-                <!-- /.card -->
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-user-shield mr-1"></i> Admin accounts</h3>
+                </div>
+                <div class="card-body">
+                    <p>Admin accounts can't reset their password by email: whoever controls an admin's mailbox would get the admin panel. To give access or change an admin's password, run on the server:</p>
+                    <pre class="mb-0 bg-light p-2 rounded small">php artisan admin:grant someone@example.com
+php artisan admin:grant someone@example.com --revoke
+php artisan admin:password someone@example.com</pre>
+                </div>
             </div>
         </div>
     </div>
 @endsection
-
-@push('scripts')
-<script>
-$(document).ready(function() {
-    $('.custom-file-input').on('change', function() {
-        let fileName = $(this).val().split('\\').pop();
-        $(this).next('.custom-file-label').addClass("selected").html(fileName);
-    });
-});
-</script>
-@endpush

@@ -67,13 +67,21 @@ class OrderEmailTest extends TestCase
         Mail::fake();
         $order = $this->placeOrder(User::factory()->create());
 
-        $this->actingAs($this->admin())
+        $this->actingAs($admin = $this->admin())
             ->put(route('admin.orders.updateStatus', $order->id), ['status' => 'shipped', 'notify_customer' => 1])
             ->assertRedirect(route('admin.orders.show', $order->id))
-            ->assertSessionHas('success', "Order marked as Shipped. We've emailed rahim@example.com.");
+            ->assertSessionHas('success', "{$order->order_number} marked as Shipped. We've emailed rahim@example.com.");
 
         $this->assertSame('shipped', $order->fresh()->status);
         Mail::assertSent(OrderStatusChanged::class, fn (OrderStatusChanged $mail) => $mail->hasTo('rahim@example.com'));
+
+        // Logged against the order: the confirmation (by the shop) and this update (by the admin)
+        $log = $order->emails()->get();
+        $this->assertSame(['status', 'placed'], $log->pluck('kind')->all());
+        $this->assertTrue($log[0]->sent);
+        $this->assertSame($admin->id, $log[0]->user_id);
+        $this->assertSame("Order {$order->order_number} is on its way", $log[0]->subject);
+        $this->assertNull($log[1]->user_id);
 
         $mail = new OrderStatusChanged($order->fresh());
         $this->assertSame("Order {$order->order_number} is on its way", $mail->envelope()->subject);
@@ -106,7 +114,7 @@ class OrderEmailTest extends TestCase
             ->assertSessionHas('success', 'The order was already Pending.');
         // Box unticked
         $this->put(route('admin.orders.updateStatus', $order->id), ['status' => 'processing'])
-            ->assertSessionHas('success', 'Order marked as Processing.');
+            ->assertSessionHas('success', "{$order->order_number} marked as Processing.");
         // Back to pending is a correction, not news
         $this->put(route('admin.orders.updateStatus', $order->id), ['status' => 'pending', 'notify_customer' => 1]);
 
@@ -154,6 +162,11 @@ class OrderEmailTest extends TestCase
         $this->assertSame(1, Order::count());
         $this->guest('get', route('order.success', $order->id))->assertOk();
         Exceptions::assertReported(TransportException::class);
+
+        // The failure is on the order's email log, with the reason, for the admin to see and resend
+        $email = $order->emails()->sole();
+        $this->assertFalse($email->sent);
+        $this->assertStringContainsString('Connection could not be established', $email->error);
     }
 
     /**

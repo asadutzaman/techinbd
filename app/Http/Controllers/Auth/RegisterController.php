@@ -46,7 +46,7 @@ class RegisterController extends Controller
 
         $cart->mergeGuestCart($guestSessionId, $user->id);
 
-        CustomerMail::send($user, new Welcome($user));
+        CustomerMail::sendAfterResponse($user, new Welcome($user));
 
         return redirect()->intended(route('home'))
             ->with('success', 'Welcome to ' . config('shop.name') . ', ' . Str::before(trim($user->name), ' ') . '! Your account is ready.');

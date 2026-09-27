@@ -646,8 +646,8 @@ class DemoCatalogSeeder extends Seeder
     }
 
     /**
-     * Remove demo data this catalog no longer has: products first (their slugs would clash with
-     * the new ones), then categories and brands nothing else uses.
+     * Remove demo data this catalog no longer has: products first, then the categories and brands
+     * nothing else uses.
      */
     private function retireOldDemoData(): void
     {

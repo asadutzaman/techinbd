@@ -3,7 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title', 'MultiShop Admin Panel')</title>
+    <!-- Read by the admin pages' fetch() calls (product images) -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>@yield('title', config('shop.name') . ' Admin')</title>
 
     <!-- Google Font: Source Sans Pro -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
@@ -13,6 +15,44 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
     <!-- AdminLTE -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.1/dist/css/adminlte.min.css">
+
+    <style>
+        /* Sidebar wordmark in place of a logo image */
+        .admin-brand .admin-brand-mark {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 33px;
+            height: 33px;
+            margin-top: -2px;
+            border-radius: 8px;
+            background: #2563EB;
+            font-weight: 800;
+            line-height: 1;
+            color: #FFFFFF;
+            opacity: 1;
+        }
+
+        .admin-brand .brand-text {
+            font-weight: 400;
+            letter-spacing: .02em;
+        }
+
+        .admin-brand .admin-brand-accent {
+            font-weight: 700;
+            color: #60A5FA;
+        }
+
+        .admin-brand small {
+            color: #9CA3AF;
+            letter-spacing: 0;
+        }
+
+        /* Taka amounts from the storefront's price component */
+        .price-sign {
+            margin-right: .06em;
+        }
+    </style>
 
     @stack('styles')
 </head>
@@ -54,10 +94,11 @@
 
     <!-- Main Sidebar Container -->
     <aside class="main-sidebar sidebar-dark-primary elevation-4">
-        <!-- Brand Logo -->
-        <a href="{{ route('admin.dashboard') }}" class="brand-link">
-            <img src="{{ asset('img/favicon.ico') }}" alt="MultiShop Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
-            <span class="brand-text font-weight-light">MultiShop Admin</span>
+        <!-- Brand: the shop's two-tone wordmark (there's no logo image) -->
+        @php($logoParts = preg_split('/(?<=[a-z])(?=[A-Z])|\s+/', config('shop.name'), 2))
+        <a href="{{ route('admin.dashboard') }}" class="brand-link admin-brand">
+            <span class="brand-image admin-brand-mark" aria-hidden="true">{{ Str::upper(Str::substr(config('shop.name'), 0, 1)) }}</span>
+            <span class="brand-text"><strong>{{ Str::upper($logoParts[0]) }}</strong><span class="admin-brand-accent">{{ Str::upper($logoParts[1] ?? '') }}</span> <small>Admin</small></span>
         </a>
 
         <!-- Sidebar -->
@@ -182,7 +223,12 @@
                     <li class="nav-item">
                         <a href="{{ route('admin.orders.index') }}" class="nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-shopping-cart"></i>
-                            <p>Orders</p>
+                            <p>
+                                Orders
+                                @if($pendingOrderCount)
+                                    <span class="right badge badge-warning" title="{{ $pendingOrderCount }} waiting to be confirmed">{{ $pendingOrderCount }}</span>
+                                @endif
+                            </p>
                         </a>
                     </li>
                     <li class="nav-item">
@@ -246,7 +292,7 @@
         <div class="float-right d-none d-sm-block">
             <b>Version</b> 1.0.0
         </div>
-        <strong>Copyright &copy; 2024 <a href="{{ route('home') }}">MultiShop</a>.</strong> All rights reserved.
+        <strong>&copy; {{ now()->year }} <a href="{{ route('home') }}">{{ config('shop.name') }}</a>.</strong> All rights reserved.
     </footer>
 </div>
 <!-- ./wrapper -->
