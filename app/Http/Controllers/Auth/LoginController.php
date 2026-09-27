@@ -18,9 +18,10 @@ class LoginController extends Controller
 
     public function login(Request $request, CartService $cart)
     {
+        // No length rule here: accounts made under older rules must still be able to sign in
         $request->validate([
             'email' => 'required|email',
-            'password' => 'required|min:6',
+            'password' => 'required|string',
         ]);
 
         $credentials = $request->only('email', 'password');
@@ -44,7 +45,7 @@ class LoginController extends Controller
         }
 
         return back()->withErrors([
-            'email' => 'The provided credentials do not match our records.',
+            'email' => "That email and password don't match an account. Check them, or reset your password.",
         ])->withInput($request->except('password'));
     }
 

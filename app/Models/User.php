@@ -3,6 +3,8 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Support\CustomerMail;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -53,6 +55,14 @@ class User extends Authenticatable
             // Deliberately not fillable: grant with `php artisan admin:grant {email}`
             'is_admin' => 'boolean',
         ];
+    }
+
+    /**
+     * The "Forgot password?" email goes out after the page has been sent, like the shop's other emails.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        CustomerMail::notify($this, new ResetPassword($token));
     }
 
     /**

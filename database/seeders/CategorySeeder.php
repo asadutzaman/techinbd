@@ -2,93 +2,48 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Category;
 use Illuminate\Database\Seeder;
 
+/**
+ * The storefront's 16 tech categories, in menu order. All show in the category bar and as
+ * home page tiles; their icons come from Category::getIconAttribute().
+ *
+ * Safe to re-run: categories are matched by slug, and ones that exist are left as they are.
+ */
 class CategorySeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
+    public const CATEGORIES = [
+        'laptop' => ['Laptop', 'Everyday, business and gaming laptops, and MacBooks.'],
+        'desktop-pc' => ['Desktop PC', 'Brand PCs, mini PCs, all-in-ones and ready-built gaming PCs.'],
+        'monitor' => ['Monitor', 'Office, gaming and creator monitors.'],
+        'smartphone' => ['Smartphone', 'Samsung, Apple, Xiaomi and realme phones.'],
+        'tablet' => ['Tablet', 'iPads, Galaxy Tabs and Android tablets for work and study.'],
+        'processor' => ['Processor', 'Intel Core and AMD Ryzen desktop processors.'],
+        'motherboard' => ['Motherboard', 'Intel and AMD motherboards from ASUS, MSI and Gigabyte.'],
+        'graphics-card' => ['Graphics Card', 'NVIDIA GeForce and AMD Radeon graphics cards.'],
+        'ram' => ['RAM', 'DDR4 and DDR5 desktop memory.'],
+        'ssd' => ['SSD', 'NVMe and SATA solid state drives.'],
+        'router' => ['Router', 'Wi-Fi 5 and Wi-Fi 6 routers and mesh systems.'],
+        'printer' => ['Printer', 'Ink tank and laser printers for home and office.'],
+        'headphones' => ['Headphones', 'Headphones, earbuds and headsets.'],
+        'keyboard-mouse' => ['Keyboard & Mouse', 'Keyboards, mice and combos for work and gaming.'],
+        'television' => ['Television', 'Smart TVs from 32 to 65 inches.'],
+        'ups-power' => ['UPS & Power', 'UPS, power banks and chargers.'],
+    ];
+
     public function run(): void
     {
-        $categories = [
-            [
-                'name' => 'Men\'s Fashion',
-                'slug' => 'mens-fashion',
-                'description' => 'Stylish clothing and accessories for men',
-                'image' => 'cat-1.jpg',
+        $position = 0;
+        foreach (self::CATEGORIES as $slug => [$name, $description]) {
+            Category::firstOrCreate(['slug' => $slug], [
+                'name' => $name,
+                'description' => $description,
+                'sort_order' => ++$position,
                 'status' => true,
                 'is_menu' => true,
-                'is_featured' => true
-            ],
-            [
-                'name' => 'Women\'s Fashion',
-                'slug' => 'womens-fashion',
-                'description' => 'Trendy clothing and accessories for women',
-                'image' => 'cat-2.jpg',
-                'status' => true,
-                'is_menu' => true,
-                'is_featured' => true
-            ],
-            [
-                'name' => 'Kids Fashion',
-                'slug' => 'kids-fashion',
-                'description' => 'Comfortable and stylish clothing for children',
-                'image' => 'cat-3.jpg',
-                'status' => true,
-                'is_menu' => true,
-                'is_featured' => false
-            ],
-            [
-                'name' => 'Electronics',
-                'slug' => 'electronics',
-                'description' => 'Latest gadgets and electronic devices',
-                'image' => 'cat-4.jpg',
-                'status' => true,
-                'is_menu' => true,
-                'is_featured' => true
-            ],
-            [
-                'name' => 'Sports & Outdoors',
-                'slug' => 'sports-outdoors',
-                'description' => 'Sports equipment and outdoor gear',
-                'image' => 'cat-1.jpg',
-                'status' => true,
-                'is_menu' => true,
-                'is_featured' => false
-            ],
-            [
-                'name' => 'Accessories',
-                'slug' => 'accessories',
-                'description' => 'Fashion accessories and jewelry',
-                'image' => 'cat-2.jpg',
-                'status' => true,
-                'is_menu' => true,
-                'is_featured' => false
-            ],
-            [
-                'name' => 'Shoes',
-                'slug' => 'shoes',
-                'description' => 'Footwear for all occasions',
-                'image' => 'cat-3.jpg',
-                'status' => true,
-                'is_menu' => true,
-                'is_featured' => true
-            ],
-            [
-                'name' => 'Home & Garden',
-                'slug' => 'home-garden',
-                'description' => 'Home decor and garden supplies',
-                'image' => 'cat-4.jpg',
-                'status' => true,
-                'is_menu' => false,
-                'is_featured' => false
-            ]
-        ];
-
-        foreach ($categories as $category) {
-            \App\Models\Category::firstOrCreate(['name' => $category['name']], $category);
+                'is_featured' => true,
+            ]);
         }
     }
 }

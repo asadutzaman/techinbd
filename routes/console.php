@@ -43,12 +43,13 @@ Artisan::command('products:reindex', function () {
 
 Artisan::command('products:thumbnails', function () {
     $count = 0;
-    ProductImageOptimized::whereNull('thumb_url')->chunkById(100, function ($images) use (&$count) {
-        foreach ($images as $image) {
-            $image->generateThumbnail();
-            $count += $image->thumb_url ? 1 : 0;
-        }
-    });
+    ProductImageOptimized::where(fn ($query) => $query->whereNull('thumb_url')->orWhereNull('large_url'))
+        ->chunkById(100, function ($images) use (&$count) {
+            foreach ($images as $image) {
+                $image->generateVersions();
+                $count += $image->thumb_url && $image->large_url ? 1 : 0;
+            }
+        });
 
-    $this->info("Generated {$count} thumbnails.");
-})->purpose('Generate card thumbnails for product images uploaded before thumbnails existed');
+    $this->info("Generated card and gallery copies for {$count} images.");
+})->purpose('Generate the card (600px) and gallery (1200px) WebP copies for product images that lack them');

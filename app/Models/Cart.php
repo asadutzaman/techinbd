@@ -14,6 +14,7 @@ class Cart extends Model
         'user_id',
         'session_id',
         'product_id',
+        'variant_id',
         'quantity',
         'price',
         'size',
@@ -27,6 +28,14 @@ class Cart extends Model
     public function product()
     {
         return $this->belongsTo(ProductOptimized::class, 'product_id');
+    }
+
+    /**
+     * The option picked on the product page ("12GB / 512GB"), which set the price
+     */
+    public function variant()
+    {
+        return $this->belongsTo(ProductVariantOptimized::class, 'variant_id');
     }
 
     public function user()

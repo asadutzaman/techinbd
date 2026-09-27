@@ -34,8 +34,8 @@
                         <h6>Order Information</h6>
                         <p><strong>Order Date:</strong> {{ $order->created_at->format('F d, Y \a\t g:i A') }}</p>
                         <p><strong>Order Status:</strong> 
-                            <span class="badge badge-{{ $order->status == 'completed' ? 'success' : ($order->status == 'pending' ? 'warning' : 'info') }}">
-                                {{ ucfirst($order->status) }}
+                            <span class="badge badge-{{ ['delivered' => 'success', 'pending' => 'warning', 'cancelled' => 'danger'][$order->status] ?? 'info' }}">
+                                {{ $order->status_label }}
                             </span>
                         </p>
                         <p><strong>Payment Status:</strong> 
@@ -86,9 +86,9 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td class="align-middle">${{ number_format($item->product_price, 2) }}</td>
+                                <td class="align-middle"><x-price :amount="$item->product_price" /></td>
                                 <td class="align-middle">{{ $item->quantity }}</td>
-                                <td class="align-middle">${{ number_format($item->total, 2) }}</td>
+                                <td class="align-middle"><x-price :amount="$item->total" /></td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -103,16 +103,16 @@
                         <h6 class="mb-3">Order Summary</h6>
                         <div class="d-flex justify-content-between mb-2">
                             <span>Subtotal:</span>
-                            <span>${{ number_format($order->subtotal, 2) }}</span>
+                            <span><x-price :amount="$order->subtotal" /></span>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
                             <span>Shipping:</span>
-                            <span>${{ number_format($order->shipping_cost, 2) }}</span>
+                            <span><x-price :amount="$order->shipping_cost" /></span>
                         </div>
                         <hr>
                         <div class="d-flex justify-content-between">
                             <strong>Total:</strong>
-                            <strong>${{ number_format($order->total, 2) }}</strong>
+                            <strong><x-price :amount="$order->total" /></strong>
                         </div>
                     </div>
                 </div>

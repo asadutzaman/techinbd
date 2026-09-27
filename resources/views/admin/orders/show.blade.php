@@ -38,26 +38,26 @@
                                         <span>{{ $item->product_name }}</span>
                                     </div>
                                 </td>
-                                <td>${{ number_format($item->product_price, 2) }}</td>
+                                <td><x-price :amount="$item->product_price" /></td>
                                 <td>{{ $item->quantity }}</td>
                                 <td>{{ $item->size ?? 'N/A' }}</td>
                                 <td>{{ $item->color ?? 'N/A' }}</td>
-                                <td>${{ number_format($item->total, 2) }}</td>
+                                <td><x-price :amount="$item->total" /></td>
                             </tr>
                             @endforeach
                         </tbody>
                         <tfoot>
                             <tr>
                                 <th colspan="5" class="text-right">Subtotal:</th>
-                                <th>${{ number_format($order->subtotal, 2) }}</th>
+                                <th><x-price :amount="$order->subtotal" /></th>
                             </tr>
                             <tr>
                                 <th colspan="5" class="text-right">Shipping:</th>
-                                <th>${{ number_format($order->shipping_cost, 2) }}</th>
+                                <th><x-price :amount="$order->shipping_cost" /></th>
                             </tr>
                             <tr class="bg-light">
                                 <th colspan="5" class="text-right">Total:</th>
-                                <th>${{ number_format($order->total, 2) }}</th>
+                                <th><x-price :amount="$order->total" /></th>
                             </tr>
                         </tfoot>
                     </table>
@@ -108,12 +108,18 @@
                         <div class="form-group">
                             <label for="status">Order Status</label>
                             <select name="status" id="status" class="form-control">
-                                <option value="pending" {{ $order->status == 'pending' ? 'selected' : '' }}>Pending</option>
-                                <option value="processing" {{ $order->status == 'processing' ? 'selected' : '' }}>Processing</option>
-                                <option value="shipped" {{ $order->status == 'shipped' ? 'selected' : '' }}>Shipped</option>
-                                <option value="delivered" {{ $order->status == 'delivered' ? 'selected' : '' }}>Delivered</option>
-                                <option value="cancelled" {{ $order->status == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                                @foreach(App\Models\Order::STATUSES as $value => $label)
+                                    <option value="{{ $value }}" @selected($order->status === $value)>{{ $label }}</option>
+                                @endforeach
                             </select>
+                        </div>
+                        {{-- Processing, shipped, delivered and cancelled each have an email (App\Mail\OrderStatusChanged) --}}
+                        <div class="form-group">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="notify_customer" name="notify_customer" value="1" checked>
+                                <label class="custom-control-label" for="notify_customer">Email the customer about this change</label>
+                            </div>
+                            <small class="form-text text-muted">Goes to {{ $order->customer_email }}. Moving an order back to pending sends nothing.</small>
                         </div>
                         <button type="submit" class="btn btn-primary">Update Status</button>
                     </form>
@@ -131,7 +137,7 @@
                         @method('PUT')
                         <div class="form-group">
                             <label for="payment_method">Payment Method</label>
-                            <input type="text" class="form-control" value="{{ ucfirst($order->payment_method) }}" readonly>
+                            <input type="text" class="form-control" value="{{ $order->payment_method_label }}" readonly>
                         </div>
                         <div class="form-group">
                             <label for="payment_status">Payment Status</label>
@@ -163,7 +169,7 @@
                         <dd class="col-sm-6">{{ $order->orderItems->sum('quantity') }} items</dd>
                         
                         <dt class="col-sm-6">Order Total:</dt>
-                        <dd class="col-sm-6"><strong>${{ number_format($order->total, 2) }}</strong></dd>
+                        <dd class="col-sm-6"><strong><x-price :amount="$order->total" /></strong></dd>
                     </dl>
                 </div>
             </div>

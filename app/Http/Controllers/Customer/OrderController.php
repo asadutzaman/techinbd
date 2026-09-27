@@ -58,7 +58,7 @@ class OrderController extends Controller
                 continue;
             }
 
-            $cart->add($item->product_id, $item->quantity, $item->size, $item->color);
+            $cart->add($item->product_id, $item->quantity, $item->size, $item->color, $item->variant_id);
         }
 
         $message = 'Items from order #' . $order->order_number . ' have been added to your cart!';

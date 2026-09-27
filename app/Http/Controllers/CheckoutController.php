@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use App\Mail\OrderPlaced;
 use App\Models\Order;
 use App\Services\CartService;
+use App\Support\CustomerMail;
 
 class CheckoutController extends Controller
 {
@@ -25,8 +28,32 @@ class CheckoutController extends Controller
         $subtotal = $this->cart->subtotal($cartItems);
         $shipping = CartService::SHIPPING_FLAT;
         $total = $subtotal + $shipping;
+        $prefill = $this->prefill();
 
-        return view('checkout', compact('cartItems', 'subtotal', 'shipping', 'total'));
+        return view('checkout', compact('cartItems', 'subtotal', 'shipping', 'total', 'prefill'));
+    }
+
+    /**
+     * What a signed-in customer's form starts with: their default shipping address, else their account
+     * details. Guests start with Bangladesh selected.
+     */
+    private function prefill(): array
+    {
+        $user = Auth::user()?->load('defaultShippingAddress');
+        $address = $user?->defaultShippingAddress;
+
+        return [
+            'first_name' => $address->first_name ?? Str::before(trim((string) $user?->name), ' '),
+            'last_name' => $address->last_name ?? (str_contains(trim((string) $user?->name), ' ') ? Str::after(trim($user->name), ' ') : ''),
+            'email' => $user?->email,
+            'phone' => $address->phone ?? $user?->phone,
+            'address_line_1' => $address?->address_line_1,
+            'address_line_2' => $address?->address_line_2,
+            'city' => $address?->city,
+            'state' => $address?->state,
+            'zip_code' => $address?->postal_code,
+            'country' => $address?->country ?: 'Bangladesh',
+        ];
     }
 
     public function store(Request $request)
@@ -42,7 +69,7 @@ class CheckoutController extends Controller
             'state' => 'required|string|max:255',
             'zip_code' => 'required|string|max:10',
             'country' => 'required|string|max:255',
-            'payment_method' => 'required|in:paypal,directcheck,banktransfer'
+            'payment_method' => 'required|in:' . implode(',', array_keys(Order::PAYMENT_METHODS))
         ]);
 
         $cartItems = $this->cart->items();
@@ -78,7 +105,9 @@ class CheckoutController extends Controller
 
             $order->orderItems()->createMany($cartItems->map(fn ($cartItem) => [
                 'product_id' => $cartItem->product_id,
-                'product_name' => $cartItem->product->name,
+                'variant_id' => $cartItem->variant_id,
+                // The name is kept with the order, so it includes the option: "Galaxy S24 Ultra (12GB / 512GB)"
+                'product_name' => $cartItem->product->name . ($cartItem->variant?->name ? ' (' . $cartItem->variant->name . ')' : ''),
                 'product_price' => $cartItem->price,
                 'quantity' => $cartItem->quantity,
                 'size' => $cartItem->size,
@@ -90,6 +119,8 @@ class CheckoutController extends Controller
 
             return $order;
         });
+
+        CustomerMail::send($order->customer_email, new OrderPlaced($order));
 
         // Lets a guest see their own confirmation page, and only that one
         $request->session()->put('last_order_id', $order->id);

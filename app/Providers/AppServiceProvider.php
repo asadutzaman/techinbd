@@ -2,8 +2,11 @@
 
 namespace App\Providers;
 
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -31,5 +34,20 @@ class AppServiceProvider extends ServiceProvider
         // Storefront layout data: menu categories and header badge counts
         view()->composer('layouts.app', \App\Http\View\Composers\MenuComposer::class);
         view()->composer('layouts.app', \App\Http\View\Composers\HeaderCountsComposer::class);
+
+        // The password reset email. Its link is built on APP_URL, not on the host the request came in
+        // with, so nobody can have a reset link point at another site.
+        ResetPassword::toMailUsing(function ($user, string $token) {
+            $url = rtrim(config('app.url'), '/') . route('password.reset', ['token' => $token, 'email' => $user->getEmailForPasswordReset()], false);
+            $minutes = config('auth.passwords.' . config('auth.defaults.passwords') . '.expire');
+
+            return (new MailMessage)
+                ->subject('Reset your ' . config('shop.name') . ' password')
+                ->greeting('Hi ' . Str::before(trim($user->name), ' ') . ',')
+                ->line('We got a request to reset the password for your account.')
+                ->action('Set a new password', $url)
+                ->line("The link works for {$minutes} minutes. If you didn't ask for this, ignore this email and your password stays the same.")
+                ->salutation('Thanks, ' . config('shop.name'));
+        });
     }
 }

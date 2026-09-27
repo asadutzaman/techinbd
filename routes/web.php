@@ -15,12 +15,20 @@ Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::get('/product/{id}', [ProductController::class, 'show'])->name('product.detail');
 
-// Authentication Routes
-Route::get('/login', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [App\Http\Controllers\Auth\LoginController::class, 'login'])->middleware('throttle:5,1');
+// Authentication Routes (signed-in visitors are sent home from these)
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [App\Http\Controllers\Auth\LoginController::class, 'login'])->middleware('throttle:5,1');
+    Route::get('/register', [App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])->name('register');
+    Route::post('/register', [App\Http\Controllers\Auth\RegisterController::class, 'register']);
+
+    // Password reset by email
+    Route::get('/forgot-password', [App\Http\Controllers\Auth\PasswordResetController::class, 'request'])->name('password.request');
+    Route::post('/forgot-password', [App\Http\Controllers\Auth\PasswordResetController::class, 'email'])->middleware('throttle:5,1')->name('password.email');
+    Route::get('/reset-password/{token}', [App\Http\Controllers\Auth\PasswordResetController::class, 'reset'])->name('password.reset');
+    Route::post('/reset-password', [App\Http\Controllers\Auth\PasswordResetController::class, 'update'])->name('password.update');
+});
 Route::post('/logout', [App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('logout');
-Route::get('/register', [App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])->name('register');
-Route::post('/register', [App\Http\Controllers\Auth\RegisterController::class, 'register']);
 
 
 // Cart Routes
@@ -35,9 +43,6 @@ Route::get('/order/success/{id}', [CheckoutController::class, 'success'])->name(
 
 // Search Routes
 Route::get('/search/suggestions', [ShopController::class, 'searchSuggestions'])->name('search.suggestions');
-
-// Filter Routes
-Route::get('/shop/attributes-by-category', [ShopController::class, 'getAttributesByCategory'])->name('shop.attributes-by-category');
 
 // Customer Dashboard Routes (Protected)
 Route::middleware('auth')->prefix('customer')->name('customer.')->group(function () {
@@ -101,6 +106,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     
     // Brands
     Route::resource('brands', App\Http\Controllers\Admin\BrandController::class);
+
+    // Home page banner slider
+    Route::resource('banners', App\Http\Controllers\Admin\BannerController::class)->except('show');
     
     // Attributes (Optimized)
     Route::resource('attributes', App\Http\Controllers\Admin\AttributeOptimizedController::class);

@@ -354,7 +354,7 @@ class ProductOptimizedController extends Controller
             ]);
 
             // Small WebP copy for product cards (uploads can be up to 2 MB)
-            $productImage->generateThumbnail();
+            $productImage->generateVersions();
         }
     }
 

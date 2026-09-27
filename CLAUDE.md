@@ -10,10 +10,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 composer install && cp .env.example .env && php artisan key:generate
-php artisan migrate --seed
+php artisan migrate --seed                 # the demo tech store: 16 categories, 100 products, home banners
 php artisan storage:link                   # product images live on the public disk
 php artisan admin:grant you@example.com    # admin access (--revoke to remove); register the account first
-php artisan serve                          # http://127.0.0.1:8000
+php artisan db:seed --class=CustomerSeeder # 5 demo customers, password 12345678, at plus-addresses of MAIL_FROM_ADDRESS
+php artisan serve --port=3000              # http://127.0.0.1:3000, the port the Cloudflare Tunnel forwards to
 
 # Tests use in-memory SQLite. This Laragon PHP doesn't enable pdo_sqlite, and `artisan test`
 # runs PHPUnit in a child process that drops -d flags, so call PHPUnit directly:
@@ -22,11 +23,12 @@ php -d extension=pdo_sqlite vendor/bin/phpunit --filter=CheckoutTest    # one cl
 vendor/bin/pint                                                         # code style
 
 php artisan products:reindex      # rebuild product_search_index after importing/seeding products
-php artisan products:thumbnails   # backfill card thumbnails for images uploaded before thumbnails existed
+php artisan products:thumbnails   # backfill the card (600px) and gallery (1200px) WebP copies of product images missing either
 ```
 
 - `.env` targets MySQL (`DB_DATABASE=rrit`); `.env.example` still says sqlite. Sessions, cache and queue use the `database` driver.
 - The theme is served as static files from `public/` (`css/style.min.css`, `lib/`, `js/main.js`); the admin layout loads AdminLTE/Bootstrap/jQuery from CDNs. Only `welcome.blade.php` uses Vite, so `npm run build` isn't part of normal work.
+- The site is also public at https://inv.naxovisoft.com, through a Cloudflare Tunnel (the `Cloudflared` Windows service) to the dev server on port 3000. `bootstrap/app.php` trusts loopback proxies for `X-Forwarded-For`/`X-Forwarded-Proto` only (a trusted forwarded host could poison reset links), so generated URLs are https:// there. Without it, browsers block `srcset` images and AJAX calls as mixed content, because Cloudflare's HTTPS rewrites skip `srcset`. Check storefront changes on the public URL too, not just localhost.
 
 ### Production
 
@@ -41,9 +43,11 @@ Laravel MVC; controllers mostly query Eloquent directly. All routes are in `rout
 The catalog models are the `*Optimized` ones: `ProductOptimized` (`products_optimized`), `ProductVariantOptimized`, `ProductImageOptimized`, `AttributeOptimized`, `AttributeValueOptimized`, `ProductAttributeOptimized`, plus `ProductSearchIndex`. The original `products`/`product_variants` tables and their models were removed.
 
 - Price is `base_price`; `status` is an integer 0/1 (`->active()` scope). A product's category is `category_id` (the `product_categories` pivot and `categories()` relation exist but are empty/unused).
-- `main_image_url` reads the `mainImage` relation, so **eager load `mainImage`** wherever products are listed. It returns the WebP card thumbnail (`thumb_url`, written by `ProductImageOptimized::generateThumbnail()` on upload) when there is one, else the original, else a `public/img/product-N.jpg` placeholder. Use `$image->full_url` for the full-size image.
+- `main_image_url` reads the `mainImage` relation, so **eager load `mainImage`** wherever products are listed. It returns the WebP card thumbnail when there is one, else the original, else a `public/img/product-N.jpg` placeholder.
+- Each product image has WebP copies written by `ProductImageOptimized::generateVersions()` on upload: `thumb_url` (600px, cards, `card_url`) and `large_url` (1200px, never upscaled, the product page gallery, `gallery_url`/`gallery_srcset`). `deleteFiles()` removes all three files. Use `$image->full_url` only when the original is really needed.
+- `specs` is label → value in entry order. It's stored as a JSON list of `[label, value]` pairs by an accessor/mutator, because MySQL sorts JSON object keys; older rows holding an object still read.
 - Card "compare at" prices come from `withMax('variants', 'compare_price')` → `variants_max_compare_price`, not from loading variants.
-- Search: `ShopController::applySearch()` uses the FULLTEXT index on `product_search_index` on MySQL and falls back to `LIKE` elsewhere (tests). That index is only as fresh as the last `ProductOptimized::updateSearchIndex()` call; the admin product controller and `OptimizedProductSeeder` call it once per product after writing attributes. New write paths (imports, other seeders) must call it or run `products:reindex`.
+- Search: `ShopController::applySearch()` uses the FULLTEXT index on `product_search_index` on MySQL and falls back to `LIKE` elsewhere (tests). That index is only as fresh as the last `ProductOptimized::updateSearchIndex()` call; the admin product controller and `DemoCatalogSeeder` call it once per product after writing attributes. New write paths (imports, other seeders) must call it or run `products:reindex`.
 
 ### Caching and query discipline
 
@@ -53,19 +57,72 @@ The catalog models are the `*Optimized` ones: `ProductOptimized` (`products_opti
 ### Cart, checkout, orders
 
 - `App\Services\CartService` is the only place that knows how to find "the current cart": rows keyed by `user_id` when logged in, or by `session_id` with a null `user_id` for guests. Controllers (cart, checkout, reorder, wishlist move-to-cart) go through it; don't query `Cart` by session directly. `SHIPPING_FLAT` lives there.
+- Options: `carts.variant_id` and `order_items.variant_id` (nullable, set null when the variant is deleted). `CartService::add(..., $variantId)` prices the line at the variant's `price` (falling back to `base_price`), and each option is its own cart line, also when merging a guest cart. `CartController::add` only accepts a `variant_id` that belongs to the product. Checkout snapshots "Name (option)" into `product_name`, and reorder passes the option back.
 - `Auth::login()`/`attempt()` rotate the session id, so login and register capture `$request->session()->getId()` **before** authenticating and pass it to `CartService::mergeGuestCart()`.
 - `orders` columns are `subtotal`, `shipping_cost`, `total`, `billing_address`/`shipping_address` (single text fields). Order items snapshot `product_name`/`product_price`; `order_items.product_id` is nullable and set null when a product is deleted, so use `$item->product?->…`.
 - The order confirmation page (`/order/success/{id}`) is only shown to the session that placed the order (`last_order_id`) or the owning user.
+- Order statuses live in `Order::STATUSES`. Change them with `$order->changeStatus($status, $notify)`, which the admin screen uses: it saves only a real change and emails the customer for processing/shipped/delivered/cancelled.
+- Checkout pre-fills signed-in customers from their default shipping address (`CheckoutController::prefill()`); the shop delivers within Bangladesh only.
+
+### Email
+
+- `.env` sends through Gmail SMTP (app password; `.env` is gitignored, never put it anywhere else). `APP_URL` is the public site: the mail header and password reset links use it. Tests pin `APP_URL`/`MAIL_MAILER=array` in `phpunit.xml`.
+- Customer emails go through `App\Support\CustomerMail::send()`/`notify()`: sent after the response with `defer()`, and a failure is `report()`ed, never shown. Gmail takes ~6s per email. `SetContentLength` middleware lets Apache/mod_php and multi-worker servers release the page first; on Windows `artisan serve` handles one request at a time, so the next page still waits there.
+- Mailables in `app/Mail` with markdown templates in `resources/views/mail`: `OrderPlaced` (checkout), `OrderStatusChanged`, `Welcome` (registration). `resources/views/vendor/mail/html/header.blade.php` overrides only the header (the two-tone wordmark). The password reset email is set up with `ResetPassword::toMailUsing()` in `AppServiceProvider` and builds its link on `APP_URL`.
+- `App\Support\Money::format()` gives plain-text taka for emails; `<x-price>` uses `Money::amount()`.
 
 ### Auth and access control
 
-- Hand-written `Auth\LoginController`/`RegisterController` on the default `web` guard; `POST /login` is throttled to 5/min.
+- Hand-written `Auth\LoginController`/`RegisterController`/`PasswordResetController` on the default `web` guard, behind `guest` middleware. `POST /login` and `POST /forgot-password` are throttled to 5/min. New passwords need 8 characters; login doesn't check length, so older short passwords still work. The forgot-password form answers the same whether or not the email has an account.
+- The account pages (`auth/*`) share form styles in `storefront.css` (`.sf-auth*`, `.sf-field*`, `.sf-input`, `.sf-password`), and `storefront.js` handles the Show/Hide password buttons.
 - Admin routes use `['auth', 'admin']`; the `admin` alias (`EnsureUserIsAdmin`, registered in `bootstrap/app.php`) checks `users.is_admin`. `is_admin` is deliberately not mass-assignable, so grant it with `php artisan admin:grant`.
 
 ### Views
 
-- `resources/views/layouts/app.blade.php` is the storefront layout. `MenuComposer` provides `$menuCategories`, and `HeaderCountsComposer` provides `$cartCount`/`$wishlistCount` server-side. JS updates the badge with `setCartCount(response.cart_count)` from cart endpoint responses rather than re-fetching `/cart/count`.
-- Pages push page-specific assets with `@push('styles')`/`@push('scripts')`; both layouts render those stacks.
+- The storefront's look follows techlandbd.com's layout in a light theme. `resources/views/layouts/app.blade.php` is the shared chrome:
+  - a sticky white header (logo, search, Deals, compare/wishlist/cart, account) with a category bar on desktops;
+  - below 1200px: a phone menu drawer, a search toggle and a fixed bottom bar (the body gets bottom padding for it);
+  - a light footer.
+
+  Its styles and design tokens (`--sf-*`, Noto Sans) are in `public/css/storefront.css`, along with shared pieces: the breadcrumb strip (`.sf-crumbs`), product cards and the pager (`.sf-pager`, from `custom-pagination.blade.php`). Both files are plain static files, cache-busted with `filemtime`. Inner pages keep the theme's own content styles, including the yellow `btn-primary`.
+- `public/js/storefront.js` handles:
+  - **Drawers:** the phone menu and the shop filters. A `[data-drawer]` opens from a `[data-drawer-open]` button whose `aria-controls` names it, and closes from `[data-drawer-close]` or Esc. It traps Tab, locks page scroll and returns focus. `data-drawer-until="992"` makes it a drawer only below that width (1200 by default).
+  - the phone search toggle and the product rail buttons;
+  - **Product card buttons:** Add to cart posts to the button's `data-cart-url`; compare calls the layout's `addToCompare()`. Pages don't add their own card handlers.
+- `MenuComposer` provides `$menuCategories`; the category bar and the drawer show the `is_menu` ones with products, in `sort_order`. `HeaderCountsComposer` provides `$cartCount`/`$wishlistCount` server-side. JS updates the three cart badges with `setCartCount(response.cart_count)` from cart endpoint responses, rather than re-fetching `/cart/count`.
+- Pages push page-specific assets with `@push('styles')`/`@push('scripts')`; both layouts render those stacks. Inner pages start with a breadcrumb, and `.sf-main` gives them the top gap; the home, shop and product pages opt out with `@section('main_class', 'is-flush')`. The layout also has a `head` stack (the product page's JSON-LD). `storefront.js` publishes the sticky header's height as `--sf-sticky-top` for other sticky bars.
+- Store-wide copy lives in `config/shop.php`: name, tagline (the home page title), description, promises, payment methods, contact/social from `SHOP_*` env, and the display timezone. The footer reads it, and contact lines only render when set. Payment options come from `Order::PAYMENT_METHODS`.
+- Home page (`HomeController` + `home.blade.php`): all data is one `CatalogCache::remember('home')` array. The page has:
+  - a hero with the banner slider and up to two side banners;
+  - Featured Categories: tiles for the `is_featured` categories with products, or all of them when none are featured;
+  - rows of Deals (`ProductOptimized::onSale()->orderBySaving()`, also behind the shop's `?sale=1`), Featured, Latest and Best Sellers.
+
+  Best Sellers ranks units ordered, ignoring cancelled orders. It only shows once at least 4 products have sales, and refreshes with the cache (orders don't bust it). Each row is `<x-product-rail>`, which scrolls sideways, and its cards are `<x-product-card>` (the `variant="deal"` card has an orange button). `<x-price>` formats taka (`৳164,999`). `<x-category-icon>` holds the category line icons (Lucide, ISC licence in the file), picked by keyword from the category's name by `Category::getIconAttribute()`; an image uploaded in admin replaces the icon. The `<h1>` is the store name, hidden with `sr-only`.
+- Shop page (`ShopController::index` + `shop.blade.php`, styles `.shop-*` and script inline):
+  - **Query string:** `App\Support\ShopFilters` reads it forgivingly (search, category, `brand[]`, `attributes[id][]`, min/max price, in stock, sale, featured, sort). It applies them, except the search, which `ShopController::applySearch()` owns.
+  - **Links:** `url($changes)` builds shop links with one value changed; `chips()` gives the removable filter chips.
+  - **Heading:** the search and the category are what the page is about (the heading), and "Clear all" keeps them.
+  - **Filters:** a sidebar from 992px, a slide-in panel below. Ticks apply at once on computers and wait for "Show results" in the panel.
+  - **Brands:** the brand list is scoped to the category (`shop-brands:{category}` cache).
+  - **Paging and sort:** 24 per page. Deals default to "Biggest saving", everything else to newest; every sort ends with `id desc`, so pages never overlap.
+  - **Cards:** `<x-product-card :specs="true" :compare="true">` adds `keySpecs()` lines ("Chip: Apple M5") and a compare button; the home rails use the plain card.
+- Product page (`ProductController::show` + `product-detail.blade.php`, styles `.pdp-*` and script inline):
+  - a gallery (scroll-snap track, thumbnails, arrows, counter, `<dialog>` lightbox), images ordered main first then `sort_order`;
+  - a buy box: chips (stock, SKU, brand, model, warranty), key features (`ProductOptimized::keyFeatures()`, the first 4 specs), price and delivery boxes, options (only when a product has more than one variant; choosing one updates the price and `variant_id`), and cart/wishlist/compare;
+  - a Specification table from `ProductOptimized::specGroups()` (the specs, plus attribute values the specs don't already give, then General details), then the description HTML under a sticky tab bar;
+  - related products from the same category (a sidebar at ≥1200px, below otherwise).
+
+  There are no reviews or ratings yet; don't add placeholder ones.
+- Banners (`Banner` model, Admin → Home Banners) have a `placement`: `slider` or `side` (the first two live side banners show). Uploads are kept as originals and served as WebP versions from `Banner::generateImages()`:
+  - slides are cropped to 3:1 for desktop and 2:1 for phones (from the optional phone image);
+  - side banners are 2:1 everywhere.
+
+  Changing the placement recrops the banner. Resizing goes through `App\Support\WebpImage`, which product thumbnails also use. Schedules (`starts_at`/`ends_at`, entered in shop time) are checked per request because the home data is cached.
+
+### Demo data
+
+- `DatabaseSeeder` seeds the demo tech store: `CategorySeeder` (16 categories), `AttributeSeeder` (Screen Size, Storage, RAM, Color), `DemoCatalogSeeder` (100 products with brands) and `BannerSeeder` (3 slides and 2 side banners). Each is safe to re-run on its own. `DemoCatalogSeeder` also removes the earlier fashion demo products, categories and brands, but keeps anything added in admin.
+- Product covers are drawn from `database/seeders/demo-art/<category-slug>.jpg`, with the brand and model added by GD. Featured products also get a close-up and a key-specs card, so their pages show a 3-image gallery. Images are only created when missing. Banner artwork is original, with its text designed in, in `public/img/banners/`.
 
 ### Migrations
 

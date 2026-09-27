@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'MultiShop - Shopping Cart')
+@section('title', 'Cart | ' . config('shop.name'))
 
 @section('content')
     <!-- Breadcrumb Start -->
@@ -37,6 +37,9 @@
                             <td class="align-middle">
                                 <img src="{{ $item->product->main_image_url }}" alt="{{ $item->product->name }}" style="width: 50px;">
                                 {{ $item->product->name }}
+                                @if($item->variant?->name)
+                                    <br><small class="text-muted">Option: {{ $item->variant->name }}</small>
+                                @endif
                                 @if($item->size)
                                     <br><small class="text-muted">Size: {{ $item->size }}</small>
                                 @endif
@@ -44,7 +47,7 @@
                                     <br><small class="text-muted">Color: {{ $item->color }}</small>
                                 @endif
                             </td>
-                            <td class="align-middle">${{ number_format($item->price, 2) }}</td>
+                            <td class="align-middle"><x-price :amount="$item->price" /></td>
                             <td class="align-middle">
                                 <div class="input-group quantity mx-auto" style="width: 100px;">
                                     <div class="input-group-btn">
@@ -61,7 +64,7 @@
                                     </div>
                                 </div>
                             </td>
-                            <td class="align-middle">${{ number_format($item->total, 2) }}</td>
+                            <td class="align-middle"><x-price :amount="$item->total" /></td>
                             <td class="align-middle">
                                 <button class="btn btn-sm btn-danger remove-item" data-cart-id="{{ $item->id }}">
                                     <i class="fa fa-times"></i>
@@ -81,31 +84,23 @@
                 </table>
             </div>
             <div class="col-lg-4">
-                <form class="mb-30" action="">
-                    <div class="input-group">
-                        <input type="text" class="form-control border-0 p-4" placeholder="Coupon Code">
-                        <div class="input-group-append">
-                            <button class="btn btn-primary">Apply Coupon</button>
-                        </div>
-                    </div>
-                </form>
                 <h5 class="section-title position-relative text-uppercase mb-3"><span class="bg-secondary pr-3">Cart Summary</span></h5>
                 <div class="bg-light p-30 mb-5">
                     @if($cartItems->count() > 0)
                     <div class="border-bottom pb-2">
                         <div class="d-flex justify-content-between mb-3">
                             <h6>Subtotal</h6>
-                            <h6 id="cart-subtotal">${{ number_format($subtotal, 2) }}</h6>
+                            <h6 id="cart-subtotal"><x-price :amount="$subtotal" /></h6>
                         </div>
                         <div class="d-flex justify-content-between">
                             <h6 class="font-weight-medium">Shipping</h6>
-                            <h6 class="font-weight-medium">${{ number_format($shipping, 2) }}</h6>
+                            <h6 class="font-weight-medium"><x-price :amount="$shipping" /></h6>
                         </div>
                     </div>
                     <div class="pt-2">
                         <div class="d-flex justify-content-between mt-2">
                             <h5>Total</h5>
-                            <h5 id="cart-total">${{ number_format($total, 2) }}</h5>
+                            <h5 id="cart-total"><x-price :amount="$total" /></h5>
                         </div>
                         <a href="{{ route('checkout') }}" class="btn btn-block btn-primary font-weight-bold my-3 py-3">Proceed To Checkout</a>
                     </div>

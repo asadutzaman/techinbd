@@ -2,137 +2,41 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Models\Category;
 use App\Models\AttributeOptimized;
 use App\Models\AttributeValueOptimized;
+use Illuminate\Database\Seeder;
 
+/**
+ * Shop-wide product attributes, filterable in the shop sidebar (it only lists values that
+ * products use). DemoCatalogSeeder links products to these by slug.
+ *
+ * Safe to re-run: attributes and values are matched by name.
+ */
 class AttributeSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
+    private const ATTRIBUTES = [
+        'Screen Size' => ['11"', '13"', '14"', '15.6"', '16"', '24"', '27"', '32"', '43"', '55"', '65"'],
+        'Storage' => ['128GB', '256GB', '480GB', '500GB', '512GB', '1TB', '2TB'],
+        'RAM' => ['4GB', '6GB', '8GB', '12GB', '16GB', '24GB', '32GB'],
+        'Color' => ['Black', 'White', 'Gray', 'Silver', 'Blue', 'Green', 'Pink', 'Purple', 'Red', 'Gold'],
+    ];
+
     public function run(): void
     {
-        // Get categories
-        $electronics = Category::where('name', 'Electronics')->first();
-        $mensFashion = Category::where('name', 'Men\'s Fashion')->first();
-        $womensFashion = Category::where('name', 'Women\'s Fashion')->first();
+        $position = 0;
+        foreach (self::ATTRIBUTES as $name => $values) {
+            $attribute = AttributeOptimized::firstOrCreate(['name' => $name], [
+                'type' => 'select',
+                'required' => false,
+                'filterable' => true,
+                'sort_order' => ++$position,
+                'status' => true,
+            ]);
 
-        if ($electronics) {
-            // Electronics attributes
-            $screenSize = AttributeOptimized::firstOrCreate(
-                [
-                    'name' => 'Screen Size'
-                ],
-                [
-                    'type' => 'select',
-                    'required' => false,
-                    'filterable' => true,
-                    'sort_order' => 1,
-                    'status' => true
-                ]
-            );
-
-            // Screen size values
-            $screenSizes = ['13"', '14"', '15.6"', '17"', '21"', '24"', '27"', '32"', '43"', '55"', '65"', '75"'];
-            foreach ($screenSizes as $index => $size) {
+            foreach ($values as $index => $value) {
                 AttributeValueOptimized::firstOrCreate(
-                    [
-                        'attribute_id' => $screenSize->id,
-                        'value' => $size
-                    ],
-                    [
-                        'sort_order' => $index,
-                        'status' => true
-                    ]
-                );
-            }
-
-            $storage = AttributeOptimized::firstOrCreate(
-                [
-                    'name' => 'Storage'
-                ],
-                [
-                    'type' => 'select',
-                    'required' => false,
-                    'filterable' => true,
-                    'sort_order' => 2,
-                    'status' => true
-                ]
-            );
-
-            // Storage values
-            $storageOptions = ['128GB', '256GB', '512GB', '1TB', '2TB', '4TB', '8TB'];
-            foreach ($storageOptions as $index => $storage_option) {
-                AttributeValueOptimized::firstOrCreate(
-                    [
-                        'attribute_id' => $storage->id,
-                        'value' => $storage_option
-                    ],
-                    [
-                        'sort_order' => $index,
-                        'status' => true
-                    ]
-                );
-            }
-        }
-
-        if ($mensFashion) {
-            // Men's Fashion attributes
-            $size = AttributeOptimized::firstOrCreate(
-                [
-                    'name' => 'Size'
-                ],
-                [
-                    'type' => 'select',
-                    'required' => true,
-                    'filterable' => true,
-                    'sort_order' => 1,
-                    'status' => true
-                ]
-            );
-
-            // Size values
-            $sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
-            foreach ($sizes as $index => $size_option) {
-                AttributeValueOptimized::firstOrCreate(
-                    [
-                        'attribute_id' => $size->id,
-                        'value' => $size_option
-                    ],
-                    [
-                        'sort_order' => $index,
-                        'status' => true
-                    ]
-                );
-            }
-
-            $color = AttributeOptimized::firstOrCreate(
-                [
-                    'name' => 'Color'
-                ],
-                [
-                    'type' => 'select',
-                    'required' => false,
-                    'filterable' => true,
-                    'sort_order' => 2,
-                    'status' => true
-                ]
-            );
-
-            // Color values
-            $colors = ['Black', 'White', 'Red', 'Blue', 'Green', 'Yellow', 'Pink', 'Purple', 'Orange', 'Gray', 'Brown'];
-            foreach ($colors as $index => $color_option) {
-                AttributeValueOptimized::firstOrCreate(
-                    [
-                        'attribute_id' => $color->id,
-                        'value' => $color_option
-                    ],
-                    [
-                        'sort_order' => $index,
-                        'status' => true
-                    ]
+                    ['attribute_id' => $attribute->id, 'value' => $value],
+                    ['sort_order' => $index, 'status' => true]
                 );
             }
         }

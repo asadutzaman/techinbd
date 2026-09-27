@@ -42,8 +42,8 @@ class StorefrontTest extends TestCase
 
         $html = $this->get('/shop')->assertOk()->getContent();
 
-        $this->assertMatchesRegularExpression('/Laptops.*?badge-pill">3</s', $html);
-        $this->assertMatchesRegularExpression('/Acme.*?badge-pill">3</s', $html);
+        $this->assertMatchesRegularExpression('/Laptops.*?shop-count">3</s', $html);
+        $this->assertMatchesRegularExpression('/Acme.*?shop-count">3</s', $html);
     }
 
     public function test_search_and_suggestions(): void
@@ -59,6 +59,19 @@ class StorefrontTest extends TestCase
             ->assertOk()
             ->assertJsonPath('0.name', 'Gaming Laptop')
             ->assertJsonPath('0.category', $match->category->name);
+    }
+
+    public function test_shop_can_show_only_price_drops(): void
+    {
+        ProductOptimized::factory()->onSale(150)->create(['name' => 'Discounted Drill', 'base_price' => 100]);
+        ProductOptimized::factory()->create(['name' => 'Regular Hammer']);
+
+        $html = $this->get('/shop?sale=1')
+            ->assertOk()
+            ->assertSee('Discounted Drill')
+            ->assertDontSee('Regular Hammer')
+            ->getContent();
+        $this->assertMatchesRegularExpression('#class="shop-summary">\s*1 product\s#', $html);
     }
 
     public function test_menu_links_filter_the_shop_by_category(): void
@@ -77,11 +90,11 @@ class StorefrontTest extends TestCase
         $category = Category::factory()->create(['name' => 'Monitors']);
         ProductOptimized::factory()->create(['category_id' => $category->id]);
 
-        $this->assertMatchesRegularExpression('/Monitors.*?badge-pill">1</s', $this->get('/shop')->getContent());
+        $this->assertMatchesRegularExpression('/Monitors.*?shop-count">1</s', $this->get('/shop')->getContent());
 
         ProductOptimized::factory()->create(['category_id' => $category->id]);
 
-        $this->assertMatchesRegularExpression('/Monitors.*?badge-pill">2</s', $this->get('/shop')->getContent());
+        $this->assertMatchesRegularExpression('/Monitors.*?shop-count">2</s', $this->get('/shop')->getContent());
     }
 
     public function test_query_count_does_not_grow_with_catalog_size(): void

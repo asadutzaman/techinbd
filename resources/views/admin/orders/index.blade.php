@@ -46,7 +46,7 @@
                                 <td>{{ $order->order_number }}</td>
                                 <td>{{ $order->customer_name }}</td>
                                 <td>{{ $order->customer_email }}</td>
-                                <td>${{ number_format($order->total, 2) }}</td>
+                                <td><x-price :amount="$order->total" /></td>
                                 <td>
                                     @switch($order->status)
                                         @case('pending')

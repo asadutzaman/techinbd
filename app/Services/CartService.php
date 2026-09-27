@@ -27,7 +27,7 @@ class CartService
 
     public function items(): Collection
     {
-        return $this->query()->with(['product.mainImage'])->get();
+        return $this->query()->with(['product.mainImage', 'variant'])->get();
     }
 
     public function find($id): Cart
@@ -35,12 +35,18 @@ class CartService
         return $this->query()->findOrFail($id);
     }
 
-    public function add(int $productId, int $quantity = 1, ?string $size = null, ?string $color = null): Cart
+    /**
+     * Add a product, or one of its options (variants), which is priced at the option's own price
+     * when it has one. Each option is its own cart line; an option of another product is ignored.
+     */
+    public function add(int $productId, int $quantity = 1, ?string $size = null, ?string $color = null, ?int $variantId = null): Cart
     {
         $product = ProductOptimized::active()->findOrFail($productId);
+        $variant = $variantId ? $product->variants()->find($variantId) : null;
 
         $existing = $this->query()
             ->where('product_id', $product->id)
+            ->where('variant_id', $variant?->id)
             ->where('size', $size)
             ->where('color', $color)
             ->first();
@@ -55,8 +61,9 @@ class CartService
             'user_id' => Auth::id(),
             'session_id' => Auth::check() ? null : session()->getId(),
             'product_id' => $product->id,
+            'variant_id' => $variant?->id,
             'quantity' => $quantity,
-            'price' => $product->base_price,
+            'price' => $variant?->price ?? $product->base_price,
             'size' => $size,
             'color' => $color,
         ]);
@@ -88,6 +95,7 @@ class CartService
         foreach ($guestItems as $guestItem) {
             $existing = Cart::where('user_id', $userId)
                 ->where('product_id', $guestItem->product_id)
+                ->where('variant_id', $guestItem->variant_id)
                 ->where('size', $guestItem->size)
                 ->where('color', $guestItem->color)
                 ->first();

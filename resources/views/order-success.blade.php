@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Order Confirmation - MultiShop')
+@section('title', 'Order confirmation | ' . config('shop.name'))
 
 @section('content')
     <!-- Breadcrumb Start -->
@@ -28,6 +28,7 @@
                         <h2 class="mt-3">Thank You For Your Order!</h2>
                         <p class="lead">Your order has been placed successfully.</p>
                         <p>Order #: <strong>{{ $order->order_number }}</strong></p>
+                        <p class="text-muted mb-0">We've emailed a confirmation to <strong>{{ $order->customer_email }}</strong>.</p>
                     </div>
 
                     <div class="row">
@@ -45,12 +46,12 @@
                                 <tr>
                                     <th>Order Status:</th>
                                     <td>
-                                        <span class="badge badge-warning">{{ ucfirst($order->status) }}</span>
+                                        <span class="badge badge-warning">{{ $order->status_label }}</span>
                                     </td>
                                 </tr>
                                 <tr>
                                     <th>Payment Method:</th>
-                                    <td>{{ ucfirst($order->payment_method) }}</td>
+                                    <td>{{ $order->payment_method_label }}</td>
                                 </tr>
                                 <tr>
                                     <th>Payment Status:</th>
@@ -62,7 +63,7 @@
                                 </tr>
                                 <tr>
                                     <th>Total Amount:</th>
-                                    <td>${{ number_format($order->total, 2) }}</td>
+                                    <td><x-price :amount="$order->total" /></td>
                                 </tr>
                             </table>
                         </div>
@@ -97,24 +98,24 @@
                                         @if($item->size) <br><small>Size: {{ $item->size }}</small> @endif
                                         @if($item->color) <br><small>Color: {{ $item->color }}</small> @endif
                                     </td>
-                                    <td>${{ number_format($item->product_price, 2) }}</td>
+                                    <td><x-price :amount="$item->product_price" /></td>
                                     <td>{{ $item->quantity }}</td>
-                                    <td>${{ number_format($item->total, 2) }}</td>
+                                    <td><x-price :amount="$item->total" /></td>
                                 </tr>
                                 @endforeach
                             </tbody>
                             <tfoot>
                                 <tr>
                                     <th colspan="3" class="text-right">Subtotal:</th>
-                                    <td>${{ number_format($order->subtotal, 2) }}</td>
+                                    <td><x-price :amount="$order->subtotal" /></td>
                                 </tr>
                                 <tr>
                                     <th colspan="3" class="text-right">Shipping:</th>
-                                    <td>${{ number_format($order->shipping_cost, 2) }}</td>
+                                    <td><x-price :amount="$order->shipping_cost" /></td>
                                 </tr>
                                 <tr>
                                     <th colspan="3" class="text-right">Total:</th>
-                                    <td>${{ number_format($order->total, 2) }}</td>
+                                    <td><x-price :amount="$order->total" /></td>
                                 </tr>
                             </tfoot>
                         </table>

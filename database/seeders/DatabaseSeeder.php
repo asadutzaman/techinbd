@@ -23,11 +23,12 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        // The demo tech catalog (it seeds its own brands) and the home page banners
         $this->call([
             CategorySeeder::class,
-            BrandSeeder::class,
             AttributeSeeder::class,
-            OptimizedProductSeeder::class,
+            DemoCatalogSeeder::class,
+            BannerSeeder::class,
         ]);
     }
 }

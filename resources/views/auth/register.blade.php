@@ -1,81 +1,75 @@
 @extends('layouts.app')
 
+@section('title', 'Create an account | ' . config('shop.name'))
+@section('main_class', 'is-flush')
+
 @section('content')
-<div class="container-fluid">
-    <div class="row px-xl-5">
-        <div class="col-12">
-            <nav class="breadcrumb bg-light mb-30">
-                <a class="breadcrumb-item text-dark" href="{{ route('home') }}">Home</a>
-                <span class="breadcrumb-item active">Register</span>
-            </nav>
-        </div>
+<nav class="sf-crumbs" aria-label="Breadcrumb">
+    <div class="sf-container">
+        <ol>
+            <li><a href="{{ route('home') }}">Home</a></li>
+            <li aria-current="page">Create an account</li>
+        </ol>
     </div>
-</div>
+</nav>
 
-<div class="container-fluid">
-    <div class="row px-xl-5 justify-content-center">
-        <div class="col-lg-8">
-            <h5 class="section-title position-relative text-uppercase mb-3">
-                <span class="bg-secondary pr-3">Customer Registration</span>
-            </h5>
-            <div class="bg-light p-30">
-                @if ($errors->any())
-                    <div class="alert alert-danger">
-                        <ul class="mb-0">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
+<div class="sf-container sf-auth">
+    <div class="sf-auth-card">
+        <h1 class="sf-auth-title">Create your account</h1>
+        <p class="sf-auth-lead">Follow your orders, keep a wishlist and check out faster. It takes a minute.</p>
 
-                <form method="POST" action="{{ route('register') }}">
-                    @csrf
-                    <div class="row">
-                        <div class="col-md-6 form-group">
-                            <label>Full Name *</label>
-                            <input class="form-control" type="text" name="name" value="{{ old('name') }}" required>
-                        </div>
-                        <div class="col-md-6 form-group">
-                            <label>Email Address *</label>
-                            <input class="form-control" type="email" name="email" value="{{ old('email') }}" required>
-                        </div>
-                        <div class="col-md-6 form-group">
-                            <label>Phone Number</label>
-                            <input class="form-control" type="text" name="phone" value="{{ old('phone') }}">
-                        </div>
-                        <div class="col-md-6 form-group">
-                            <label>Date of Birth</label>
-                            <input class="form-control" type="date" name="date_of_birth" value="{{ old('date_of_birth') }}">
-                        </div>
-                        <div class="col-md-6 form-group">
-                            <label>Gender</label>
-                            <select class="form-control" name="gender">
-                                <option value="">Select Gender</option>
-                                <option value="male" {{ old('gender') == 'male' ? 'selected' : '' }}>Male</option>
-                                <option value="female" {{ old('gender') == 'female' ? 'selected' : '' }}>Female</option>
-                                <option value="other" {{ old('gender') == 'other' ? 'selected' : '' }}>Other</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6 form-group">
-                            <label>Password *</label>
-                            <input class="form-control" type="password" name="password" required>
-                        </div>
-                        <div class="col-md-6 form-group">
-                            <label>Confirm Password *</label>
-                            <input class="form-control" type="password" name="password_confirmation" required>
-                        </div>
-                        <div class="col-md-12">
-                            <button class="btn btn-primary py-2 px-4" type="submit">Register</button>
-                        </div>
-                    </div>
-                </form>
-                
-                <div class="text-center mt-3">
-                    <p>Already have an account? <a href="{{ route('login') }}">Login here</a></p>
-                </div>
+        <form method="POST" action="{{ route('register') }}">
+            @csrf
+            <div class="sf-field">
+                <label class="sf-field-label" for="register-name">Full name</label>
+                <input class="sf-input" type="text" id="register-name" name="name" value="{{ old('name') }}" autocomplete="name" required autofocus
+                       @error('name') aria-invalid="true" aria-describedby="register-name-error" @enderror>
+                @error('name')
+                    <p class="sf-field-error" id="register-name-error">{{ $message }}</p>
+                @enderror
             </div>
-        </div>
+
+            <div class="sf-field">
+                <label class="sf-field-label" for="register-email">Email</label>
+                <input class="sf-input" type="email" id="register-email" name="email" value="{{ old('email') }}" autocomplete="email" required
+                       aria-describedby="register-email-hint @error('email') register-email-error @enderror" @error('email') aria-invalid="true" @enderror>
+                <p class="sf-field-hint" id="register-email-hint">Order updates go here.</p>
+                @error('email')
+                    <p class="sf-field-error" id="register-email-error">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <div class="sf-field">
+                <label class="sf-field-label" for="register-phone">Mobile number <span class="sf-field-optional">(optional)</span></label>
+                <input class="sf-input" type="tel" id="register-phone" name="phone" value="{{ old('phone') }}" autocomplete="tel" placeholder="01XXXXXXXXX"
+                       @error('phone') aria-invalid="true" aria-describedby="register-phone-error" @enderror>
+                @error('phone')
+                    <p class="sf-field-error" id="register-phone-error">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <div class="sf-field">
+                <label class="sf-field-label" for="register-password">Password</label>
+                <div class="sf-password">
+                    <input class="sf-input" type="password" id="register-password" name="password" autocomplete="new-password" minlength="8" required
+                           aria-describedby="register-password-hint @error('password') register-password-error @enderror" @error('password') aria-invalid="true" @enderror>
+                    <button type="button" class="sf-password-toggle" data-password-toggle aria-controls="register-password" aria-label="Show password">Show</button>
+                </div>
+                <p class="sf-field-hint" id="register-password-hint">At least 8 characters.</p>
+                @error('password')
+                    <p class="sf-field-error" id="register-password-error">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <div class="sf-field">
+                <label class="sf-field-label" for="register-password-confirmation">Confirm password</label>
+                <input class="sf-input" type="password" id="register-password-confirmation" name="password_confirmation" autocomplete="new-password" minlength="8" required>
+            </div>
+
+            <button type="submit" class="sf-submit">Create account</button>
+        </form>
+
+        <p class="sf-auth-alt">Already have an account? <a href="{{ route('login') }}">Sign in</a></p>
     </div>
 </div>
 @endsection

@@ -75,17 +75,21 @@
                                     </td>
                                     <td class="align-middle">{{ $order->created_at->format('M d, Y') }}</td>
                                     <td class="align-middle">
-                                        <span class="badge badge-{{ $order->status == 'completed' ? 'success' : ($order->status == 'pending' ? 'warning' : 'info') }}">
-                                            {{ ucfirst($order->status) }}
+                                        <span class="badge badge-{{ ['delivered' => 'success', 'pending' => 'warning', 'cancelled' => 'danger'][$order->status] ?? 'info' }}">
+                                            {{ $order->status_label }}
                                         </span>
                                     </td>
                                     <td class="align-middle">{{ $order->order_items_count }} item(s)</td>
-                                    <td class="align-middle">${{ number_format($order->total, 2) }}</td>
+                                    <td class="align-middle"><x-price :amount="$order->total" /></td>
                                     <td class="align-middle">
                                         <div class="btn-group" role="group">
                                             <a href="{{ route('customer.orders.show', $order) }}" class="btn btn-sm btn-outline-primary">View</a>
                                             @if(in_array($order->status, ['delivered', 'completed']))
-                                                <a href="{{ route('customer.orders.reorder', $order) }}" class="btn btn-sm btn-outline-success">Reorder</a>
+                                                {{-- Reorder is a POST: it changes the cart --}}
+                                                <form action="{{ route('customer.orders.reorder', $order) }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-sm btn-outline-success">Reorder</button>
+                                                </form>
                                             @endif
                                         </div>
                                     </td>

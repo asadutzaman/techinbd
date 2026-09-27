@@ -53,7 +53,7 @@
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="align-middle">{{ $item->product->currency }} {{ number_format($item->product->base_price, 2) }}</td>
+                                    <td class="align-middle"><x-price :amount="$item->product->base_price" :currency="$item->product->currency" /></td>
                                     <td class="align-middle">
                                         @if($item->product->is_active && $item->product->stock_status === 'in_stock')
                                             <span class="badge badge-success">In Stock</span>

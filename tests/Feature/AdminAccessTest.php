@@ -10,7 +10,7 @@ class AdminAccessTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const ADMIN_PAGES = ['/admin', '/admin/products', '/admin/orders', '/admin/categories', '/admin/brands', '/admin/attributes', '/admin/settings'];
+    private const ADMIN_PAGES = ['/admin', '/admin/products', '/admin/orders', '/admin/categories', '/admin/brands', '/admin/attributes', '/admin/banners', '/admin/banners/create', '/admin/settings'];
 
     public function test_guests_are_sent_to_login(): void
     {

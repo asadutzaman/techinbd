@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use App\Services\CartService;
 
 class CartController extends Controller
@@ -26,6 +27,8 @@ class CartController extends Controller
     {
         $request->validate([
             'product_id' => 'required|exists:products_optimized,id',
+            // An option of this product; it sets the price
+            'variant_id' => ['nullable', 'integer', Rule::exists('product_variants_optimized', 'id')->where('product_id', $request->integer('product_id'))],
             'quantity' => 'required|integer|min:1',
             'size' => 'nullable|string',
             'color' => 'nullable|string'
@@ -35,7 +38,8 @@ class CartController extends Controller
             (int) $request->product_id,
             (int) $request->quantity,
             $request->size,
-            $request->color
+            $request->color,
+            $request->filled('variant_id') ? $request->integer('variant_id') : null
         );
 
         return response()->json([

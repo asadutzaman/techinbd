@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use App\Models\ProductOptimized;
 use App\Models\Category;
 use App\Models\Brand;
@@ -11,6 +12,7 @@ use App\Models\AttributeOptimized;
 use App\Models\ProductAttributeOptimized;
 use App\Models\ProductSearchIndex;
 use App\Support\CatalogCache;
+use App\Support\ShopFilters;
 
 class ShopController extends Controller
 {
@@ -25,125 +27,63 @@ class ShopController extends Controller
 
     public function index(Request $request)
     {
-        $perPage = $request->get('per_page', 9); // Default to 9 products per page
+        $filters = ShopFilters::fromRequest($request);
 
-        // Validate per_page parameter
-        if (!in_array($perPage, [9, 15, 21])) {
-            $perPage = 9;
+        $query = ProductOptimized::active();
+        if ($filters->search !== null) {
+            $this->applySearch($query, $filters->search);
         }
+        $filters->apply($query);
+
+        // The price range of everything that matches, for the summary line and the price inputs
+        $prices = $query->clone()->toBase()->selectRaw('min(base_price) as low, max(base_price) as high')->first();
 
         // Only what the product cards render
-        $query = ProductOptimized::with('mainImage')
-            ->withMax('variants', 'compare_price')
-            ->active();
-        $searchTerm = null;
-        $isSearching = false;
+        $products = $filters->orderBy($query->with('mainImage')->withMax('variants', 'compare_price'))
+            ->paginate(ShopFilters::PER_PAGE)
+            ->withQueryString();
 
-        // Handle search functionality
-        if ($request->has('search') && !empty($request->search)) {
-            $searchTerm = trim($request->search);
-            $isSearching = true;
-            $this->applySearch($query, $searchTerm);
-        }
-
-        // Handle category filter
-        if ($request->has('category') && !empty($request->category)) {
-            $query->where('category_id', $request->category);
-        }
-
-        // Handle brand filter
-        if ($request->has('brand') && !empty($request->brand)) {
-            $query->where('brand_id', $request->brand);
-        }
-
-        // Handle product attributes filters
-        $attributeFilters = $request->get('attributes', []);
-        if (!empty($attributeFilters)) {
-            foreach ($attributeFilters as $attributeId => $values) {
-                if (!empty($values)) {
-                    $query->whereHas('productAttributes', function($q) use ($attributeId, $values) {
-                        $q->where('attribute_id', $attributeId);
-                        if (is_array($values)) {
-                            $q->whereIn('value', $values);
-                        } else {
-                            $q->where('value', $values);
-                        }
-                    });
-                }
-            }
-        }
-
-        // Handle price range filter
-        if ($request->has('min_price') && !empty($request->min_price)) {
-            $query->where('base_price', '>=', $request->min_price);
-        }
-
-        if ($request->has('max_price') && !empty($request->max_price)) {
-            $query->where('base_price', '<=', $request->max_price);
-        }
-
-        // Handle featured filter
-        if ($request->has('featured') && $request->featured == '1') {
-            $query->featured();
-        }
-
-        // Handle stock filter
-        if ($request->has('in_stock') && $request->in_stock == '1') {
-            $query->inStock();
-        }
-
-        // Handle sorting (only if not searching, as search has its own relevance ordering)
-        if (!$isSearching) {
-            $sortBy = $request->get('sort', 'latest');
-            switch ($sortBy) {
-                case 'price_low':
-                    $query->orderBy('base_price', 'ASC');
-                    break;
-                case 'price_high':
-                    $query->orderBy('base_price', 'DESC');
-                    break;
-                case 'name':
-                    $query->orderBy('name', 'ASC');
-                    break;
-                case 'latest':
-                default:
-                    $query->orderBy('created_at', 'DESC');
-                    break;
-            }
-        }
-
-        $products = $query->paginate($perPage);
-
-        // Append query parameters to pagination links
-        $products->appends($request->query());
-
-        // Get search suggestions if searching
-        $suggestions = collect();
-        if ($isSearching && $products->count() < 5) {
-            $suggestions = $this->getSearchSuggestions($searchTerm);
-        }
-
-        // Sidebar data doesn't depend on the current filters, so it's cached with the catalog
+        // The sidebar lists don't depend on the other filters, so they're cached with the catalog
         $categories = $this->catalogCache->remember('active-categories', 600, fn () => Category::activeWithProductCounts());
-        $brands = $this->catalogCache->remember('active-brands', 600, fn () => Brand::where('status', 1)
-            ->withCount(['products' => fn ($q) => $q->where('status', 1)])
+        $brands = $this->brandsFor($filters->category);
+        $totalActiveProducts = $this->catalogCache->remember('active-product-count', 600, fn () => ProductOptimized::active()->count());
+        $filterableAttributes = $this->getFilterableAttributes($filters->category);
+
+        $category = $filters->category ? $categories->firstWhere('id', $filters->category) : null;
+        $brand = count($filters->brands) === 1 ? $brands->firstWhere('id', $filters->brands[0]) : null;
+        $heading = match (true) {
+            $filters->search !== null => 'Results for “' . $filters->search . '”',
+            $category !== null => $category->name,
+            $brand !== null => $brand->name,
+            $filters->sale => 'Deals',
+            $filters->featured => 'Featured products',
+            default => 'All products',
+        };
+
+        return view('shop', [
+            'products' => $products,
+            'filters' => $filters,
+            'heading' => $heading,
+            'category' => $category,
+            'categories' => $categories,
+            'brands' => $brands,
+            'totalActiveProducts' => $totalActiveProducts,
+            'filterableAttributes' => $filterableAttributes,
+            'prices' => $prices,
+            'chips' => $filters->chips($brands, $filterableAttributes),
+        ]);
+    }
+
+    /**
+     * Active brands, each with its number of active products in the category (or in the whole shop).
+     */
+    private function brandsFor(?int $categoryId): Collection
+    {
+        return $this->catalogCache->remember('shop-brands:' . ($categoryId ?? 'all'), 600, fn () => Brand::active()
+            ->withCount(['products' => fn ($products) => $products->active()
+                ->when($categoryId, fn ($products) => $products->where('category_id', $categoryId))])
             ->orderBy('name')
             ->get());
-        $totalActiveProducts = $this->catalogCache->remember('active-product-count', 600, fn () => ProductOptimized::active()->count());
-
-        // Get filterable attributes with their values
-        $filterableAttributes = $this->getFilterableAttributes($request->get('category'));
-
-        return view('shop', compact(
-            'products',
-            'searchTerm',
-            'isSearching',
-            'suggestions',
-            'categories',
-            'brands',
-            'totalActiveProducts',
-            'filterableAttributes'
-        ));
     }
 
     /**
@@ -179,26 +119,10 @@ class ShopController extends Controller
     }
 
     /**
-     * Get search suggestions based on search term
-     */
-    private function getSearchSuggestions($searchTerm)
-    {
-        $query = ProductOptimized::active()->select('name')->limit(5);
-        $this->applySearch($query, $searchTerm);
-
-        return $query->get()
-            ->map(fn ($product) => ['name' => $product->name])
-            ->unique('name')
-            ->take(3);
-    }
-
-    /**
      * Get filterable attributes with the values actually used by active products
      */
-    private function getFilterableAttributes($selectedCategory)
+    private function getFilterableAttributes(?int $selectedCategory): array
     {
-        $selectedCategory = (int) $selectedCategory ?: null;
-
         return $this->catalogCache->remember('shop-filters:' . ($selectedCategory ?? 'all'), 600, function () use ($selectedCategory) {
             $attributesQuery = AttributeOptimized::active()->filterable();
 
@@ -226,10 +150,12 @@ class ShopController extends Controller
 
             $filterableAttributes = [];
             foreach ($attributes as $attribute) {
+                // Natural order: 4GB, 8GB, 16GB rather than 16GB, 4GB, 8GB
                 $values = collect($usedValues->get($attribute->id))
                     ->pluck('value')
                     ->filter()
-                    ->sort()
+                    ->unique()
+                    ->sort(SORT_NATURAL | SORT_FLAG_CASE)
                     ->values();
 
                 if ($values->isNotEmpty()) {
@@ -272,19 +198,5 @@ class ShopController extends Controller
         ]);
 
         return response()->json($suggestions);
-    }
-
-    /**
-     * AJAX endpoint to get attributes for a specific category
-     */
-    public function getAttributesByCategory(Request $request)
-    {
-        $categoryId = $request->get('category_id');
-
-        if (!$categoryId) {
-            return response()->json([]);
-        }
-
-        return response()->json($this->getFilterableAttributes($categoryId));
     }
 }

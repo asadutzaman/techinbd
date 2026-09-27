@@ -4,6 +4,8 @@ namespace Database\Factories;
 
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\ProductOptimized;
+use App\Models\ProductVariantOptimized;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -35,5 +37,22 @@ class ProductOptimizedFactory extends Factory
     public function inactive(): static
     {
         return $this->state(fn () => ['status' => 0]);
+    }
+
+    /**
+     * Marked down: a default variant carries the higher "was" price.
+     */
+    public function onSale(float $was): static
+    {
+        return $this->afterCreating(function (ProductOptimized $product) use ($was) {
+            $variant = new ProductVariantOptimized([
+                'name' => 'Standard',
+                'compare_price' => $was,
+                'stock' => 5,
+                'is_default' => true,
+            ]);
+            $variant->product()->associate($product);
+            $variant->save();
+        });
     }
 }

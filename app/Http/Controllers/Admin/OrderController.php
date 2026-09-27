@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\OrderStatusChanged;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use App\Models\Order;
 
 class OrderController extends Controller
@@ -29,14 +31,22 @@ class OrderController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $request->validate([
-            'status' => 'required|in:pending,processing,shipped,delivered,cancelled'
+            'status' => ['required', Rule::in(array_keys(Order::STATUSES))],
         ]);
 
         $order = Order::findOrFail($id);
-        $order->status = $request->status;
-        $order->save();
+        $notify = $request->boolean('notify_customer');
 
-        return redirect()->route('admin.orders.index')->with('success', 'Order status updated successfully!');
+        if (! $order->changeStatus($request->status, $notify)) {
+            return redirect()->route('admin.orders.show', $order->id)->with('success', "The order was already {$order->status_label}.");
+        }
+
+        $message = "Order marked as {$order->status_label}.";
+        if ($notify && OrderStatusChanged::covers($order->status)) {
+            $message .= " We've emailed {$order->customer_email}.";
+        }
+
+        return redirect()->route('admin.orders.show', $order->id)->with('success', $message);
     }
 
     public function updatePaymentStatus(Request $request, $id)

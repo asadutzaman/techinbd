@@ -174,14 +174,17 @@ resources/views/
 
 3. **Test Data Created**: ✅ DONE
    ```bash
-   php artisan db:seed --class=CustomerTestSeeder
+   php artisan db:seed --class=CustomerSeeder
    ```
 
-## Test Account Created
+## Test Accounts
+
+`CustomerSeeder` (which replaced `CustomerTestSeeder`) makes five customers with default addresses. Their emails are
+plus-addresses of `MAIL_FROM_ADDRESS` (e.g. `you+rahim@gmail.com`), so their emails reach the shop's inbox.
 
 **Login Credentials:**
-- Email: `customer@example.com`
-- Password: `password123`
+- Email: printed by the seeder (`<mailbox>+rahim@<domain>`, `+nusrat`, `+tanvir`, `+farhana`, `+karim`)
+- Password: `12345678`
 
 **Server Running:**
 - URL: http://127.0.0.1:8000

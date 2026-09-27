@@ -75,11 +75,11 @@
                                 <td class="align-middle">#{{ $order->order_number }}</td>
                                 <td class="align-middle">{{ $order->created_at->format('M d, Y') }}</td>
                                 <td class="align-middle">
-                                    <span class="badge badge-{{ $order->status == 'completed' ? 'success' : ($order->status == 'pending' ? 'warning' : 'info') }}">
-                                        {{ ucfirst($order->status) }}
+                                    <span class="badge badge-{{ ['delivered' => 'success', 'pending' => 'warning', 'cancelled' => 'danger'][$order->status] ?? 'info' }}">
+                                        {{ $order->status_label }}
                                     </span>
                                 </td>
-                                <td class="align-middle">${{ number_format($order->total, 2) }}</td>
+                                <td class="align-middle"><x-price :amount="$order->total" /></td>
                                 <td class="align-middle">
                                     <a href="{{ route('customer.orders.show', $order) }}" class="btn btn-sm btn-outline-primary">View</a>
                                 </td>
