@@ -130,7 +130,7 @@ class BannerSeeder extends Seeder
         if (isset($link['category'])) {
             $category = Category::where('slug', $link['category'])->first();
 
-            return route('shop', $category ? ['category' => $category->id] : [], false);
+            return $category ? route('shop.category', $category, false) : route('shop', [], false);
         }
 
         return route('shop', $link, false);

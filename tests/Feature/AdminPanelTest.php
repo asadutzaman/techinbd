@@ -81,12 +81,12 @@ class AdminPanelTest extends TestCase
         $html = $this->actingAs($this->admin())->get(route('admin.products.show', $product->id))->assertOk()->getContent();
 
         $this->assertMatchesRegularExpression('#Processor</th>\s*<td>\s*Ryzen 5\s*<span class="badge[^"]*"[^>]*>key feature</span>#', $html);
-        $this->assertStringContainsString('http://localhost/product/' . $product->id, $html, 'The search preview uses APP_URL');
+        $this->assertStringContainsString('http://localhost/product/zen-laptop', $html, 'The search preview uses APP_URL');
         $this->assertStringContainsString('Save <span class="price">', $html);
         $this->assertStringContainsString('(17%)', $html, 'Saving as a share of the was price');
         $this->assertStringContainsString('(20%)', $html, 'Margin over cost');
         $this->assertMatchesRegularExpression('#<div class="h4 mb-0">2</div>\s*<small class="text-muted">sold</small>#', $html, 'Cancelled orders are left out');
-        $this->assertStringContainsString('href="' . route('product.detail', $product->id) . '"', $html);
+        $this->assertStringContainsString('href="' . route('product.detail', $product) . '"', $html);
         $this->assertStringContainsString($order->order_number, $html);
     }
 
@@ -144,10 +144,19 @@ class AdminPanelTest extends TestCase
         $cable = ['name' => 'USB-C Cable', 'category_id' => $category->id, 'base_price' => 450, 'stock_status' => 'in_stock', 'status' => 1];
 
         $this->post(route('admin.products.store'), $cable)->assertSessionHasNoErrors();
-        // Typing the same slug is fine too: no URL uses it
+        // Typing a slug another product has gets a number too, rather than an error
         $this->post(route('admin.products.store'), $cable + ['slug' => 'usb-c-cable'])->assertSessionHasNoErrors();
 
-        $this->assertSame(['usb-c-cable', 'usb-c-cable'], ProductOptimized::where('name', 'USB-C Cable')->pluck('slug')->all());
+        $this->assertSame(['usb-c-cable', 'usb-c-cable-2'], ProductOptimized::where('name', 'USB-C Cable')->orderBy('id')->pluck('slug')->all());
+    }
+
+    public function test_a_category_added_in_admin_gets_its_address_from_the_name(): void
+    {
+        $this->actingAs($this->admin())
+            ->post(route('admin.categories.store'), ['name' => 'Smart Watches', 'status' => 1, 'is_menu' => 1])
+            ->assertRedirect(route('admin.categories.index'));
+
+        $this->assertSame('smart-watches', Category::where('name', 'Smart Watches')->value('slug'));
     }
 
     public function test_a_was_price_below_the_price_is_refused(): void

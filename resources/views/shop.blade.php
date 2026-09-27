@@ -8,7 +8,7 @@
     $clearUrl = $filters->withoutFilters()->url();
     // Picking a category keeps the search, sort and the in stock / sale / featured ticks; brands, prices and
     // attributes belong to the category that was open
-    $categoryUrl = fn (?int $id) => $filters->url(['category' => $id, 'brands' => [], 'attributes' => [], 'minPrice' => null, 'maxPrice' => null]);
+    $categoryUrl = fn (?App\Models\Category $item) => $filters->url(['category' => $item, 'brands' => [], 'attributes' => [], 'minPrice' => null, 'maxPrice' => null]);
     // Colour attributes get a swatch; only plain CSS colour names ("Black", "Space Gray" → spacegray) reach the style
     $isColour = fn (array $attribute) => $attribute['type'] === 'color' || in_array(Str::lower($attribute['name']), ['color', 'colour']);
     $swatch = fn (string $value) => preg_match('/^[a-z]+$/i', $plain = str_replace(' ', '', $value)) ? Str::lower($plain) : 'transparent';
@@ -56,12 +56,9 @@
                     </button>
                 </div>
 
-                <form class="shop-filters-form" id="shop-filter-form" action="{{ route('shop') }}" method="GET" data-drawer-body>
+                <form class="shop-filters-form" id="shop-filter-form" action="{{ $filters->path() }}" method="GET" data-drawer-body>
                     @if($filters->search !== null)
                         <input type="hidden" name="search" value="{{ $filters->search }}">
-                    @endif
-                    @if($filters->category)
-                        <input type="hidden" name="category" value="{{ $filters->category }}">
                     @endif
                     @if(! $total && $filters->sort)
                         {{-- The sort menu only shows with results --}}
@@ -85,7 +82,7 @@
                             </li>
                             @foreach($categoryList as $item)
                                 <li>
-                                    <a class="shop-option" href="{{ $categoryUrl($item->id) }}" @if($filters->category === $item->id) aria-current="page" @endif>
+                                    <a class="shop-option" href="{{ $categoryUrl($item) }}" @if($filters->category?->id === $item->id) aria-current="page" @endif>
                                         <span class="shop-option-label">{{ $item->name }}</span>
                                         <span class="shop-count">{{ $item->products_count }}</span>
                                     </a>
@@ -269,7 +266,7 @@
                         <p class="shop-empty-label">Or pick a category</p>
                         <ul class="shop-empty-categories">
                             @foreach($categoryList->sortByDesc('products_count')->take(8) as $item)
-                                <li><a class="sf-view-all" href="{{ route('shop', ['category' => $item->id]) }}">{{ $item->name }}</a></li>
+                                <li><a class="sf-view-all" href="{{ route('shop.category', $item) }}">{{ $item->name }}</a></li>
                             @endforeach
                         </ul>
                     @endif

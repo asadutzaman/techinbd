@@ -98,7 +98,7 @@
                 <ul class="home-categories">
                     @foreach($categories as $category)
                         <li>
-                            <a class="home-category" href="{{ route('shop', ['category' => $category->id]) }}">
+                            <a class="home-category" href="{{ route('shop.category', $category) }}">
                                 @if($category->image_url)
                                     <img src="{{ $category->image_url }}" alt="" width="56" height="56" loading="lazy">
                                 @else

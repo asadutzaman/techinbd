@@ -193,7 +193,46 @@ class ProductPageTest extends TestCase
         $this->assertStringNotContainsString('Main Laptop', $related);
         $this->assertStringNotContainsString('Hidden Laptop', $related);
         $this->assertStringNotContainsString('Unrelated Kettle', $related);
-        $this->assertStringContainsString('href="' . route('shop', ['category' => $category->id]) . '"', $related);
+        $this->assertStringContainsString('href="' . route('shop.category', $category) . '"', $related);
+    }
+
+    public function test_the_address_is_the_product_name_and_old_links_move_there(): void
+    {
+        $product = ProductOptimized::factory()->create(['name' => 'Samsung ViewFinity S8 27" 4K Monitor']);
+        $this->assertSame(url('/product/samsung-viewfinity-s8-27-4k-monitor'), route('product.detail', $product));
+        $this->get('/product/samsung-viewfinity-s8-27-4k-monitor')->assertOk()->assertSee('Samsung ViewFinity S8');
+
+        // Links from before, by id, keep their query string
+        $this->get('/product/' . $product->id . '?utm_source=facebook')
+            ->assertStatus(301)
+            ->assertRedirect(url('/product/samsung-viewfinity-s8-27-4k-monitor') . '?utm_source=facebook');
+
+        // Renaming keeps the address; changing the slug moves it, and the old one redirects
+        $product->update(['name' => 'Samsung ViewFinity S8 (2025)']);
+        $this->assertSame('samsung-viewfinity-s8-27-4k-monitor', $product->fresh()->slug);
+        $product->update(['slug' => 'samsung-s8-monitor']);
+        $this->get('/product/samsung-viewfinity-s8-27-4k-monitor')->assertStatus(301)->assertRedirect(url('/product/samsung-s8-monitor'));
+
+        $this->get('/product/no-such-thing')->assertNotFound();
+        $this->get('/product/999999')->assertNotFound();
+    }
+
+    public function test_every_product_gets_its_own_address(): void
+    {
+        $first = ProductOptimized::factory()->create(['name' => 'USB-C Cable']);
+        $second = ProductOptimized::factory()->create(['name' => 'USB-C Cable']);
+        $numbers = ProductOptimized::factory()->create(['name' => '2024']);
+        $typed = ProductOptimized::factory()->create(['name' => 'Anything', 'slug' => 'My Special Cable!']);
+
+        $this->assertSame(['usb-c-cable', 'usb-c-cable-2'], [$first->slug, $second->slug]);
+        $this->assertSame('product-2024', $numbers->slug, 'An all-digit slug would read as an old /product/{id} address');
+        $this->assertSame('my-special-cable', $typed->slug);
+
+        // An address freed by a change is given to the next product that wants it
+        $first->update(['slug' => 'usb-c-cable-1m']);
+        $third = ProductOptimized::factory()->create(['name' => 'USB-C Cable']);
+        $this->assertSame('usb-c-cable', $third->slug);
+        $this->get('/product/usb-c-cable')->assertOk()->assertSee($third->name);
     }
 
     public function test_search_engines_get_the_seo_title_and_structured_data(): void

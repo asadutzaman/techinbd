@@ -44,7 +44,7 @@ class AdminProductTest extends TestCase
 
         // Cards use the thumbnail and the product page the gallery copy; the product was indexed for search once
         $this->get('/shop')->assertSee('storage/' . $image->thumb_url);
-        $this->get(route('product.detail', $image->product_id))->assertSee('storage/' . $image->large_url)->assertDontSee('storage/' . $image->url);
+        $this->get(route('product.detail', $image->product))->assertSee('storage/' . $image->large_url)->assertDontSee('storage/' . $image->url);
         $this->assertSame(1, ProductSearchIndex::count());
 
         $this->actingAs($admin)->delete(route('admin.products.destroy', $image->product_id));

@@ -20,7 +20,8 @@ class StorefrontTest extends TestCase
 
         $this->get('/')->assertOk()->assertSee($product->name);
         $this->get('/shop')->assertOk()->assertSee($product->name);
-        $this->get('/product/' . $product->id)->assertOk()->assertSee($product->name);
+        $this->get(route('product.detail', $product))->assertOk()->assertSee($product->name);
+        $this->get(route('shop.category', $product->category))->assertOk()->assertSee($product->name);
         $this->get('/cart')->assertOk();
         $this->get('/contact')->assertOk();
     }
@@ -30,6 +31,7 @@ class StorefrontTest extends TestCase
         $hidden = ProductOptimized::factory()->inactive()->create();
 
         $this->get('/shop')->assertOk()->assertDontSee($hidden->name);
+        $this->get(route('product.detail', $hidden))->assertNotFound();
         $this->get('/product/' . $hidden->id)->assertNotFound();
     }
 
@@ -58,7 +60,8 @@ class StorefrontTest extends TestCase
         $this->getJson('/search/suggestions?q=gaming')
             ->assertOk()
             ->assertJsonPath('0.name', 'Gaming Laptop')
-            ->assertJsonPath('0.category', $match->category->name);
+            ->assertJsonPath('0.category', $match->category->name)
+            ->assertJsonPath('0.url', url('/product/gaming-laptop'));
     }
 
     public function test_shop_can_show_only_price_drops(): void
@@ -79,8 +82,8 @@ class StorefrontTest extends TestCase
         $laptop = ProductOptimized::factory()->create();
         $mug = ProductOptimized::factory()->create();
 
-        $this->get('/')->assertSee(route('shop', ['category' => $laptop->category_id]), false);
-        $this->get(route('shop', ['category' => $laptop->category_id]))
+        $this->get('/')->assertSee('href="' . url('/category/' . $laptop->category->slug) . '"', false);
+        $this->get(route('shop.category', $laptop->category))
             ->assertSee($laptop->name)
             ->assertDontSee($mug->name);
     }
@@ -125,7 +128,8 @@ class StorefrontTest extends TestCase
         $product = ProductOptimized::first();
 
         $counts = [];
-        foreach (['home' => '/', 'shop' => '/shop', 'product' => '/product/' . $product->id] as $page => $uri) {
+        $pages = ['home' => '/', 'shop' => '/shop', 'category' => route('shop.category', $categories[0]), 'product' => route('product.detail', $product)];
+        foreach ($pages as $page => $uri) {
             cache()->flush();
             DB::flushQueryLog();
             DB::enableQueryLog();

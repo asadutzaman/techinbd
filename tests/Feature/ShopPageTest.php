@@ -26,15 +26,42 @@ class ShopPageTest extends TestCase
         ]);
 
         $this->assertSame('All products', $this->heading('/shop'));
-        $this->assertSame('Laptop', $this->heading('/shop?category=' . $laptops->id));
+        $this->assertSame('Laptop', $this->heading(route('shop.category', $laptops)));
         $this->assertSame('Apple', $this->heading('/shop?brand=' . $apple->id));
         $this->assertSame('Deals', $this->heading('/shop?sale=1'));
         $this->assertSame('Featured products', $this->heading('/shop?featured=1'));
         $this->assertSame('Results for “macbook”', $this->heading('/shop?search=macbook'));
 
-        $this->get('/shop?category=' . $laptops->id)
+        $this->get(route('shop.category', $laptops))
             ->assertSee('<title>Laptop | ' . config('shop.name') . '</title>', false)
             ->assertSee('<li aria-current="page">Laptop</li>', false);
+    }
+
+    public function test_categories_have_their_own_address_and_old_links_move_there(): void
+    {
+        $laptops = Category::factory()->create(['name' => 'Gaming Laptops', 'slug' => null]);
+        $acme = Brand::factory()->create();
+        ProductOptimized::factory()->create(['name' => 'Rog Strix', 'category_id' => $laptops->id, 'brand_id' => $acme->id]);
+        ProductOptimized::factory()->create(['name' => 'Coffee Mug']);
+
+        $this->assertSame('gaming-laptops', $laptops->fresh()->slug, 'Made from the name');
+        $this->assertSame(['Rog Strix'], $this->listed('/category/gaming-laptops'));
+        $this->assertStringContainsString('action="' . url('/category/gaming-laptops') . '"', $this->get('/category/gaming-laptops')->getContent(), 'The filters stay on the category page');
+
+        // The shop's old ?category=id links, with their other filters
+        $this->get('/shop?category=' . $laptops->id . '&brand=' . $acme->id . '&sort=price_low')
+            ->assertStatus(301)
+            ->assertRedirect(url('/category/gaming-laptops') . '?brand=' . $acme->id . '&sort=price_low');
+        $this->get('/category/' . $laptops->id)->assertStatus(301)->assertRedirect(url('/category/gaming-laptops'));
+
+        // A changed address leaves a redirect behind
+        $laptops->forceFill(['slug' => 'laptops'])->save();
+        $this->get('/category/gaming-laptops')->assertStatus(301)->assertRedirect(url('/category/laptops'));
+
+        $this->get('/category/no-such-thing')->assertNotFound();
+        $laptops->update(['status' => false]);
+        $this->get('/category/laptops')->assertNotFound();
+        $this->get('/category/gaming-laptops')->assertNotFound();
     }
 
     public function test_cards_show_key_specs_and_a_compare_button_without_made_up_ratings(): void
@@ -92,8 +119,8 @@ class ShopPageTest extends TestCase
         $product = ProductOptimized::factory()->create(['category_id' => $category->id, 'brand_id' => $acme->id, 'base_price' => 60000]);
         ProductAttributeOptimized::create(['product_id' => $product->id, 'attribute_id' => $ram->id, 'value' => '16GB']);
 
-        $html = $this->get(route('shop', [
-            'category' => $category->id, 'brand' => [$acme->id, $zeta->id], 'attributes' => [$ram->id => ['16GB']],
+        $html = $this->get(route('shop.category', [
+            'category' => $category, 'brand' => [$acme->id, $zeta->id], 'attributes' => [$ram->id => ['16GB']],
             'min_price' => 50000, 'in_stock' => 1, 'sort' => 'price_low',
         ]))->assertOk()->getContent();
 
@@ -102,14 +129,14 @@ class ShopPageTest extends TestCase
         $this->assertStringContainsString('From <span class="price-sign">৳</span>50,000', $chips[2][2], 'The taka sign gets the price font');
 
         $removeAcme = html_entity_decode($chips[1][0]);
-        $this->assertSame(route('shop', [
-            'category' => $category->id, 'brand' => $zeta->id, 'attributes' => [$ram->id => ['16GB']],
+        $this->assertSame(route('shop.category', [
+            'category' => $category, 'brand' => $zeta->id, 'attributes' => [$ram->id => ['16GB']],
             'min_price' => 50000, 'in_stock' => 1, 'sort' => 'price_low',
         ]), $removeAcme, 'Removing one brand keeps the other and every other filter');
         $this->assertStringNotContainsString('attributes', html_entity_decode($chips[1][4]), 'Removing the last RAM value drops the attribute');
 
         // Clear all keeps the category and the sort
-        $clear = route('shop', ['category' => $category->id, 'sort' => 'price_low']);
+        $clear = route('shop.category', ['category' => $category, 'sort' => 'price_low']);
         $this->assertStringContainsString('<a class="shop-chips-clear" href="' . e($clear) . '">Clear all</a>', $html);
         $this->assertStringContainsString('<span class="shop-filter-count">5<', $html);
 
@@ -121,7 +148,7 @@ class ShopPageTest extends TestCase
         $this->assertTrue($this->categoryFacetOpen($this->get('/shop')->getContent()), 'Without a category the list is open');
 
         // Without filters there are no chips
-        $this->assertStringNotContainsString('class="shop-chips"', $this->get(route('shop', ['category' => $category->id]))->getContent());
+        $this->assertStringNotContainsString('class="shop-chips"', $this->get(route('shop.category', $category))->getContent());
     }
 
     public function test_the_brand_list_follows_the_category(): void
@@ -137,9 +164,9 @@ class ShopPageTest extends TestCase
         ProductOptimized::factory()->create(['category_id' => $phones->id, 'brand_id' => $apple->id]);
 
         $this->assertSame(['Apple' => '3', 'Dell' => '1', 'Samsung' => '1'], $this->brandList('/shop'));
-        $this->assertSame(['Apple' => '2', 'Dell' => '1'], $this->brandList(route('shop', ['category' => $laptops->id])));
+        $this->assertSame(['Apple' => '2', 'Dell' => '1'], $this->brandList(route('shop.category', $laptops)));
         // A brand that has nothing here but was chosen stays listed, so it can be unticked
-        $this->assertSame(['Apple' => '2', 'Dell' => '1', 'Samsung' => '0'], $this->brandList(route('shop', ['category' => $laptops->id, 'brand' => $samsung->id])));
+        $this->assertSame(['Apple' => '2', 'Dell' => '1', 'Samsung' => '0'], $this->brandList(route('shop.category', ['category' => $laptops, 'brand' => $samsung->id])));
     }
 
     public function test_the_summary_and_price_hints_give_the_range(): void
@@ -149,12 +176,12 @@ class ShopPageTest extends TestCase
             ProductOptimized::factory()->create(['category_id' => $category->id, 'base_price' => $price]);
         }
 
-        $html = $this->get(route('shop', ['category' => $category->id]))->getContent();
+        $html = $this->get(route('shop.category', $category))->getContent();
         $this->assertSame('3 products · ৳Tk 1,200 to ৳Tk 99,999', $this->summary($html));
         $this->assertStringContainsString('placeholder="1,200"', $html);
         $this->assertStringContainsString('placeholder="99,999"', $html);
 
-        $html = $this->get(route('shop', ['category' => $category->id, 'max_price' => 50000]))->getContent();
+        $html = $this->get(route('shop.category', ['category' => $category, 'max_price' => 50000]))->getContent();
         $this->assertSame('2 products · ৳Tk 1,200 to ৳Tk 45,000', $this->summary($html));
         $this->assertStringContainsString('name="max_price" value="50000"', $html);
     }
@@ -204,16 +231,16 @@ class ShopPageTest extends TestCase
         $category = Category::factory()->create(['name' => 'Laptop']);
         ProductOptimized::factory()->create(['category_id' => $category->id, 'base_price' => 60000]);
 
-        $this->get(route('shop', ['category' => $category->id, 'max_price' => 100]))
+        $this->get(route('shop.category', ['category' => $category, 'max_price' => 100]))
             ->assertOk()
             ->assertSee('No products match these filters')
-            ->assertSee('<a class="sf-btn" href="' . e(route('shop', ['category' => $category->id])) . '">Clear all filters</a>', false);
+            ->assertSee('<a class="sf-btn" href="' . e(route('shop.category', $category)) . '">Clear all filters</a>', false);
 
         $this->get('/shop?search=zzzz')
             ->assertOk()
             ->assertSee('Results for “zzzz”')
             ->assertSee('No products found')
-            ->assertSee('href="' . e(route('shop', ['category' => $category->id])) . '">Laptop</a>', false)
+            ->assertSee('href="' . e(route('shop.category', $category)) . '">Laptop</a>', false)
             ->assertDontSee('id="shop-sort"', false);
     }
 

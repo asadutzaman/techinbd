@@ -10,10 +10,13 @@ use App\Http\Controllers\ContactController;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/shop', [ShopController::class, 'index'])->name('shop');
+// Pages addressed by slug: route('shop.category', $category) and route('product.detail', $product) take the model.
+// The controllers look the slug up themselves, so old addresses (ids, changed slugs) can redirect.
+Route::get('/category/{category:slug}', [ShopController::class, 'category'])->name('shop.category');
+Route::get('/product/{product:slug}', [ProductController::class, 'show'])->name('product.detail');
 Route::get('/cart', [CartController::class, 'index'])->name('cart');
 Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
-Route::get('/product/{id}', [ProductController::class, 'show'])->name('product.detail');
 
 // Authentication Routes (signed-in visitors are sent home from these)
 Route::middleware('guest')->group(function () {

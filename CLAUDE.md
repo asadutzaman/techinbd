@@ -44,7 +44,12 @@ Laravel MVC; controllers mostly query Eloquent directly. All routes are in `rout
 
 The catalog models are the `*Optimized` ones: `ProductOptimized` (`products_optimized`), `ProductVariantOptimized`, `ProductImageOptimized`, `AttributeOptimized`, `AttributeValueOptimized`, `ProductAttributeOptimized`, plus `ProductSearchIndex`. The original `products`/`product_variants` tables and their models were removed.
 
-- Price is `base_price`; `status` is an integer 0/1 (`->active()` scope). A product's category is `category_id` (the `product_categories` pivot and `categories()` relation exist but are empty/unused). `slug` is made from the name and isn't unique; no URL uses it (product links use the id), so products can share a name.
+- Price is `base_price`; `status` is an integer 0/1 (`->active()` scope). A product's category is `category_id` (the `product_categories` pivot and `categories()` relation exist but are empty/unused).
+- Product and category pages are addressed by slug: `/product/{slug}` and `/category/{slug}`.
+  - **Links:** pass the model, as in `route('product.detail', $product)` or `route('shop.category', $category)`. The routes declare `{product:slug}`/`{category:slug}`, so `route()` takes the slug. The controllers look it up themselves (no implicit binding), so old addresses can redirect.
+  - **Making slugs:** `App\Models\Concerns\HasSlug` makes a unique slug from the name when the item is created (`usb-c-cable-2` for a repeat, never all digits). It keeps that slug through renames.
+  - **Changing slugs:** when a slug is changed on purpose, the old one goes into `slug_redirects`.
+  - **Old addresses:** `/product/{id}`, `/category/{id}`, `/shop?category={id}` and changed slugs answer with a 301 to the current address. Inactive products and categories are 404.
 - `main_image_url` reads the `mainImage` relation, so **eager load `mainImage`** wherever products are listed. It returns the WebP card thumbnail when there is one, else the original, else a `public/img/product-N.jpg` placeholder.
 - Each product image has WebP copies written by `ProductImageOptimized::generateVersions()` on upload: `thumb_url` (600px, cards, `card_url`) and `large_url` (1200px, never upscaled, the product page gallery, `gallery_url`/`gallery_srcset`). `deleteFiles()` removes all three files. Use `$image->full_url` only when the original is really needed.
 - `specs` is label → value in entry order. It's stored as a JSON list of `[label, value]` pairs by an accessor/mutator, because MySQL sorts JSON object keys; older rows holding an object still read.
@@ -119,8 +124,8 @@ The catalog models are the `*Optimized` ones: `ProductOptimized` (`products_opti
 
   Best Sellers ranks units ordered, ignoring cancelled orders. It only shows once at least 4 products have sales, and refreshes with the cache (orders don't bust it). Each row is `<x-product-rail>`, which scrolls sideways, and its cards are `<x-product-card>` (the `variant="deal"` card has an orange button). `<x-price>` formats taka (`৳164,999`). `<x-category-icon>` holds the category line icons (Lucide, ISC licence in the file), picked by keyword from the category's name by `Category::getIconAttribute()`; an image uploaded in admin replaces the icon. The `<h1>` is the store name, hidden with `sr-only`.
 - Shop page (`ShopController::index` + `shop.blade.php`, styles `.shop-*` and script inline):
-  - **Query string:** `App\Support\ShopFilters` reads it forgivingly (search, category, `brand[]`, `attributes[id][]`, min/max price, in stock, sale, featured, sort). It applies them, except the search, which `ShopController::applySearch()` owns.
-  - **Links:** `url($changes)` builds shop links with one value changed; `chips()` gives the removable filter chips.
+  - **Query string:** `App\Support\ShopFilters` reads it forgivingly (search, `brand[]`, `attributes[id][]`, min/max price, in stock, sale, featured, sort). It applies them, except the search, which `ShopController::applySearch()` owns. The category isn't in the query string: `ShopController::category()` passes the `Category` from the address, and `ShopFilters` holds the model.
+  - **Links:** `url($changes)` builds shop links with one value changed (`/category/{slug}?…` or `/shop?…`); `path()` is the filter form's action; `chips()` gives the removable filter chips.
   - **Heading:** the search and the category are what the page is about (the heading), and "Clear all" keeps them.
   - **Filters:** a sidebar from 992px, a slide-in panel below. Ticks apply at once on computers and wait for "Show results" in the panel.
   - **Brands:** the brand list is scoped to the category (`shop-brands:{category}` cache).

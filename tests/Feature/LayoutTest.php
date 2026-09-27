@@ -86,9 +86,9 @@ class LayoutTest extends TestCase
         $laptops = Category::factory()->create(['name' => 'Laptop', 'is_menu' => true]);
         ProductOptimized::factory()->create(['category_id' => $laptops->id]);
 
-        $bar = Str::betweenFirst($this->get(route('shop', ['category' => $laptops->id]))->assertOk()->getContent(), 'class="sf-catbar-list"', '</ul>');
+        $bar = Str::betweenFirst($this->get(route('shop.category', $laptops))->assertOk()->getContent(), 'class="sf-catbar-list"', '</ul>');
 
-        $this->assertMatchesRegularExpression('#href="' . preg_quote(route('shop', ['category' => $laptops->id]), '#') . '"\s+aria-current="page"#', $bar);
+        $this->assertMatchesRegularExpression('#href="' . preg_quote(route('shop.category', $laptops), '#') . '"\s+aria-current="page"#', $bar);
     }
 
     public function test_bottom_bar_marks_the_current_page(): void

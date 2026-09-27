@@ -27,7 +27,36 @@ class ShopController extends Controller
 
     public function index(Request $request)
     {
-        $filters = ShopFilters::fromRequest($request);
+        // Category links from before categories had their own address (/shop?category=9)
+        $legacy = $request->query('category');
+        if (is_string($legacy) && ctype_digit($legacy) && $category = Category::where('status', true)->find($legacy)) {
+            return redirect()->route('shop.category', ['category' => $category] + $request->except('category'), 301);
+        }
+
+        return $this->listing($request);
+    }
+
+    /**
+     * A category's page: the shop, narrowed to the category.
+     */
+    public function category(Request $request, string $slug)
+    {
+        $category = Category::where('status', true)->firstWhere('slug', $slug);
+
+        if (! $category) {
+            // Old addresses: a category id, or a slug that has since changed
+            $current = ctype_digit($slug) ? Category::find($slug) : Category::findByOldSlug($slug);
+            abort_unless($current?->status, 404);
+
+            return redirect()->route('shop.category', ['category' => $current] + $request->query(), 301);
+        }
+
+        return $this->listing($request, $category);
+    }
+
+    private function listing(Request $request, ?Category $category = null)
+    {
+        $filters = ShopFilters::fromRequest($request, $category);
 
         $query = ProductOptimized::active();
         if ($filters->search !== null) {
@@ -45,11 +74,10 @@ class ShopController extends Controller
 
         // The sidebar lists don't depend on the other filters, so they're cached with the catalog
         $categories = $this->catalogCache->remember('active-categories', 600, fn () => Category::activeWithProductCounts());
-        $brands = $this->brandsFor($filters->category);
+        $brands = $this->brandsFor($category?->id);
         $totalActiveProducts = $this->catalogCache->remember('active-product-count', 600, fn () => ProductOptimized::active()->count());
-        $filterableAttributes = $this->getFilterableAttributes($filters->category);
+        $filterableAttributes = $this->getFilterableAttributes($category?->id);
 
-        $category = $filters->category ? $categories->firstWhere('id', $filters->category) : null;
         $brand = count($filters->brands) === 1 ? $brands->firstWhere('id', $filters->brands[0]) : null;
         $heading = match (true) {
             $filters->search !== null => 'Results for “' . $filters->search . '”',
@@ -186,7 +214,7 @@ class ShopController extends Controller
 
         $query = ProductOptimized::active()
             ->with('category:id,name')
-            ->select('id', 'name', 'category_id')
+            ->select('id', 'name', 'slug', 'category_id')
             ->limit(8);
         $this->applySearch($query, $searchTerm);
 
@@ -194,7 +222,7 @@ class ShopController extends Controller
             'id' => $product->id,
             'name' => $product->name,
             'category' => $product->category?->name,
-            'url' => route('product.detail', $product->id)
+            'url' => route('product.detail', $product)
         ]);
 
         return response()->json($suggestions);

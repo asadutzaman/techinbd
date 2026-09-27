@@ -16,9 +16,9 @@
     $specRows = $product->specGroups()['Specifications'] ?? [];
     $keyCount = count($product->keySpecs());
     $statusBadge = ['pending' => 'warning', 'processing' => 'info', 'shipped' => 'primary', 'delivered' => 'success', 'cancelled' => 'danger'];
-    $liveUrl = route('product.detail', $product->id);
+    $liveUrl = route('product.detail', $product);
     // How search engines see it: on the public address, whichever address this page was opened on
-    $publicUrl = rtrim(config('app.url'), '/') . route('product.detail', $product->id, false);
+    $publicUrl = rtrim(config('app.url'), '/') . route('product.detail', $product, false);
 @endphp
 
 @section('title', $product->name . ' | ' . config('shop.name') . ' Admin')

@@ -86,9 +86,10 @@
 
                         <div class="form-group">
                             <label for="slug">URL Slug</label>
-                            <input type="text" class="form-control @error('slug') is-invalid @enderror" 
-                                   id="slug" name="slug" value="{{ old('slug') }}" 
-                                   placeholder="Auto-generated from name if empty">
+                            <input type="text" class="form-control @error('slug') is-invalid @enderror"
+                                   id="slug" name="slug" value="{{ old('slug') }}"
+                                   placeholder="Made from the name if left empty" aria-describedby="slug-help">
+                            <small id="slug-help" class="form-text text-muted">The page's address: {{ url('/product') }}/<em>slug</em>. If another product has it, a number is added.</small>
                             @error('slug')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -413,17 +414,6 @@
 
 @push('scripts')
 <script>
-    // Auto-generate slug from name
-    document.getElementById('name').addEventListener('input', function() {
-        const name = this.value;
-        const slug = name.toLowerCase()
-            .replace(/[^a-z0-9 -]/g, '')
-            .replace(/\s+/g, '-')
-            .replace(/-+/g, '-')
-            .trim('-');
-        document.getElementById('slug').value = slug;
-    });
-
     // Image preview
     document.getElementById('images').addEventListener('change', function() {
         const preview = document.getElementById('image-preview');

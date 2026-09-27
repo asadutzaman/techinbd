@@ -46,7 +46,8 @@
     $accountUrl = auth()->check() ? route('customer.dashboard') : route('login');
     // Query values can arrive as arrays (?search[]=x); the header only uses plain ones
     $searchTerm = is_string(request('search')) ? request('search') : '';
-    $currentCategory = is_scalar(request('category')) ? (string) request('category') : '';
+    // The open category page's slug (/category/{slug})
+    $currentCategory = request()->routeIs('shop.category') ? (string) request()->route('category') : '';
 @endphp
 
 <body>
@@ -129,8 +130,8 @@
                     <ul class="sf-catbar-list">
                         @foreach($navCategories as $category)
                             <li>
-                                <a href="{{ route('shop', ['category' => $category->id]) }}"
-                                   @if($currentCategory === (string) $category->id) aria-current="page" @endif>{{ $category->name }}</a>
+                                <a href="{{ route('shop.category', $category) }}"
+                                   @if($currentCategory === $category->slug) aria-current="page" @endif>{{ $category->name }}</a>
                             </li>
                         @endforeach
                     </ul>
@@ -155,7 +156,7 @@
                     <ul class="sf-drawer-list">
                         @foreach($navCategories as $category)
                             <li>
-                                <a href="{{ route('shop', ['category' => $category->id]) }}">
+                                <a href="{{ route('shop.category', $category) }}">
                                     <x-category-icon :name="$category->icon" />{{ $category->name }}
                                     <span class="sf-drawer-count">{{ $category->products_count }}</span>
                                 </a>

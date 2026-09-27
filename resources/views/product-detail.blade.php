@@ -28,7 +28,7 @@
         'brand' => $product->brand ? ['@type' => 'Brand', 'name' => $product->brand->name] : null,
         'offers' => [
             '@type' => 'Offer',
-            'url' => route('product.detail', $product->id),
+            'url' => route('product.detail', $product),
             'priceCurrency' => $product->currency ?: 'BDT',
             'price' => number_format($price, 2, '.', ''),
             'itemCondition' => 'https://schema.org/NewCondition',
@@ -54,8 +54,9 @@
     <div class="sf-container">
         <ol>
             <li><a href="{{ route('home') }}">Home</a></li>
-            @if($product->category)
-                <li><a href="{{ route('shop', ['category' => $product->category->id]) }}">{{ $product->category->name }}</a></li>
+            {{-- A hidden (inactive) category has no page to link to --}}
+            @if($product->category?->status)
+                <li><a href="{{ route('shop.category', $product->category) }}">{{ $product->category->name }}</a></li>
             @endif
             <li aria-current="page">{{ $product->name }}</li>
         </ol>
@@ -284,7 +285,7 @@
                             $relatedSaving = $relatedWas > (float) $related->base_price ? $relatedWas - (float) $related->base_price : 0;
                         @endphp
                         <li>
-                            <a class="pdp-related-item" href="{{ route('product.detail', $related->id) }}">
+                            <a class="pdp-related-item" href="{{ route('product.detail', $related) }}">
                                 <img src="{{ $related->main_image_url }}" alt="" width="64" height="64" loading="lazy" decoding="async">
                                 <span class="pdp-related-body">
                                     <span class="pdp-related-name">{{ $related->name }}</span>
@@ -302,8 +303,8 @@
                         </li>
                     @endforeach
                 </ul>
-                @if($product->category)
-                    <a class="sf-view-all pdp-related-all" href="{{ route('shop', ['category' => $product->category->id]) }}">
+                @if($product->category?->status)
+                    <a class="sf-view-all pdp-related-all" href="{{ route('shop.category', $product->category) }}">
                         View all {{ $product->category->name }} <i class="fas fa-arrow-right" aria-hidden="true"></i>
                     </a>
                 @endif

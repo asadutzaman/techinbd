@@ -73,6 +73,6 @@ class DemoCatalogSeederTest extends TestCase
 
         $this->get('/shop')->assertOk()->assertSee('Showing 1–24 of 101 products');
         $this->get('/shop?search=galaxy')->assertOk()->assertSee('Samsung Galaxy S24 Ultra');
-        $this->get('/product/' . $phone->id)->assertOk()->assertSee('SM-S928B')->assertSee('12GB / 512GB');
+        $this->get(route('product.detail', $phone))->assertOk()->assertSee('SM-S928B')->assertSee('12GB / 512GB');
     }
 }

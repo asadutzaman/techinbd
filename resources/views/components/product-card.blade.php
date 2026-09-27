@@ -4,7 +4,7 @@
     $price = (float) $product->base_price;
     $was = (float) ($product->variants_max_compare_price ?? 0);
     $saving = $was > $price ? $was - $price : 0;
-    $url = route('product.detail', $product->id);
+    $url = route('product.detail', $product);
     $keySpecs = $specs ? $product->keySpecs() : [];
 @endphp
 <article class="sf-card {{ $variant === 'deal' ? 'is-deal' : '' }}">

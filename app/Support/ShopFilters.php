@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Category;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -9,8 +10,9 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 /**
- * The shop page's filters and sort, read from the query string. Applies them to a product query and
- * builds shop URLs with one of them changed (the category links and the removable filter chips).
+ * The shop page's filters and sort, read from the query string (the category comes from the address,
+ * /category/{slug}). Applies them to a product query and builds shop URLs with one of them changed (the
+ * category links and the removable filter chips).
  *
  * The search and the category are what a page is about (its heading); the rest are filters, which
  * "Clear all" removes.
@@ -33,7 +35,7 @@ final class ShopFilters
      */
     public function __construct(
         public readonly ?string $search = null,
-        public readonly ?int $category = null,
+        public readonly ?Category $category = null,
         public readonly array $brands = [],
         public readonly array $attributes = [],
         public readonly ?int $minPrice = null,
@@ -48,7 +50,7 @@ final class ShopFilters
     /**
      * Anything malformed in the query string is ignored rather than rejected: these URLs get shared and edited.
      */
-    public static function fromRequest(Request $request): self
+    public static function fromRequest(Request $request, ?Category $category = null): self
     {
         $search = Str::limit(self::text($request->input('search')), 100, '');
 
@@ -83,7 +85,7 @@ final class ShopFilters
 
         return new self(
             search: $search !== '' ? $search : null,
-            category: self::id($request->input('category')),
+            category: $category,
             brands: $brands,
             attributes: $attributes,
             minPrice: $minPrice,
@@ -101,7 +103,7 @@ final class ShopFilters
     public function apply(Builder $query): Builder
     {
         $query
-            ->when($this->category, fn (Builder $query) => $query->where('category_id', $this->category))
+            ->when($this->category, fn (Builder $query) => $query->where('category_id', $this->category->id))
             ->when($this->brands, fn (Builder $query) => $query->whereIn('brand_id', $this->brands))
             ->when($this->minPrice !== null, fn (Builder $query) => $query->where('base_price', '>=', $this->minPrice))
             ->when($this->maxPrice !== null, fn (Builder $query) => $query->where('base_price', '<=', $this->maxPrice))
@@ -166,17 +168,28 @@ final class ShopFilters
 
     public function url(array $changes = []): string
     {
-        return route('shop', $this->with($changes)->query());
+        $filters = $this->with($changes);
+
+        return $filters->category
+            ? route('shop.category', ['category' => $filters->category] + $filters->query())
+            : route('shop', $filters->query());
     }
 
     /**
-     * The query string for these filters, leaving out anything unset.
+     * The page's address without the query string (the filter form submits to it).
+     */
+    public function path(): string
+    {
+        return $this->category ? route('shop.category', $this->category) : route('shop');
+    }
+
+    /**
+     * The query string for these filters, leaving out anything unset. The category is in the path.
      */
     public function query(): array
     {
         return array_filter([
             'search' => $this->search,
-            'category' => $this->category,
             'brand' => count($this->brands) === 1 ? $this->brands[0] : ($this->brands ?: null),
             'attributes' => $this->attributes ?: null,
             'min_price' => $this->minPrice,

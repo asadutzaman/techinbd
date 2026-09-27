@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BustsCatalogCache;
+use App\Models\Concerns\HasSlug;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,9 +14,17 @@ use Illuminate\Support\Str;
 
 class ProductOptimized extends Model
 {
-    use HasFactory, BustsCatalogCache;
+    use HasFactory, BustsCatalogCache, HasSlug;
 
     protected $table = 'products_optimized';
+
+    /**
+     * Product pages live at /product/{slug}.
+     */
+    public static function slugType(): string
+    {
+        return 'product';
+    }
 
     protected $fillable = [
         'sku',
@@ -99,9 +108,6 @@ class ProductOptimized extends Model
         parent::boot();
         
         static::creating(function ($product) {
-            if (empty($product->slug)) {
-                $product->slug = Str::slug($product->name);
-            }
             if (empty($product->uuid)) {
                 $product->uuid = Str::uuid();
             }
@@ -295,13 +301,6 @@ class ProductOptimized extends Model
         ], 'filled');
 
         return array_filter(['Specifications' => $specs->all(), 'General' => $general]);
-    }
-
-    // Mutators
-    public function setNameAttribute($value)
-    {
-        $this->attributes['name'] = $value;
-        $this->attributes['slug'] = Str::slug($value);
     }
 
     // Helper methods

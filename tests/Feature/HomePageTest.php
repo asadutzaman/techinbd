@@ -45,7 +45,7 @@ class HomePageTest extends TestCase
 
         $tiles = $this->categoryTiles();
 
-        $this->assertStringContainsString('href="' . route('shop', ['category' => $laptops->id]) . '"', $tiles);
+        $this->assertStringContainsString('href="' . route('shop.category', $laptops) . '"', $tiles);
         $this->assertStringContainsString('Laptop', $tiles);
         $this->assertStringNotContainsString('Cables', $tiles, 'Only featured categories when some are featured');
         $this->assertStringNotContainsString('Empty Shelf', $tiles, 'Categories without products are left out');
@@ -73,7 +73,7 @@ class HomePageTest extends TestCase
 
         $tiles = $this->categoryTiles();
 
-        $this->assertMatchesRegularExpression('#category=' . $laptops->id . '">\s*<svg class="category-icon"#', $tiles);
+        $this->assertMatchesRegularExpression('#' . preg_quote(route('shop.category', $laptops), '#') . '">\s*<svg class="category-icon"#', $tiles);
         $this->assertStringContainsString('<img src="' . asset('img/camera-tile.png') . '"', $tiles);
     }
 
