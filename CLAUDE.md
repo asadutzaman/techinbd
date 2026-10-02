@@ -162,7 +162,7 @@ The catalog models are the `*Optimized` ones: `ProductOptimized` (`products_opti
   - SKUs are `TIB-{subcategory prefix}-{position}`. Photos are copied in when missing; other `products/demo/*` images of a product are removed (an earlier catalog's drawn covers), and images added in admin stay.
   - It removes earlier demo catalogs' products, categories (fashion, and the old flat tech ones such as smartphone and graphics-card) and brands, but keeps anything added in admin.
 - The photos and specs are StarTech's and the manufacturers'. The site is public, so replace them before a real launch.
-- Banner artwork is original, with its text designed in, in `public/img/banners/`.
+- Banner artwork is in `public/img/banners/`, with its text designed in, so each banner's title (its alt text) should say what the image says. The three slides show catalog product photos on white (1920x640, plus 1200x600 for phones), rendered from HTML; the side banners are original artwork.
 
 ### Migrations
 

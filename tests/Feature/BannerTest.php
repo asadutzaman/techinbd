@@ -225,6 +225,8 @@ class BannerTest extends TestCase
         $this->seed([\Database\Seeders\CategorySeeder::class, \Database\Seeders\BannerSeeder::class]);
 
         $banners = Banner::active()->get();
+        // SQLite doesn't enforce column lengths; MySQL's title column holds 120 characters
+        $banners->each(fn (Banner $banner) => $this->assertLessThanOrEqual(120, mb_strlen($banner->title), $banner->title));
         $slides = $banners->reject->isSide()->values();
         $sides = $banners->filter->isSide()->values();
         $this->assertCount(3, $slides);
