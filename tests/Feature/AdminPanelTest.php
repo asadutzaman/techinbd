@@ -159,6 +159,45 @@ class AdminPanelTest extends TestCase
         $this->assertSame('smart-watches', Category::where('name', 'Smart Watches')->value('slug'));
     }
 
+    public function test_subcategories_are_one_level_deep_and_keep_their_category_from_being_deleted(): void
+    {
+        $gadgets = Category::factory()->create(['name' => 'Gadget']);
+        $this->actingAs($this->admin());
+
+        $this->post(route('admin.categories.store'), ['name' => 'Smart Watch', 'parent_id' => $gadgets->id, 'sort_order' => 3, 'status' => 1, 'is_menu' => 1])
+            ->assertRedirect(route('admin.categories.index'));
+        $watches = Category::firstWhere('name', 'Smart Watch');
+        $this->assertSame($gadgets->id, $watches->parent_id);
+        $this->assertSame(3, $watches->sort_order);
+
+        // Not under a subcategory, and a category with subcategories stays top-level
+        $this->post(route('admin.categories.store'), ['name' => 'Kids Watch', 'parent_id' => $watches->id, 'status' => 1])->assertSessionHasErrors('parent_id');
+        $printers = Category::factory()->create(['name' => 'Printer']);
+        $this->put(route('admin.categories.update', $gadgets->id), ['name' => 'Gadget', 'parent_id' => $printers->id, 'status' => 1])->assertSessionHasErrors('parent_id');
+        $this->put(route('admin.categories.update', $watches->id), ['name' => 'Smart Watch', 'parent_id' => $watches->id, 'status' => 1])->assertSessionHasErrors('parent_id');
+
+        // Deleting the category would delete its subcategories
+        $this->delete(route('admin.categories.destroy', $gadgets->id))->assertSessionHas('error');
+        $this->assertNotNull($gadgets->fresh());
+
+        // The list shows each category followed by its subcategories
+        $this->get(route('admin.categories.index'))->assertOk()->assertSeeInOrder(['Gadget', 'Smart Watch', 'Printer']);
+        $this->get(route('admin.products.create'))->assertOk()->assertSee('— Smart Watch');
+    }
+
+    public function test_a_subcategory_gets_its_category_attributes_in_the_product_form(): void
+    {
+        $laptops = Category::factory()->create();
+        $asus = Category::factory()->create(['parent_id' => $laptops->id]);
+        AttributeOptimized::create(['name' => 'Screen', 'type' => 'select', 'required' => true, 'status' => true, 'category_id' => $laptops->id]);
+        AttributeOptimized::create(['name' => 'Ink', 'type' => 'select', 'status' => true, 'category_id' => Category::factory()->create()->id]);
+
+        $attributes = collect($this->actingAs($this->admin())->getJson("/admin/products/categories/{$asus->id}/attributes")->json('attributes'))->keyBy('name');
+
+        $this->assertTrue($attributes['Screen']['required']);
+        $this->assertArrayNotHasKey('Ink', $attributes->all());
+    }
+
     public function test_a_was_price_below_the_price_is_refused(): void
     {
         $product = ProductOptimized::factory()->create(['base_price' => 30000]);

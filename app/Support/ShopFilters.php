@@ -103,7 +103,8 @@ final class ShopFilters
     public function apply(Builder $query): Builder
     {
         $query
-            ->when($this->category, fn (Builder $query) => $query->where('category_id', $this->category->id))
+            // A category's page includes its subcategories' products
+            ->when($this->category, fn (Builder $query) => $query->whereIn('category_id', $this->category->familyIds()))
             ->when($this->brands, fn (Builder $query) => $query->whereIn('brand_id', $this->brands))
             ->when($this->minPrice !== null, fn (Builder $query) => $query->where('base_price', '>=', $this->minPrice))
             ->when($this->maxPrice !== null, fn (Builder $query) => $query->where('base_price', '<=', $this->maxPrice))

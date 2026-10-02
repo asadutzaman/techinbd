@@ -39,15 +39,20 @@
     $shopName = config('shop.name');
     // Two-tone wordmark: "MultiShop" → Multi + Shop
     $logoParts = preg_split('/(?<=[a-z])(?=[A-Z])|\s+/', $shopName, 2);
-    // Menu categories with products, for the category bar and the phone menu
+    // Menu categories with products (their own or their subcategories'), for the category bar and the phone menu
     $navCategories = collect($menuCategories ?? [])->filter(fn ($category) => $category->is_menu && $category->products_count > 0);
+    // Category id => its subcategories with products, for the bar's dropdowns and the phone menu's groups
+    $navChildren = $navCategories->mapWithKeys(fn ($category) => [
+        $category->id => $category->children->filter(fn ($child) => $child->is_menu && $child->products_count > 0)->values(),
+    ]);
     $shopContact = array_filter(config('shop.contact', []));
     $shopSocial = array_filter(config('shop.social', []));
     $accountUrl = auth()->check() ? route('customer.dashboard') : route('login');
     // Query values can arrive as arrays (?search[]=x); the header only uses plain ones
     $searchTerm = is_string(request('search')) ? request('search') : '';
-    // The open category page's slug (/category/{slug})
+    // The open category page's slug (/category/{slug}); on a subcategory's page, its parent is marked in the bar
     $currentCategory = request()->routeIs('shop.category') ? (string) request()->route('category') : '';
+    $currentTop = $navCategories->first(fn ($category) => $category->slug === $currentCategory || $navChildren[$category->id]->contains('slug', $currentCategory));
 @endphp
 
 <body>
@@ -64,7 +69,7 @@
 
             <form class="sf-search" action="{{ route('shop') }}" method="GET" id="search-form" role="search">
                 <label class="sr-only" for="search-input">Search products</label>
-                <input type="search" name="search" id="search-input" placeholder="Search laptops, phones, parts and more…"
+                <input type="search" name="search" id="search-input" placeholder="Search laptops, monitors, gadgets and more…"
                        value="{{ $searchTerm }}" autocomplete="off">
                 <button class="sf-search-btn" type="submit">
                     <i class="fas fa-search" aria-hidden="true"></i><span class="sf-search-label">Search</span>
@@ -129,9 +134,22 @@
                 <div class="sf-container">
                     <ul class="sf-catbar-list">
                         @foreach($navCategories as $category)
-                            <li>
+                            @php($children = $navChildren[$category->id])
+                            <li @class(['has-menu' => $children->isNotEmpty()])>
                                 <a href="{{ route('shop.category', $category) }}"
-                                   @if($currentCategory === $category->slug) aria-current="page" @endif>{{ $category->name }}</a>
+                                   @if($currentCategory === $category->slug) aria-current="page" @elseif($currentTop?->is($category)) aria-current="true" @endif>{{ $category->name }}</a>
+                                @if($children->isNotEmpty())
+                                    {{-- Opens on hover and while focus is inside, so Tab walks through it --}}
+                                    <ul class="sf-catbar-menu" aria-label="{{ $category->name }}">
+                                        <li><a href="{{ route('shop.category', $category) }}">All {{ $category->name }}</a></li>
+                                        @foreach($children as $child)
+                                            <li>
+                                                <a href="{{ route('shop.category', $child) }}"
+                                                   @if($currentCategory === $child->slug) aria-current="page" @endif>{{ $child->name }}</a>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                @endif
                             </li>
                         @endforeach
                     </ul>
@@ -155,11 +173,32 @@
                     <p class="sf-drawer-label">Categories</p>
                     <ul class="sf-drawer-list">
                         @foreach($navCategories as $category)
+                            @php($children = $navChildren[$category->id])
                             <li>
-                                <a href="{{ route('shop.category', $category) }}">
-                                    <x-category-icon :name="$category->icon" />{{ $category->name }}
-                                    <span class="sf-drawer-count">{{ $category->products_count }}</span>
-                                </a>
+                                @if($children->isNotEmpty())
+                                    <details class="sf-drawer-group" @if($currentTop?->is($category)) open @endif>
+                                        <summary>
+                                            <x-category-icon :name="$category->icon" />{{ $category->name }}
+                                            <span class="sf-drawer-count">{{ $category->products_count }}</span>
+                                            <i class="fas fa-chevron-down sf-drawer-chevron" aria-hidden="true"></i>
+                                        </summary>
+                                        <ul class="sf-drawer-sublist">
+                                            <li><a href="{{ route('shop.category', $category) }}">All {{ $category->name }}</a></li>
+                                            @foreach($children as $child)
+                                                <li>
+                                                    <a href="{{ route('shop.category', $child) }}">
+                                                        {{ $child->name }}<span class="sf-drawer-count">{{ $child->products_count }}</span>
+                                                    </a>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </details>
+                                @else
+                                    <a href="{{ route('shop.category', $category) }}">
+                                        <x-category-icon :name="$category->icon" />{{ $category->name }}
+                                        <span class="sf-drawer-count">{{ $category->products_count }}</span>
+                                    </a>
+                                @endif
                             </li>
                         @endforeach
                     </ul>

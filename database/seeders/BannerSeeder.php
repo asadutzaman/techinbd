@@ -8,13 +8,13 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Starter banners for the home page: three slides (MacBook Air M5, graphics cards, gaming
- * laptops) and two side banners (cash on delivery, deals). All are original artwork with the
- * text designed in (public/img/banners), so the title is what screen readers announce.
+ * Starter banners for the home page: three slides (MacBook Air M5, gadgets, gaming laptops) and
+ * two side banners (cash on delivery, deals). All are original artwork with the text designed in
+ * (public/img/banners), so the title is what screen readers announce.
  * Replace or reorder them in Admin → Home Banners.
  *
  * Safe to re-run: banners are matched by their image, and changed artwork is picked up.
- * The fashion slides from the earlier demo catalog are removed.
+ * Slides from earlier demo catalogs (fashion, graphics cards) are removed.
  *
  *   php artisan db:seed --class=BannerSeeder
  */
@@ -28,16 +28,16 @@ class BannerSeeder extends Seeder
             'title' => 'MacBook Air M5, now available. Powered by the Apple M5 chip, with official warranty and cash on delivery.',
         ],
         [
-            'photo' => 'banners/graphics-cards.jpg',
-            'mobile_photo' => 'banners/graphics-cards-mobile.jpg',
-            'link' => ['category' => 'graphics-card'],
-            'title' => 'Graphics cards: GeForce RTX 5060, 5070 and 5070 Ti from ZOTAC, MSI and Gigabyte, with a 3-year warranty.',
+            'photo' => 'banners/gadgets.jpg',
+            'mobile_photo' => 'banners/gadgets-mobile.jpg',
+            'link' => ['category' => 'gadget'],
+            'title' => 'Smart gadgets: smart watches, earbuds and power banks from Samsung, Amazfit, Anker and more.',
         ],
         [
             'photo' => 'banners/gaming-laptops.jpg',
             'mobile_photo' => 'banners/gaming-laptops-mobile.jpg',
             'link' => ['category' => 'laptop'],
-            'title' => 'Gaming laptops: play at 144Hz with RTX 4050 and 4060 laptops from ASUS, Lenovo and HP.',
+            'title' => 'Gaming laptops: play at 144Hz with RTX gaming laptops from ASUS, HP, Lenovo, MSI and Acer.',
         ],
         [
             'photo' => 'banners/cash-on-delivery.jpg',
@@ -53,8 +53,8 @@ class BannerSeeder extends Seeder
         ],
     ];
 
-    /** Starter slides from the earlier fashion catalog */
-    private const RETIRED = ['carousel-1.jpg', 'carousel-2.jpg', 'carousel-3.jpg'];
+    /** Starter slides from earlier demo catalogs: the fashion slides, then graphics cards */
+    private const RETIRED = ['carousel-1.jpg', 'carousel-2.jpg', 'carousel-3.jpg', 'graphics-cards.jpg'];
 
     public function run(): void
     {

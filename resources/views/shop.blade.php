@@ -2,7 +2,10 @@
 
 @php
     $total = $products->total();
+    // Top-level categories with products; the open category's family also lists its subcategories
     $categoryList = $categories->filter(fn ($item) => $item->products_count > 0);
+    $openFamily = $category?->parent_id ?? $category?->id;
+    $subcategoryList = $categoryList->firstWhere('id', $openFamily)?->children->filter(fn ($child) => $child->products_count > 0) ?? collect();
     // Brands with products here, plus any already chosen so they can be unticked
     $brandList = $brands->filter(fn ($brand) => $brand->products_count > 0 || in_array($brand->id, $filters->brands));
     $clearUrl = $filters->withoutFilters()->url();
@@ -32,6 +35,9 @@
             <li><a href="{{ route('home') }}">Home</a></li>
             @if($crumb)
                 <li><a href="{{ route('shop') }}">Shop</a></li>
+                @if($category?->parent?->status && $crumb === $category->name)
+                    <li><a href="{{ route('shop.category', $category->parent) }}">{{ $category->parent->name }}</a></li>
+                @endif
                 <li aria-current="page">{{ $crumb }}</li>
             @else
                 <li aria-current="page">Shop</li>
@@ -73,7 +79,7 @@
                                 <span class="shop-facet-value">{{ $category->name }}</span>
                             @endif
                         </summary>
-                        <ul class="shop-options {{ $categoryList->count() >= 8 ? 'is-long' : '' }}">
+                        <ul class="shop-options {{ $categoryList->count() + $subcategoryList->count() >= 8 ? 'is-long' : '' }}">
                             <li>
                                 <a class="shop-option" href="{{ $categoryUrl(null) }}" @if(! $filters->category) aria-current="page" @endif>
                                     <span class="shop-option-label">All categories</span>
@@ -86,6 +92,18 @@
                                         <span class="shop-option-label">{{ $item->name }}</span>
                                         <span class="shop-count">{{ $item->products_count }}</span>
                                     </a>
+                                    @if($item->id === $openFamily && $subcategoryList->isNotEmpty())
+                                        <ul class="shop-suboptions">
+                                            @foreach($subcategoryList as $child)
+                                                <li>
+                                                    <a class="shop-option" href="{{ $categoryUrl($child) }}" @if($filters->category?->id === $child->id) aria-current="page" @endif>
+                                                        <span class="shop-option-label">{{ $child->name }}</span>
+                                                        <span class="shop-count">{{ $child->products_count }}</span>
+                                                    </a>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    @endif
                                 </li>
                             @endforeach
                         </ul>
@@ -431,6 +449,13 @@ a.shop-option[aria-current="page"] {
 .shop-option-label {
     flex: 1;
     min-width: 0;
+}
+
+/* The open category's subcategories, under it */
+.shop-suboptions {
+    margin: 0;
+    padding: 0 0 0 14px;
+    list-style: none;
 }
 
 .shop-count {

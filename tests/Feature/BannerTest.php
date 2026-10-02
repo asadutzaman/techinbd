@@ -216,9 +216,11 @@ class BannerTest extends TestCase
 
     public function test_starter_banners_lead_with_the_macbook_air_m5(): void
     {
-        // A fashion slide from the earlier demo catalog, which the seeder retires
+        // Slides from earlier demo catalogs (fashion, then graphics cards), which the seeder retires
         $retired = $this->makeBanner(['title' => 'Panjabis, blazers and jeans']);
         $retired->forceFill(['image_path' => 'banners/originals/starter-carousel-1.jpg'])->save();
+        $graphicsCards = $this->makeBanner(['title' => 'Graphics cards: GeForce RTX 5060']);
+        $graphicsCards->forceFill(['image_path' => 'banners/originals/starter-graphics-cards.jpg'])->save();
 
         $this->seed([\Database\Seeders\CategorySeeder::class, \Database\Seeders\BannerSeeder::class]);
 
@@ -228,11 +230,13 @@ class BannerTest extends TestCase
         $this->assertCount(3, $slides);
         $this->assertCount(2, $sides);
         $this->assertStringStartsWith('MacBook Air M5', $slides[0]->title);
-        $this->assertStringStartsWith('Graphics cards', $slides[1]->title);
+        $this->assertStringStartsWith('Smart gadgets', $slides[1]->title);
+        $this->assertSame('/category/gadget', $slides[1]->link_url);
         $this->assertStringStartsWith('Gaming laptops', $slides[2]->title);
         $this->assertStringStartsWith('Cash on delivery', $sides[0]->title);
         $this->assertSame('/shop?sale=1', $sides[1]->link_url);
         $this->assertNull(Banner::find($retired->id));
+        $this->assertNull(Banner::find($graphicsCards->id));
 
         $macbook = $slides[0];
         $this->assertFalse($macbook->show_text, 'The artwork has its text designed in');

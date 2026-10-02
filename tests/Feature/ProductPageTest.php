@@ -196,6 +196,22 @@ class ProductPageTest extends TestCase
         $this->assertStringContainsString('href="' . route('shop.category', $category) . '"', $related);
     }
 
+    public function test_the_breadcrumb_names_the_category_and_its_subcategory(): void
+    {
+        $laptops = Category::factory()->create(['name' => 'Laptop']);
+        $asus = Category::factory()->create(['name' => 'ASUS Laptop', 'parent_id' => $laptops->id]);
+        $product = ProductOptimized::factory()->create(['category_id' => $asus->id, 'name' => 'Zenbook 14']);
+
+        $crumbs = Str::betweenFirst($this->page($product), 'class="sf-crumbs"', '</nav>');
+        $this->assertMatchesRegularExpression('#href="' . preg_quote(route('shop.category', $laptops), '#') . '">Laptop</a></li>\s*<li><a href="' . preg_quote(route('shop.category', $asus), '#') . '">ASUS Laptop</a>#', $crumbs);
+
+        // A hidden category has no page to link to
+        $laptops->update(['status' => false]);
+        $crumbs = Str::betweenFirst($this->page($product), 'class="sf-crumbs"', '</nav>');
+        $this->assertStringNotContainsString('>Laptop</a>', $crumbs);
+        $this->assertStringContainsString('>ASUS Laptop</a>', $crumbs);
+    }
+
     public function test_the_address_is_the_product_name_and_old_links_move_there(): void
     {
         $product = ProductOptimized::factory()->create(['name' => 'Samsung ViewFinity S8 27" 4K Monitor']);

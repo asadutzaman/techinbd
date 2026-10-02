@@ -15,17 +15,7 @@
                 <div class="card-header">
                     <h3 class="card-title">All Categories</h3>
                     <div class="card-tools">
-                        <div class="input-group input-group-sm mr-3" style="width: 200px;">
-                            <span class="text-muted mr-2">
-                                Showing {{ $categories->firstItem() ?? 0 }}-{{ $categories->lastItem() ?? 0 }} of {{ $categories->total() }}
-                            </span>
-                            <select class="form-control form-control-sm" onchange="changePerPage(this.value)">
-                                <option value="10" {{ request('per_page') == 10 ? 'selected' : '' }}>10 per page</option>
-                                <option value="15" {{ request('per_page', 15) == 15 ? 'selected' : '' }}>15 per page</option>
-                                <option value="25" {{ request('per_page') == 25 ? 'selected' : '' }}>25 per page</option>
-                                <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50 per page</option>
-                            </select>
-                        </div>
+                        <span class="text-muted mr-3">{{ $categories->count() }} {{ Str::plural('category', $categories->count()) }}, in menu order</span>
                         <a href="{{ route('admin.categories.create') }}" class="btn btn-primary">
                             <i class="fas fa-plus"></i> Add New Category
                         </a>
@@ -39,6 +29,7 @@
                                 <th>ID</th>
                                 <th>Image</th>
                                 <th>Name</th>
+                                <th>Sort</th>
                                 <th>Description</th>
                                 <th>Products Count</th>
                                 <th>Status</th>
@@ -61,7 +52,17 @@
                                         </div>
                                     @endif
                                 </td>
-                                <td>{{ $category->name }}</td>
+                                <td>
+                                    @if($category->parent_id)
+                                        <span class="text-muted pl-3" aria-hidden="true">└</span> {{ $category->name }}
+                                    @else
+                                        <strong>{{ $category->name }}</strong>
+                                        @if($category->children_count)
+                                            <small class="text-muted ml-1">{{ $category->children_count }} {{ Str::plural('subcategory', $category->children_count) }}</small>
+                                        @endif
+                                    @endif
+                                </td>
+                                <td>{{ $category->sort_order }}</td>
                                 <td>{{ Str::limit($category->description, 50) ?? 'No description' }}</td>
                                 <td>
                                     <span class="badge badge-info">{{ $category->products_count ?? 0 }} Products</span>
@@ -103,7 +104,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="10" class="text-center py-4">
+                                <td colspan="11" class="text-center py-4">
                                     <h5>No categories found</h5>
                                     <p class="text-muted">Start by adding your first category.</p>
                                     <a href="{{ route('admin.categories.create') }}" class="btn btn-primary">
@@ -116,24 +117,8 @@
                     </table>
                 </div>
                 <!-- /.card-body -->
-                @if($categories->hasPages())
-                <div class="card-footer clearfix">
-                    {{ $categories->links() }}
-                </div>
-                @endif
             </div>
             <!-- /.card -->
         </div>
     </div>
 @endsection
-
-@push('scripts')
-<script>
-function changePerPage(perPage) {
-    const url = new URL(window.location);
-    url.searchParams.set('per_page', perPage);
-    url.searchParams.delete('page'); // Reset to first page when changing per_page
-    window.location.href = url.toString();
-}
-</script>
-@endpush

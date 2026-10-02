@@ -56,14 +56,16 @@ class HomeController extends Controller
     }
 
     /**
-     * Categories with active products, limited to the featured ones when any are marked.
+     * The featured categories and subcategories with active products, in menu order (each category
+     * followed by its subcategories); the top-level categories when none are featured.
      */
     private function categories(): Collection
     {
-        $categories = Category::activeWithProductCounts()->filter(fn ($category) => $category->products_count > 0);
-        $featured = $categories->where('is_featured', true);
+        $tree = Category::tree()->filter(fn ($category) => $category->products_count > 0);
+        $featured = $tree->flatMap(fn ($category) => [$category, ...$category->children])
+            ->filter(fn ($category) => $category->is_featured && $category->products_count > 0);
 
-        return ($featured->isNotEmpty() ? $featured : $categories)->take(self::CATEGORY_TILES)->values();
+        return ($featured->isNotEmpty() ? $featured : $tree)->take(self::CATEGORY_TILES)->values();
     }
 
     /**

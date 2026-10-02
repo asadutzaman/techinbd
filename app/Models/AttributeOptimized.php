@@ -101,10 +101,13 @@ class AttributeOptimized extends Model
         return $query->whereNull('category_id');
     }
 
-    public function scopeForCategory($query, $categoryId)
+    /**
+     * Store-wide attributes plus those of the given category, or of any of a list of categories.
+     */
+    public function scopeForCategory($query, $categoryIds)
     {
-        return $query->where(function($q) use ($categoryId) {
-            $q->where('category_id', $categoryId)
+        return $query->where(function($q) use ($categoryIds) {
+            $q->whereIn('category_id', (array) $categoryIds)
               ->orWhereNull('category_id');
         });
     }

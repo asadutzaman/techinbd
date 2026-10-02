@@ -14,10 +14,10 @@ return [
 
     'name' => env('SHOP_NAME', 'MultiShop'),
 
-    // Home page title: "MultiShop — Laptops, phones and PC parts in Bangladesh"
-    'tagline' => 'Laptops, phones and PC parts in Bangladesh',
+    // Home page title: "MultiShop — Laptops, monitors and gadgets in Bangladesh"
+    'tagline' => 'Laptops, monitors and gadgets in Bangladesh',
 
-    'description' => 'Genuine laptops, phones, PC parts and accessories, priced in taka and delivered across Bangladesh.',
+    'description' => 'Genuine laptops, monitors, gadgets, printers and accessories, priced in taka and delivered across Bangladesh.',
 
     // Dates shown to shoppers (the app itself stores UTC)
     'timezone' => env('SHOP_TIMEZONE', 'Asia/Dhaka'),

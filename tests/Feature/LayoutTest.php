@@ -70,7 +70,7 @@ class LayoutTest extends TestCase
         }
 
         $html = $this->get('/')->assertOk()->getContent();
-        $bar = Str::betweenFirst($html, 'class="sf-catbar-list"', '</ul>');
+        $bar = Str::betweenFirst($html, 'class="sf-catbar-list"', '</nav>');
         $menu = Str::betweenFirst($html, 'id="sf-drawer"', 'class="sf-drawer-label">Shop');
 
         foreach (['category bar' => $bar, 'phone menu' => $menu] as $where => $list) {
@@ -86,9 +86,46 @@ class LayoutTest extends TestCase
         $laptops = Category::factory()->create(['name' => 'Laptop', 'is_menu' => true]);
         ProductOptimized::factory()->create(['category_id' => $laptops->id]);
 
-        $bar = Str::betweenFirst($this->get(route('shop.category', $laptops))->assertOk()->getContent(), 'class="sf-catbar-list"', '</ul>');
+        $bar = Str::betweenFirst($this->get(route('shop.category', $laptops))->assertOk()->getContent(), 'class="sf-catbar-list"', '</nav>');
 
         $this->assertMatchesRegularExpression('#href="' . preg_quote(route('shop.category', $laptops), '#') . '"\s+aria-current="page"#', $bar);
+    }
+
+    public function test_subcategories_open_from_their_category_in_the_bar_and_the_phone_menu(): void
+    {
+        // Peripherals has no products of its own, only its subcategories'
+        $peripherals = Category::factory()->create(['name' => 'Peripherals', 'is_menu' => true]);
+        $keyboards = Category::factory()->create(['name' => 'Keyboard', 'is_menu' => true, 'parent_id' => $peripherals->id, 'sort_order' => 1]);
+        $mice = Category::factory()->create(['name' => 'Mouse', 'is_menu' => true, 'parent_id' => $peripherals->id, 'sort_order' => 2]);
+        Category::factory()->create(['name' => 'Mouse Pad', 'is_menu' => true, 'parent_id' => $peripherals->id]);
+        ProductOptimized::factory()->create(['category_id' => $keyboards->id]);
+        ProductOptimized::factory()->count(2)->create(['category_id' => $mice->id]);
+
+        $html = $this->get('/')->assertOk()->getContent();
+        $bar = Str::betweenFirst($html, 'class="sf-catbar-list"', '</nav>');
+        $menu = Str::betweenFirst($html, 'id="sf-drawer"', 'class="sf-drawer-label">Shop');
+
+        $this->assertMatchesRegularExpression('#<li class="has-menu">\s*<a href="' . preg_quote(route('shop.category', $peripherals), '#') . '"#', $bar);
+        $this->assertMatchesRegularExpression('#class="sf-catbar-menu".*All Peripherals.*Keyboard.*Mouse#s', $bar);
+        $this->assertStringNotContainsString('Mouse Pad', $bar, 'Empty subcategories stay out');
+
+        $this->assertMatchesRegularExpression('#<details class="sf-drawer-group"\s*>\s*<summary>.*Peripherals\s*<span class="sf-drawer-count">3</span>#s', $menu, 'The count covers the subcategories');
+        $this->assertStringContainsString('href="' . route('shop.category', $mice) . '"', $menu);
+        $this->assertStringNotContainsString('Mouse Pad', $menu);
+    }
+
+    public function test_a_subcategory_page_marks_its_category_in_the_bar_and_opens_it_in_the_phone_menu(): void
+    {
+        $peripherals = Category::factory()->create(['name' => 'Peripherals', 'is_menu' => true]);
+        $keyboards = Category::factory()->create(['name' => 'Keyboard', 'is_menu' => true, 'parent_id' => $peripherals->id]);
+        ProductOptimized::factory()->create(['category_id' => $keyboards->id]);
+
+        $html = $this->get(route('shop.category', $keyboards))->assertOk()->getContent();
+        $bar = Str::betweenFirst($html, 'class="sf-catbar-list"', '</nav>');
+
+        $this->assertMatchesRegularExpression('#href="' . preg_quote(route('shop.category', $peripherals), '#') . '"\s+aria-current="true"#', $bar);
+        $this->assertMatchesRegularExpression('#href="' . preg_quote(route('shop.category', $keyboards), '#') . '"\s+aria-current="page"#', $bar);
+        $this->assertMatchesRegularExpression('#<details class="sf-drawer-group"\s+open\s*>#', Str::betweenFirst($html, 'id="sf-drawer"', 'class="sf-drawer-label">Shop'));
     }
 
     public function test_bottom_bar_marks_the_current_page(): void

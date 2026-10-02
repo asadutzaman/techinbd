@@ -14,7 +14,8 @@ class ProductController extends Controller
     {
         $product = ProductOptimized::with([
             'brand',
-            'category',
+            // The parent category for the breadcrumb
+            'category.parent',
             // The main image leads the gallery
             'images' => fn ($query) => $query->orderByDesc('is_main')->orderBy('sort_order')->orderBy('id'),
             'variants' => fn ($query) => $query->orderBy('is_default', 'desc')->orderBy('price'),

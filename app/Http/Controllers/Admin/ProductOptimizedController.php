@@ -60,8 +60,9 @@ class ProductOptimizedController extends Controller
             });
         }
 
-        if ($category) {
-            $query->where('category_id', $category);
+        // A category includes its subcategories' products
+        if ($category && $selected = Category::find($category)) {
+            $query->whereIn('category_id', $selected->familyIds());
         }
 
         if ($brand) {
@@ -75,7 +76,7 @@ class ProductOptimizedController extends Controller
         $products = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
         // Get filter options
-        $categories = Category::where('status', true)->orderBy('name')->get(['id', 'name']);
+        $categories = Category::nestedList();
         $brands = Brand::where('status', true)->orderBy('name')->get(['id', 'name']);
 
         return view('admin.products.index', compact('products', 'categories', 'brands'));
@@ -83,7 +84,7 @@ class ProductOptimizedController extends Controller
 
     public function create()
     {
-        $categories = Category::where('status', true)->orderBy('name')->get();
+        $categories = Category::nestedList();
         $brands = Brand::where('status', true)->orderBy('name')->get();
         
         return view('admin.products.create', compact('categories', 'brands'));
@@ -214,7 +215,7 @@ class ProductOptimizedController extends Controller
             'productAttributes.attributeValue'
         ])->findOrFail($id);
 
-        $categories = Category::where('status', true)->orderBy('name')->get();
+        $categories = Category::nestedList();
         $brands = Brand::where('status', true)->orderBy('name')->get();
 
         // Get current product attributes as key-value pairs
@@ -344,7 +345,8 @@ class ProductOptimizedController extends Controller
             $attributes = AttributeOptimized::with(['activeValues' => function($query) {
                     $query->orderBy('sort_order');
                 }])
-                ->forCategory($categoryId)
+                // A subcategory also gets its parent category's attributes
+                ->forCategory(array_filter([$category->id, $category->parent_id]))
                 ->active()
                 ->orderBy('sort_order')
                 ->get()

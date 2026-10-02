@@ -14,7 +14,8 @@ class MenuComposer
 
     public function compose(View $view)
     {
-        $menuCategories = $this->catalogCache->remember('active-categories', 600, fn () => Category::activeWithProductCounts());
+        // Top-level categories with their subcategories as `children`
+        $menuCategories = $this->catalogCache->remember('category-tree', 600, fn () => Category::tree());
 
         $view->with('menuCategories', $menuCategories);
     }

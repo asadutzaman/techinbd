@@ -72,7 +72,7 @@
         <div class="form-group">
             <label for="title">Title <span class="text-danger">*</span></label>
             <input type="text" class="form-control" id="title" name="title" maxlength="120" required
-                   value="{{ old('title', $banner->title) }}" placeholder="Graphics cards, in stock">
+                   value="{{ old('title', $banner->title) }}" placeholder="Gaming laptops, in stock">
             <small class="form-text text-muted">Also describes the image for screen readers.</small>
         </div>
 

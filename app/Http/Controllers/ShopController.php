@@ -41,7 +41,10 @@ class ShopController extends Controller
      */
     public function category(Request $request, string $slug)
     {
-        $category = Category::where('status', true)->firstWhere('slug', $slug);
+        // The parent for the breadcrumb; the active subcategories, whose products the page includes
+        $category = Category::with(['parent', 'children' => fn ($children) => $children->where('status', true)])
+            ->where('status', true)
+            ->firstWhere('slug', $slug);
 
         if (! $category) {
             // Old addresses: a category id, or a slug that has since changed
@@ -73,10 +76,10 @@ class ShopController extends Controller
             ->withQueryString();
 
         // The sidebar lists don't depend on the other filters, so they're cached with the catalog
-        $categories = $this->catalogCache->remember('active-categories', 600, fn () => Category::activeWithProductCounts());
-        $brands = $this->brandsFor($category?->id);
+        $categories = $this->catalogCache->remember('category-tree', 600, fn () => Category::tree());
+        $brands = $this->brandsFor($category);
         $totalActiveProducts = $this->catalogCache->remember('active-product-count', 600, fn () => ProductOptimized::active()->count());
-        $filterableAttributes = $this->getFilterableAttributes($category?->id);
+        $filterableAttributes = $this->getFilterableAttributes($category);
 
         $brand = count($filters->brands) === 1 ? $brands->firstWhere('id', $filters->brands[0]) : null;
         $heading = match (true) {
@@ -103,13 +106,14 @@ class ShopController extends Controller
     }
 
     /**
-     * Active brands, each with its number of active products in the category (or in the whole shop).
+     * Active brands, each with its number of active products in the category and its subcategories
+     * (or in the whole shop).
      */
-    private function brandsFor(?int $categoryId): Collection
+    private function brandsFor(?Category $category): Collection
     {
-        return $this->catalogCache->remember('shop-brands:' . ($categoryId ?? 'all'), 600, fn () => Brand::active()
+        return $this->catalogCache->remember('shop-brands:' . ($category?->id ?? 'all'), 600, fn () => Brand::active()
             ->withCount(['products' => fn ($products) => $products->active()
-                ->when($categoryId, fn ($products) => $products->where('category_id', $categoryId))])
+                ->when($category, fn ($products) => $products->whereIn('category_id', $category->familyIds()))])
             ->orderBy('name')
             ->get());
     }
@@ -141,7 +145,8 @@ class ShopController extends Controller
         $query->where(function ($q) use ($searchTerm) {
             $q->where('name', 'LIKE', '%' . $searchTerm . '%')
               ->orWhere('description', 'LIKE', '%' . $searchTerm . '%')
-              ->orWhereHas('category', fn ($category) => $category->where('name', 'LIKE', '%' . $searchTerm . '%'))
+              ->orWhereHas('category', fn ($category) => $category->where('name', 'LIKE', '%' . $searchTerm . '%')
+                  ->orWhereHas('parent', fn ($parent) => $parent->where('name', 'LIKE', '%' . $searchTerm . '%')))
               ->orWhereHas('brand', fn ($brand) => $brand->where('name', 'LIKE', '%' . $searchTerm . '%'));
         });
     }
@@ -149,14 +154,15 @@ class ShopController extends Controller
     /**
      * Get filterable attributes with the values actually used by active products
      */
-    private function getFilterableAttributes(?int $selectedCategory): array
+    private function getFilterableAttributes(?Category $category): array
     {
-        return $this->catalogCache->remember('shop-filters:' . ($selectedCategory ?? 'all'), 600, function () use ($selectedCategory) {
+        return $this->catalogCache->remember('shop-filters:' . ($category?->id ?? 'all'), 600, function () use ($category) {
             $attributesQuery = AttributeOptimized::active()->filterable();
+            $familyIds = $category?->familyIds();
 
-            // If category is selected, get attributes for that category
-            if ($selectedCategory) {
-                $attributesQuery->forCategory($selectedCategory);
+            // On a category page: store-wide attributes, plus those of the category, its subcategories and its parent
+            if ($category) {
+                $attributesQuery->forCategory(array_filter([...$familyIds, $category->parent_id]));
             }
 
             $attributes = $attributesQuery->orderBy('sort_order')->get();
@@ -166,10 +172,10 @@ class ShopController extends Controller
 
             // One query for the used values of every attribute
             $usedValues = ProductAttributeOptimized::whereIn('attribute_id', $attributes->pluck('id'))
-                ->whereHas('product', function ($q) use ($selectedCategory) {
+                ->whereHas('product', function ($q) use ($familyIds) {
                     $q->active();
-                    if ($selectedCategory) {
-                        $q->where('category_id', $selectedCategory);
+                    if ($familyIds) {
+                        $q->whereIn('category_id', $familyIds);
                     }
                 })
                 ->distinct()

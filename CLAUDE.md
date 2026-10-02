@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 composer install && cp .env.example .env && php artisan key:generate
-php artisan migrate --seed                 # the demo tech store: 16 categories, 100 products, home banners
+php artisan migrate --seed                 # the demo tech store: 9 categories and their subcategories, ~140 StarTech products, home banners
 php artisan storage:link                   # product images live on the public disk
 php artisan admin:grant you@example.com    # admin access (--revoke to remove); register the account first
 php artisan admin:password you@example.com # set an admin's password; admins can't reset theirs by email
@@ -45,6 +45,11 @@ Laravel MVC; controllers mostly query Eloquent directly. All routes are in `rout
 The catalog models are the `*Optimized` ones: `ProductOptimized` (`products_optimized`), `ProductVariantOptimized`, `ProductImageOptimized`, `AttributeOptimized`, `AttributeValueOptimized`, `ProductAttributeOptimized`, plus `ProductSearchIndex`. The original `products`/`product_variants` tables and their models were removed.
 
 - Price is `base_price`; `status` is an integer 0/1 (`->active()` scope). A product's category is `category_id` (the `product_categories` pivot and `categories()` relation exist but are empty/unused).
+- Categories are one level deep: a top-level category (`parent_id` null) and its subcategories (`parent()`/`children()`). Products normally sit in a subcategory; a category with no subcategories (Monitor) holds them itself.
+  - **A category's page includes its subcategories' products.** Anything that narrows products by category uses `$category->familyIds()` (itself plus its active subcategories): `ShopFilters::apply`, the shop's brand and attribute lists, the admin product filter. Related products stay in the product's own subcategory.
+  - **Menus and counts** come from `Category::tree()`: active top-level categories with their active subcategories set as `children` and a `products_count` that includes them, from one query. It's cached as `category-tree` (menu, shop sidebar); the home page builds it inside its own cache.
+  - **Category-specific attributes:** `AttributeOptimized::forCategory()` takes one id or a list, so a subcategory's product form also gets its parent's attributes, and a category's shop page its subcategories'.
+  - **Admin:** the parent must be a top-level category, a category with subcategories can't move under another, and one with subcategories can't be deleted (the FK would delete them and empty their products' `category_id`). Admin selects list `Category::nestedList()` (parents, each followed by its subcategories prefixed "— ").
 - Product and category pages are addressed by slug: `/product/{slug}` and `/category/{slug}`.
   - **Links:** pass the model, as in `route('product.detail', $product)` or `route('shop.category', $category)`. The routes declare `{product:slug}`/`{category:slug}`, so `route()` takes the slug. The controllers look it up themselves (no implicit binding), so old addresses can redirect.
   - **Making slugs:** `App\Models\Concerns\HasSlug` makes a unique slug from the name when the item is created (`usb-c-cable-2` for a repeat, never all digits). It keeps that slug through renames.
@@ -54,7 +59,7 @@ The catalog models are the `*Optimized` ones: `ProductOptimized` (`products_opti
 - Each product image has WebP copies written by `ProductImageOptimized::generateVersions()` on upload: `thumb_url` (600px, cards, `card_url`) and `large_url` (1200px, never upscaled, the product page gallery, `gallery_url`/`gallery_srcset`). `deleteFiles()` removes all three files. Use `$image->full_url` only when the original is really needed.
 - `specs` is label → value in entry order. It's stored as a JSON list of `[label, value]` pairs by an accessor/mutator, because MySQL sorts JSON object keys; older rows holding an object still read.
 - Card "compare at" prices come from `withMax('variants', 'compare_price')` → `variants_max_compare_price`, not from loading variants.
-- Search: `ShopController::applySearch()` uses the FULLTEXT index on `product_search_index` on MySQL and falls back to `LIKE` elsewhere (tests). That index is only as fresh as the last `ProductOptimized::updateSearchIndex()` call; the admin product controller and `DemoCatalogSeeder` call it once per product after writing attributes. New write paths (imports, other seeders) must call it or run `products:reindex`.
+- Search: `ShopController::applySearch()` uses the FULLTEXT index on `product_search_index` on MySQL and falls back to `LIKE` elsewhere (tests). The index holds the category and its parent ("Gadget, Smart Watch"), so searching a category finds its subcategories' products. That index is only as fresh as the last `ProductOptimized::updateSearchIndex()` call; the admin product controller and `DemoCatalogSeeder` call it once per product after writing attributes. New write paths (imports, other seeders) must call it or run `products:reindex`.
 
 ### Caching and query discipline
 
@@ -114,19 +119,23 @@ The catalog models are the `*Optimized` ones: `ProductOptimized` (`products_opti
   - **Drawers:** the phone menu and the shop filters. A `[data-drawer]` opens from a `[data-drawer-open]` button whose `aria-controls` names it, and closes from `[data-drawer-close]` or Esc. It traps Tab, locks page scroll and returns focus. `data-drawer-until="992"` makes it a drawer only below that width (1200 by default).
   - the phone search toggle and the product rail buttons;
   - **Product card buttons:** Add to cart posts to the button's `data-cart-url`; compare calls the layout's `addToCompare()`. Pages don't add their own card handlers.
-- `MenuComposer` provides `$menuCategories`; the category bar and the drawer show the `is_menu` ones with products, in `sort_order`. `HeaderCountsComposer` provides `$cartCount`/`$wishlistCount` server-side. JS updates the three cart badges with `setCartCount(response.cart_count)` from cart endpoint responses, rather than re-fetching `/cart/count`.
+- `MenuComposer` provides `$menuCategories` (the `Category::tree()`); the category bar and the drawer show the `is_menu` ones with products, in `sort_order`.
+  - **Bar:** a category with subcategories gets a dropdown (`.sf-catbar-menu`: "All {category}", then the subcategories) that opens on hover and on `:focus-within`, so Tab walks into it. The bar wraps rather than scrolls, because a scrolling list would clip the dropdowns.
+  - **Phone drawer:** such a category is a `<details class="sf-drawer-group">`, open on its own and its subcategories' pages. The drawer's focus trap already includes `summary`.
+  - On a subcategory's page the bar marks its category with `aria-current="true"`. `HeaderCountsComposer` provides `$cartCount`/`$wishlistCount` server-side. JS updates the three cart badges with `setCartCount(response.cart_count)` from cart endpoint responses, rather than re-fetching `/cart/count`.
 - Pages push page-specific assets with `@push('styles')`/`@push('scripts')`; both layouts render those stacks. Inner pages start with a breadcrumb, and `.sf-main` gives them the top gap; the home, shop and product pages opt out with `@section('main_class', 'is-flush')`. The layout also has a `head` stack (the product page's JSON-LD). `storefront.js` publishes the sticky header's height as `--sf-sticky-top` for other sticky bars.
 - Store-wide copy lives in `config/shop.php`: name, tagline (the home page title), description, promises, payment methods, contact/social from `SHOP_*` env, and the display timezone. The footer reads it, and contact lines only render when set. Payment options come from `Order::PAYMENT_METHODS`.
 - Home page (`HomeController` + `home.blade.php`): all data is one `CatalogCache::remember('home')` array. The page has:
   - a hero with the banner slider and up to two side banners;
-  - Featured Categories: tiles for the `is_featured` categories with products, or all of them when none are featured;
+  - Featured Categories: tiles for the `is_featured` categories and subcategories with products, each category followed by its subcategories, or the top-level categories when none are featured;
   - rows of Deals (`ProductOptimized::onSale()->orderBySaving()`, also behind the shop's `?sale=1`), Featured, Latest and Best Sellers.
 
   Best Sellers ranks units ordered, ignoring cancelled orders. It only shows once at least 4 products have sales, and refreshes with the cache (orders don't bust it). Each row is `<x-product-rail>`, which scrolls sideways, and its cards are `<x-product-card>` (the `variant="deal"` card has an orange button). `<x-price>` formats taka (`৳164,999`). `<x-category-icon>` holds the category line icons (Lucide, ISC licence in the file), picked by keyword from the category's name by `Category::getIconAttribute()`; an image uploaded in admin replaces the icon. The `<h1>` is the store name, hidden with `sr-only`.
 - Shop page (`ShopController::index` + `shop.blade.php`, styles `.shop-*` and script inline):
   - **Query string:** `App\Support\ShopFilters` reads it forgivingly (search, `brand[]`, `attributes[id][]`, min/max price, in stock, sale, featured, sort). It applies them, except the search, which `ShopController::applySearch()` owns. The category isn't in the query string: `ShopController::category()` passes the `Category` from the address, and `ShopFilters` holds the model.
   - **Links:** `url($changes)` builds shop links with one value changed (`/category/{slug}?…` or `/shop?…`); `path()` is the filter form's action; `chips()` gives the removable filter chips.
-  - **Heading:** the search and the category are what the page is about (the heading), and "Clear all" keeps them.
+  - **Heading:** the search and the category are what the page is about (the heading), and "Clear all" keeps them. A subcategory's breadcrumb goes through its category.
+  - **Category facet:** the top-level categories with their counts; the open category's family also lists its subcategories, indented (`.shop-suboptions`).
   - **Filters:** a sidebar from 992px, a slide-in panel below. Ticks apply at once on computers and wait for "Show results" in the panel.
   - **Brands:** the brand list is scoped to the category (`shop-brands:{category}` cache).
   - **Paging and sort:** 24 per page. Deals default to "Biggest saving", everything else to newest; every sort ends with `id desc`, so pages never overlap.
@@ -146,8 +155,14 @@ The catalog models are the `*Optimized` ones: `ProductOptimized` (`products_opti
 
 ### Demo data
 
-- `DatabaseSeeder` seeds the demo tech store: `CategorySeeder` (16 categories), `AttributeSeeder` (Screen Size, Storage, RAM, Color), `DemoCatalogSeeder` (100 products with brands) and `BannerSeeder` (3 slides and 2 side banners). Each is safe to re-run on its own. `DemoCatalogSeeder` also removes the earlier fashion demo products, categories and brands, but keeps anything added in admin.
-- Product covers are drawn from `database/seeders/demo-art/<category-slug>.jpg`, with the brand and model added by GD. Featured products also get a close-up and a key-specs card, so their pages show a 3-image gallery. Images are only created when missing. Banner artwork is original, with its text designed in, in `public/img/banners/`.
+- `DatabaseSeeder` seeds the demo tech store: `CategorySeeder`, `AttributeSeeder` (Screen Size, Storage, RAM, Color), `DemoCatalogSeeder` and `BannerSeeder` (3 slides and 2 side banners). Each is safe to re-run on its own.
+- `CategorySeeder::CATEGORIES` is the tree: Laptop (a subcategory per brand, plus Laptop Cooler), Monitor, Peripherals, Desktop PC, Office Equipment, Networking, TV, Gadget and Printer. On every run it sets the tree, menu order and switches; names, descriptions and images edited in admin stay. `RENAMED` renames the earlier catalog's `television`/`headphones` rows in place, so their old addresses redirect.
+- `DemoCatalogSeeder` seeds about 140 real products from startech.com.bd. The data is `database/seeders/catalog/products.php` (brands and products per subcategory: price, StarTech's crossed-out price as `was`, specs, attributes, MPN, warranty), and the photos are `catalog/images/{sku}-{n}.jpg` (up to 800px, about 11 MB).
+  - The one-line highlights, brand descriptions and the description template are our own; `source` is each product's StarTech page, for refreshing prices, and isn't stored.
+  - SKUs are `TIB-{subcategory prefix}-{position}`. Photos are copied in when missing; other `products/demo/*` images of a product are removed (an earlier catalog's drawn covers), and images added in admin stay.
+  - It removes earlier demo catalogs' products, categories (fashion, and the old flat tech ones such as smartphone and graphics-card) and brands, but keeps anything added in admin.
+- The photos and specs are StarTech's and the manufacturers'. The site is public, so replace them before a real launch.
+- Banner artwork is original, with its text designed in, in `public/img/banners/`.
 
 ### Migrations
 

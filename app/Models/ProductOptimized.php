@@ -307,7 +307,10 @@ class ProductOptimized extends Model
     public function updateSearchIndex()
     {
         // Fresh load: callers usually change brand/category/attributes just before indexing
-        $this->load(['brand', 'category', 'productAttributes']);
+        $this->load(['brand', 'category.parent', 'productAttributes']);
+
+        // "Gadget, Smart Watch": searching a category also finds its subcategories' products
+        $categoryNames = collect([$this->category?->parent?->name, $this->category?->name])->filter()->implode(', ');
 
         // Update the denormalized search index
         $searchableContent = collect([
@@ -315,7 +318,7 @@ class ProductOptimized extends Model
             $this->short_description,
             $this->description,
             $this->brand?->name,
-            $this->category?->name,
+            $categoryNames,
             $this->productAttributes->pluck('value')->implode(' ')
         ])->filter()->implode(' ');
 
@@ -326,7 +329,7 @@ class ProductOptimized extends Model
                 'sku' => $this->sku,
                 'name' => $this->name,
                 'brand_name' => $this->brand?->name,
-                'category_names' => $this->category?->name,
+                'category_names' => $categoryNames ?: null,
                 'attribute_values' => $this->productAttributes->pluck('value')->implode(' '),
                 'price' => $this->base_price,
                 'status' => $this->status ?? 1,

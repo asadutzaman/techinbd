@@ -15,9 +15,9 @@ use Illuminate\Database\Seeder;
 class AttributeSeeder extends Seeder
 {
     private const ATTRIBUTES = [
-        'Screen Size' => ['11"', '13"', '14"', '15.6"', '16"', '24"', '27"', '32"', '43"', '55"', '65"'],
+        'Screen Size' => ['11"', '13"', '14"', '15"', '15.6"', '16"', '22"', '24"', '27"', '32"', '43"', '50"', '55"', '65"', '75"', '86"'],
         'Storage' => ['128GB', '256GB', '480GB', '500GB', '512GB', '1TB', '2TB'],
-        'RAM' => ['4GB', '6GB', '8GB', '12GB', '16GB', '24GB', '32GB'],
+        'RAM' => ['4GB', '6GB', '8GB', '12GB', '16GB', '24GB', '32GB', '64GB'],
         'Color' => ['Black', 'White', 'Gray', 'Silver', 'Blue', 'Green', 'Pink', 'Purple', 'Red', 'Gold'],
     ];
 

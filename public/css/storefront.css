@@ -405,22 +405,22 @@ summary:focus-visible {
     border-top: 1px solid var(--sf-line);
 }
 
+/* Wraps rather than scrolls: a scrolling list would clip the dropdowns */
 .sf-catbar-list {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
-    gap: 18px;
+    gap: 0 18px;
     margin: 0;
     padding: 0;
-    overflow-x: auto;
     list-style: none;
-    scrollbar-width: none;
 }
 
-.sf-catbar-list::-webkit-scrollbar {
-    display: none;
+.sf-catbar-list > li {
+    position: relative;
 }
 
-.sf-catbar-list a {
+.sf-catbar-list > li > a {
     display: block;
     padding: 11px 0 10px;
     border-bottom: 2px solid transparent;
@@ -430,11 +430,81 @@ summary:focus-visible {
     white-space: nowrap;
 }
 
-.sf-catbar-list a:hover,
-.sf-catbar-list a[aria-current="page"] {
+.sf-catbar-list > li > a:hover,
+.sf-catbar-list > li > a[aria-current] {
     border-bottom-color: var(--sf-accent);
     color: var(--sf-accent);
     text-decoration: none;
+}
+
+.sf-catbar-list > .has-menu > a::after {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-left: 7px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    opacity: .55;
+    transform: translateY(-3px) rotate(45deg);
+}
+
+/* A category's subcategories: shown on hover, and while focus is inside so Tab walks through them */
+.sf-catbar-menu {
+    position: absolute;
+    top: 100%;
+    left: -14px;
+    z-index: 30;
+    min-width: 220px;
+    margin: 0;
+    padding: 6px 0;
+    list-style: none;
+    background: var(--sf-surface);
+    border: 1px solid var(--sf-line);
+    border-radius: 0 0 var(--sf-radius) var(--sf-radius);
+    box-shadow: var(--sf-shadow);
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity .15s, transform .15s, visibility .15s;
+}
+
+.sf-catbar-list > li:hover > .sf-catbar-menu,
+.sf-catbar-list > li:focus-within > .sf-catbar-menu {
+    visibility: visible;
+    opacity: 1;
+    transform: none;
+}
+
+/* The last menus open leftwards, so they stay on screen */
+.sf-catbar-list > li:nth-last-child(-n+2) > .sf-catbar-menu {
+    right: -14px;
+    left: auto;
+}
+
+.sf-catbar-menu a {
+    display: block;
+    padding: 8px 18px;
+    font-size: 14px;
+    color: var(--sf-text);
+    white-space: nowrap;
+}
+
+.sf-catbar-menu li:first-child a {
+    font-weight: 600;
+}
+
+.sf-catbar-menu a:hover,
+.sf-catbar-menu a[aria-current="page"] {
+    background: var(--sf-hover);
+    color: var(--sf-accent);
+    text-decoration: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sf-catbar-menu {
+        transition: none;
+    }
 }
 
 @media (min-width: 768px) {
@@ -628,6 +698,49 @@ summary:focus-visible {
     margin-left: auto;
     font-size: 12px;
     color: var(--sf-faint);
+}
+
+/* A category with subcategories opens in place */
+.sf-drawer-group > summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 16px;
+    font-size: 15px;
+    color: var(--sf-text);
+    list-style: none;
+    cursor: pointer;
+}
+
+.sf-drawer-group > summary::-webkit-details-marker {
+    display: none;
+}
+
+.sf-drawer-group > summary:hover {
+    background: var(--sf-hover);
+    color: var(--sf-accent);
+}
+
+.sf-drawer-list .sf-drawer-chevron {
+    width: 14px;
+    font-size: 11px;
+    transition: transform .15s;
+}
+
+.sf-drawer-group[open] .sf-drawer-chevron {
+    transform: rotate(180deg);
+}
+
+.sf-drawer-sublist {
+    margin: 0 0 6px;
+    padding: 0;
+    list-style: none;
+}
+
+/* Lined up with the category names above, past the icon */
+.sf-drawer-list .sf-drawer-sublist a {
+    padding: 9px 16px 9px 50px;
+    font-size: 14px;
 }
 
 body.sf-drawer-open {

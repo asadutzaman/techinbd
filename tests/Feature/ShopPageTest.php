@@ -64,6 +64,38 @@ class ShopPageTest extends TestCase
         $this->get('/category/gaming-laptops')->assertNotFound();
     }
 
+    public function test_a_category_page_includes_its_subcategories(): void
+    {
+        $peripherals = Category::factory()->create(['name' => 'Peripherals']);
+        $keyboards = Category::factory()->create(['name' => 'Keyboard', 'parent_id' => $peripherals->id, 'sort_order' => 1]);
+        $mice = Category::factory()->create(['name' => 'Mouse', 'parent_id' => $peripherals->id, 'sort_order' => 2]);
+        $hidden = Category::factory()->create(['name' => 'Retired Pads', 'parent_id' => $peripherals->id, 'status' => false]);
+        [$logitech, $razer] = [Brand::factory()->create(['name' => 'Logitech']), Brand::factory()->create(['name' => 'Razer'])];
+        ProductOptimized::factory()->create(['name' => 'K120', 'category_id' => $keyboards->id, 'brand_id' => $logitech->id]);
+        ProductOptimized::factory()->create(['name' => 'G102', 'category_id' => $mice->id, 'brand_id' => $logitech->id]);
+        ProductOptimized::factory()->create(['name' => 'Viper', 'category_id' => $mice->id, 'brand_id' => $razer->id]);
+        ProductOptimized::factory()->create(['name' => 'Old Pad', 'category_id' => $hidden->id, 'brand_id' => $razer->id]);
+        ProductOptimized::factory()->create(['name' => 'Coffee Mug']);
+
+        $this->assertEqualsCanonicalizing(['K120', 'G102', 'Viper'], $this->listed(route('shop.category', $peripherals)), 'Active subcategories only');
+        $this->assertSame(['K120'], $this->listed(route('shop.category', $keyboards)));
+        $this->assertSame(['Logitech' => '2', 'Razer' => '1'], $this->brandList(route('shop.category', $peripherals)));
+        $this->assertSame(['Logitech' => '1'], $this->brandList(route('shop.category', $keyboards)));
+
+        // The subcategory's page names its category in the breadcrumb and the sidebar
+        $html = $this->get(route('shop.category', $keyboards))->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('#<li><a href="' . preg_quote(route('shop.category', $peripherals), '#') . '">Peripherals</a></li>\s*<li aria-current="page">Keyboard</li>#', $html);
+        $facet = Str::betweenFirst($html, '<span class="shop-facet-name">Category</span>', '</details>');
+        $this->assertMatchesRegularExpression('#Peripherals</span>\s*<span class="shop-count">3</span>#', $facet, 'The category counts its subcategories');
+        $this->assertMatchesRegularExpression('#class="shop-suboptions">.*aria-current="page"\s*>\s*<span class="shop-option-label">Keyboard.*Mouse#s', $facet);
+
+        // Other categories' subcategories stay folded away
+        $other = Category::factory()->create(['name' => 'Gadget']);
+        ProductOptimized::factory()->create(['category_id' => Category::factory()->create(['name' => 'Smart Watch', 'parent_id' => $other->id])->id]);
+        $this->assertStringNotContainsString('Smart Watch', Str::betweenFirst($this->get(route('shop.category', $keyboards))->getContent(), '<span class="shop-facet-name">Category</span>', '</details>'));
+        $this->get('/shop?search=peripherals')->assertOk()->assertSee('K120')->assertSee('Viper');
+    }
+
     public function test_cards_show_key_specs_and_a_compare_button_without_made_up_ratings(): void
     {
         $product = ProductOptimized::factory()->create([

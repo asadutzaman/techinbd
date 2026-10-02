@@ -39,6 +39,8 @@
                             @enderror
                         </div>
 
+                        @include('admin.categories._placement', ['category' => null])
+
                         <div class="form-group">
                             <label for="description">Description</label>
                             <textarea class="form-control @error('description') is-invalid @enderror" id="description" name="description" rows="4" placeholder="Enter category description">{{ old('description') }}</textarea>

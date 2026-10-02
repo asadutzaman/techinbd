@@ -39,7 +39,7 @@ class AttributeOptimizedController extends Controller
 
         $attributes = $query->orderBy('sort_order')->orderBy('name')->paginate($perPage);
 
-        $categories = Category::where('status', true)->orderBy('name')->get(['id', 'name']);
+        $categories = Category::nestedList();
         $types = ['text', 'number', 'select', 'boolean', 'textarea', 'color', 'date'];
 
         return view('admin.attributes.index', compact('attributes', 'categories', 'types'));
@@ -47,7 +47,7 @@ class AttributeOptimizedController extends Controller
 
     public function create()
     {
-        $categories = Category::where('status', true)->orderBy('name')->get();
+        $categories = Category::nestedList();
         $types = [
             'text' => 'Text',
             'number' => 'Number',
@@ -95,7 +95,7 @@ class AttributeOptimizedController extends Controller
     public function edit($id)
     {
         $attribute = AttributeOptimized::findOrFail($id);
-        $categories = Category::where('status', true)->orderBy('name')->get();
+        $categories = Category::nestedList();
         $types = [
             'text' => 'Text',
             'number' => 'Number',

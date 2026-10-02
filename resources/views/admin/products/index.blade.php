@@ -51,7 +51,7 @@
                             @foreach($categories as $category)
                                 <option value="{{ $category->id }}" 
                                         {{ request('category') == $category->id ? 'selected' : '' }}>
-                                    {{ $category->name }}
+                                    {{ $category->parent_id ? "— " : "" }}{{ $category->name }}
                                 </option>
                             @endforeach
                         </select>

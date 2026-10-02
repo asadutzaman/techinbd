@@ -55,6 +55,9 @@
         <ol>
             <li><a href="{{ route('home') }}">Home</a></li>
             {{-- A hidden (inactive) category has no page to link to --}}
+            @if($product->category?->status && $product->category->parent?->status)
+                <li><a href="{{ route('shop.category', $product->category->parent) }}">{{ $product->category->parent->name }}</a></li>
+            @endif
             @if($product->category?->status)
                 <li><a href="{{ route('shop.category', $product->category) }}">{{ $product->category->name }}</a></li>
             @endif

@@ -51,6 +51,26 @@ class HomePageTest extends TestCase
         $this->assertStringNotContainsString('Empty Shelf', $tiles, 'Categories without products are left out');
     }
 
+    public function test_featured_subcategories_get_tiles_and_a_category_counts_its_subcategories(): void
+    {
+        $gadgets = Category::factory()->create(['name' => 'Gadget', 'is_featured' => true, 'sort_order' => 1]);
+        $watches = Category::factory()->create(['name' => 'Smart Watch', 'parent_id' => $gadgets->id, 'is_featured' => true]);
+        $bands = Category::factory()->create(['name' => 'Fitness Band', 'parent_id' => $gadgets->id, 'is_featured' => false]);
+        $printers = Category::factory()->create(['name' => 'Printer', 'is_featured' => false, 'sort_order' => 2]);
+        $laser = Category::factory()->create(['name' => 'Laser Printer', 'parent_id' => $printers->id, 'is_featured' => true]);
+        // Gadget has no products of its own
+        ProductOptimized::factory()->create(['category_id' => $watches->id]);
+        ProductOptimized::factory()->create(['category_id' => $bands->id]);
+        ProductOptimized::factory()->create(['category_id' => $laser->id]);
+
+        $tiles = $this->categoryTiles();
+
+        $this->assertMatchesRegularExpression('#Gadget.*Smart Watch.*Laser Printer#s', $tiles, 'Each category, then its subcategories');
+        $this->assertStringContainsString('href="' . route('shop.category', $laser) . '"', $tiles);
+        $this->assertStringNotContainsString('Fitness Band', $tiles);
+        $this->assertStringNotContainsString('>Printer<', $tiles);
+    }
+
     public function test_all_categories_with_products_show_when_none_are_featured(): void
     {
         $cables = Category::factory()->create(['name' => 'Cables']);
@@ -84,7 +104,11 @@ class HomePageTest extends TestCase
             'Tablet' => 'tablet', 'Processor' => 'cpu', 'Motherboard' => 'circuit-board', 'Graphics Card' => 'gpu',
             'RAM' => 'memory-stick', 'SSD' => 'hard-drive', 'Router' => 'router', 'Printer' => 'printer',
             'Headphones' => 'headphones', 'Keyboard & Mouse' => 'keyboard', 'Television' => 'tv', 'UPS & Power' => 'battery-charging',
-            'Kitchen' => 'package',
+            'Peripherals' => 'keyboard', 'Keyboard' => 'keyboard', 'Mouse' => 'mouse', 'Mouse Pad' => 'mouse', 'Headphone' => 'headphones',
+            'Laptop Cooler' => 'fan', 'Apple MacBook' => 'laptop', 'Brand PC' => 'desktop', 'Office Equipment' => 'presentation',
+            'Interactive Flat Panel' => 'presentation', 'Networking' => 'router', 'TV' => 'tv', 'Smart TV' => 'tv', 'Gadget' => 'watch',
+            'Smart Watch' => 'watch', 'Earbuds' => 'headphones', 'Earphone' => 'headphones', 'Power Bank' => 'battery-charging',
+            'Laser Printer' => 'printer', 'POS Printer' => 'printer', 'Kitchen' => 'package',
         ];
 
         foreach ($icons as $name => $icon) {
