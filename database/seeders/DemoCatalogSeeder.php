@@ -14,8 +14,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
- * The demo catalog: about 140 real products from startech.com.bd across the CategorySeeder
- * subcategories, with prices, specifications, attributes and photos. The data and the photos are
+ * The demo catalog: about 390 real products from startech.com.bd (12 to 18 per subcategory) across the
+ * CategorySeeder subcategories, with prices, specifications, attributes and photos. The data and the photos are
  * in database/seeders/catalog (products.php, images/); the highlights there are our own.
  *
  *   php artisan db:seed --class=DemoCatalogSeeder
@@ -100,11 +100,14 @@ class DemoCatalogSeeder extends Seeder
         foreach ($this->data['products'] as $categorySlug => $items) {
             $settings = self::CATEGORIES[$categorySlug];
             $category = $categories[$categorySlug];
+            $categoryNumber = array_search($categorySlug, array_keys(self::CATEGORIES)) + 1;
 
             foreach ($items as $position => $item) {
                 $number++;
                 $sku = sprintf('TIB-%s-%03d', $settings['prefix'], $position + 1);
-                $this->seedProduct($item, $sku, $number, $category, $settings, $brands[$item['brand']], $attributes);
+                // Barcodes go by subcategory and position, so adding products doesn't renumber the others
+                $ean = $this->ean13($categoryNumber * 1000 + $position + 1);
+                $this->seedProduct($item, $sku, $ean, $category, $settings, $brands[$item['brand']], $attributes);
             }
 
             $this->command?->info(sprintf('  %-24s %d products', $category->name, count($items)));
@@ -168,7 +171,7 @@ class DemoCatalogSeeder extends Seeder
         return $brands;
     }
 
-    private function seedProduct(array $item, string $sku, int $number, Category $category, array $settings, Brand $brand, $attributes): void
+    private function seedProduct(array $item, string $sku, string $ean, Category $category, array $settings, Brand $brand, $attributes): void
     {
         $status = $item['status'] ?? 'in_stock';
         $stock = $status === 'in_stock' ? 8 + crc32($sku) % 60 : 0;
@@ -198,7 +201,7 @@ class DemoCatalogSeeder extends Seeder
             'featured' => ! empty($item['f']),
             'warranty' => $warranty,
             'manufacturer_part_no' => $item['mpn'] ?? null,
-            'ean_upc' => $this->ean13($number),
+            'ean_upc' => $ean,
             // Listed over the past six weeks, so "Latest Products" mixes categories as in a real shop
             'created_at' => now()->subMinutes(crc32($sku) % (60 * 24 * 42)),
         ]);

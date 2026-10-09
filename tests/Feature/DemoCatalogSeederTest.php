@@ -44,7 +44,7 @@ class DemoCatalogSeederTest extends TestCase
         $this->seed(DemoCatalogSeeder::class);
 
         $this->assertSame($productCount, ProductOptimized::where('sku', 'like', 'TIB-%')->count());
-        $this->assertGreaterThanOrEqual(130, $productCount);
+        $this->assertGreaterThanOrEqual(390, $productCount);
         $this->assertSame($productCount, ProductSearchIndex::count());
 
         // Every photo, with its card and gallery copies; every product has one leading
@@ -91,6 +91,8 @@ class DemoCatalogSeederTest extends TestCase
         $this->assertSame('Laptop', $zenbook->category->parent->name);
         $this->assertSame('ASUS', $zenbook->brand->name);
         $this->assertTrue($zenbook->featured);
+        // ASUS Laptop is the second subcategory: barcodes go by subcategory and position
+        $this->assertStringStartsWith('941000002004', $zenbook->ean_upc);
         $this->assertEqualsCanonicalizing(['14"', '16GB', '512GB', 'Silver'], $zenbook->productAttributes->pluck('value')->all());
         $this->assertSame('Processor', array_key_first($zenbook->specs));
         // The page lists the specs itself, so the description is prose only
@@ -107,6 +109,11 @@ class DemoCatalogSeederTest extends TestCase
         $this->assertSame($deal->variants->sum('stock'), $deal->total_stock);
         $this->assertGreaterThan(0, ProductVariantOptimized::count());
 
+        // A product StarTech lists as out of stock is out of stock here too
+        $soldOut = ProductOptimized::where('sku', 'TIB-MBK-011')->sole();
+        $this->assertSame('out_of_stock', $soldOut->stock_status);
+        $this->assertSame(0, (int) $soldOut->total_stock);
+
         $this->get('/shop')->assertOk()->assertSee('Showing 1–24 of ' . ($productCount + 1) . ' products');
         $this->get('/shop?search=zenbook')->assertOk()->assertSee('ASUS Zenbook 14 OLED');
         $this->get(route('product.detail', $zenbook))->assertOk()->assertSee('UX3405CA-QL219W')
@@ -114,6 +121,8 @@ class DemoCatalogSeederTest extends TestCase
         // A category's page lists its subcategories' products
         $laptopFamily = array_sum(array_map(fn ($slug) => count($catalog['products'][$slug]), array_keys(CategorySeeder::CATEGORIES['laptop'][3])));
         $this->get('/category/laptop')->assertOk()->assertSee('Showing 1–24 of ' . $laptopFamily . ' products');
-        $this->get('/category/gadget')->assertOk()->assertSee('Amazfit Bip Max');
+        $gadgetFamily = array_sum(array_map(fn ($slug) => count($catalog['products'][$slug]), array_keys(CategorySeeder::CATEGORIES['gadget'][3])));
+        $this->get('/category/gadget')->assertOk()->assertSee('Showing 1–24 of ' . $gadgetFamily . ' products');
+        $this->get('/category/smart-watch')->assertOk()->assertSee('Amazfit Bip Max');
     }
 }
