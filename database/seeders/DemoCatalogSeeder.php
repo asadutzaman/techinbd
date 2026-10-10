@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
- * The demo catalog: about 390 real products from startech.com.bd (12 to 18 per subcategory) across the
+ * The demo catalog: about 600 real products from startech.com.bd (12 to 30 per subcategory) across the
  * CategorySeeder subcategories, with prices, specifications, attributes and photos. The data and the photos are
  * in database/seeders/catalog (products.php, images/); the highlights there are our own.
  *

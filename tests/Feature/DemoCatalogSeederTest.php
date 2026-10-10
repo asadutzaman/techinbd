@@ -44,7 +44,7 @@ class DemoCatalogSeederTest extends TestCase
         $this->seed(DemoCatalogSeeder::class);
 
         $this->assertSame($productCount, ProductOptimized::where('sku', 'like', 'TIB-%')->count());
-        $this->assertGreaterThanOrEqual(390, $productCount);
+        $this->assertGreaterThanOrEqual(600, $productCount);
         $this->assertSame($productCount, ProductSearchIndex::count());
 
         // Every photo, with its card and gallery copies; every product has one leading

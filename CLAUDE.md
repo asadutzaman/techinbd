@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 composer install && cp .env.example .env && php artisan key:generate
-php artisan migrate --seed                 # the demo tech store: 9 categories and their subcategories, ~390 StarTech products, home banners
+php artisan migrate --seed                 # the demo tech store: 9 categories and their subcategories, ~600 StarTech products, home banners
 php artisan storage:link                   # product images live on the public disk
 php artisan admin:grant you@example.com    # admin access (--revoke to remove); register the account first
 php artisan admin:password you@example.com # set an admin's password; admins can't reset theirs by email
@@ -157,7 +157,7 @@ The catalog models are the `*Optimized` ones: `ProductOptimized` (`products_opti
 
 - `DatabaseSeeder` seeds the demo tech store: `CategorySeeder`, `AttributeSeeder` (Screen Size, Storage, RAM, Color), `DemoCatalogSeeder` and `BannerSeeder` (3 slides and 2 side banners). Each is safe to re-run on its own.
 - `CategorySeeder::CATEGORIES` is the tree: Laptop (a subcategory per brand, plus Laptop Cooler), Monitor, Peripherals, Desktop PC, Office Equipment, Networking, TV, Gadget and Printer. On every run it sets the tree, menu order and switches; names, descriptions and images edited in admin stay. `RENAMED` renames the earlier catalog's `television`/`headphones` rows in place, so their old addresses redirect.
-- `DemoCatalogSeeder` seeds about 390 real products from startech.com.bd: 12 to 18 per subcategory, 24 monitors. The data is `database/seeders/catalog/products.php` (brands and products per subcategory: price, StarTech's crossed-out price as `was`, specs, attributes, MPN, warranty, and `status` for the few StarTech lists as out of stock), and the photos are `catalog/images/{sku}-{n}.jpg` (up to 800px, about 28 MB).
+- `DemoCatalogSeeder` seeds about 600 real products from startech.com.bd: 12 to 30 per subcategory, 35 monitors. The data is `database/seeders/catalog/products.php` (brands and products per subcategory: price, StarTech's crossed-out price as `was`, specs, attributes, MPN, warranty, and `status` for the few StarTech lists as out of stock), and the photos are `catalog/images/{sku}-{n}.jpg` (up to 800px, about 43 MB).
   - The one-line highlights, brand descriptions and the description template are our own; `source` is each product's StarTech page, for refreshing prices, and isn't stored.
   - SKUs are `TIB-{subcategory prefix}-{position}`, and barcodes (EAN-13) go by subcategory and position. Add products at the end of a subcategory's list, so existing ones keep their SKU, photos and barcode.
   - Photos are copied in when missing; other `products/demo/*` images of a product are removed (an earlier catalog's drawn covers), and images added in admin stay.
