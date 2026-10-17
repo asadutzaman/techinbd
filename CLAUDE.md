@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 composer install && cp .env.example .env && php artisan key:generate
-php artisan migrate --seed                 # the demo tech store: 9 categories and their subcategories, ~600 StarTech products, home banners
+php artisan migrate --seed                 # the demo tech store: 10 categories and their subcategories, ~1,030 products from StarTech and MotionView, home banners
 php artisan storage:link                   # product images live on the public disk
 php artisan admin:grant you@example.com    # admin access (--revoke to remove); register the account first
 php artisan admin:password you@example.com # set an admin's password; admins can't reset theirs by email
@@ -156,13 +156,13 @@ The catalog models are the `*Optimized` ones: `ProductOptimized` (`products_opti
 ### Demo data
 
 - `DatabaseSeeder` seeds the demo tech store: `CategorySeeder`, `AttributeSeeder` (Screen Size, Storage, RAM, Color), `DemoCatalogSeeder` and `BannerSeeder` (3 slides and 2 side banners). Each is safe to re-run on its own.
-- `CategorySeeder::CATEGORIES` is the tree: Laptop (a subcategory per brand, plus Laptop Cooler), Monitor, Peripherals, Desktop PC, Office Equipment, Networking, TV, Gadget and Printer. On every run it sets the tree, menu order and switches; names, descriptions and images edited in admin stay. `RENAMED` renames the earlier catalog's `television`/`headphones` rows in place, so their old addresses redirect.
-- `DemoCatalogSeeder` seeds about 600 real products from startech.com.bd: 12 to 30 per subcategory, 35 monitors. The data is `database/seeders/catalog/products.php` (brands and products per subcategory: price, StarTech's crossed-out price as `was`, specs, attributes, MPN, warranty, and `status` for the few StarTech lists as out of stock), and the photos are `catalog/images/{sku}-{n}.jpg` (up to 800px, about 43 MB).
-  - The one-line highlights, brand descriptions and the description template are our own; `source` is each product's StarTech page, for refreshing prices, and isn't stored.
-  - SKUs are `TIB-{subcategory prefix}-{position}`, and barcodes (EAN-13) go by subcategory and position. Add products at the end of a subcategory's list, so existing ones keep their SKU, photos and barcode.
+- `CategorySeeder::CATEGORIES` is the tree: Laptop (a subcategory per brand, plus Laptop Cooler), Monitor, Peripherals, Desktop PC, Office Equipment, Networking, TV, Gadget, Charger & Cable and Printer. On every run it sets the tree, menu order and switches; names, descriptions and images edited in admin stay. `RENAMED` renames the earlier catalog's `television`/`headphones` rows in place, so their old addresses redirect.
+- `DemoCatalogSeeder` seeds about 1,030 real products: 12 to 79 per subcategory, from startech.com.bd and motionview.com.bd (Gadget, Charger & Cable and the Computer Accessory subcategory are mostly MotionView; MotionView lists a stock count, and only products with stock and a price were taken). The data is `database/seeders/catalog/products.php` (brands and products per subcategory: price, StarTech's crossed-out price as `was`, specs, attributes, MPN, warranty, and `status` for the few StarTech lists as out of stock), and the photos are `catalog/images/{sku}-{n}.jpg` (up to 800px, about 67 MB). MotionView's photos are its own templates (a logo strip on top, a name and warranty strip below); those strips were cropped off and the photo padded to a white square.
+  - The one-line highlights, brand descriptions and the description template are our own; `source` is each product's page on its shop, for refreshing prices, and isn't stored.
+  - SKUs are `TIB-{subcategory prefix}-{position}`, and barcodes (EAN-13) go by subcategory and position. Add products at the end of a subcategory's list, and new subcategories at the end of `DemoCatalogSeeder::CATEGORIES` (a subcategory's place there is part of its barcodes), so existing ones keep their SKU, photos and barcode.
   - Photos are copied in when missing; other `products/demo/*` images of a product are removed (an earlier catalog's drawn covers), and images added in admin stay.
   - It removes earlier demo catalogs' products, categories (fashion, and the old flat tech ones such as smartphone and graphics-card) and brands, but keeps anything added in admin.
-- The photos and specs are StarTech's and the manufacturers'. The site is public, so replace them before a real launch.
+- The photos and specs are StarTech's, MotionView's and the manufacturers'. The site is public, so replace them before a real launch.
 - Banner artwork is in `public/img/banners/`, with its text designed in, so each banner's title (its alt text) should say what the image says. The three slides show catalog product photos on white (1920x640, plus 1200x600 for phones), rendered from HTML; the side banners are original artwork.
 
 ### Migrations

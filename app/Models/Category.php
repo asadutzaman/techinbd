@@ -48,6 +48,7 @@ class Category extends Model
     private const ICON_KEYWORDS = [
         'fan' => '/cooler|cooling|\bfan\b/',
         'laptop' => '/laptop|notebook|macbook/',
+        'mic' => '/microphone|\bmic\b/',
         'headphones' => '/headphone|earphone|earbud|audio|speaker|sound/',
         'watch' => '/watch|wearable|gadget/',
         'presentation' => '/interactive|flat panel|presentation|projector|office equipment/',
@@ -65,7 +66,9 @@ class Category extends Model
         'keyboard' => '/keyboard|accessor|peripheral/',
         'mouse' => '/mouse/',
         'battery-charging' => '/\bups\b|power|battery|charger/',
-        'camera' => '/camera|cctv|security/',
+        'plug' => '/\bcable\b/',
+        'house' => '/smart home|\bhome\b/',
+        'camera' => '/camera|webcam|cctv|security/',
         'gamepad' => '/gaming|\bgame|console/',
         'desktop' => '/desktop|\bpc\b|computer|casing/',
     ];

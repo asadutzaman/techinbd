@@ -29,14 +29,26 @@ class CategorySeeder extends Seeder
             'laptop-cooler' => ['Laptop Cooler', 'Cooling pads and stands that keep laptops running cool.', false],
         ]],
         'monitor' => ['Monitor', 'Office, gaming and 4K monitors from 22 to 27 inches.', true, []],
-        'peripherals' => ['Peripherals', 'Keyboards, mice, headphones and mouse pads.', false, [
+        'peripherals' => ['Peripherals', 'Keyboards, mice, headphones, mouse pads and computer accessories.', false, [
             'keyboard' => ['Keyboard', 'Office, membrane and mechanical gaming keyboards.', true],
             'mouse' => ['Mouse', 'Everyday, gaming and wireless mice.', true],
             'headphone' => ['Headphone', 'Headsets for calls, music and gaming.', true],
             'mouse-pad' => ['Mouse Pad', 'Gaming mouse pads, desk mats and wrist rests.', true],
+            'pc-accessory' => ['Computer Accessory', 'USB hubs, pen drives, laptop cases and bags.', false],
+            'webcam' => ['Webcam', 'Webcams for streaming, calls and classes.', false],
+            'microphone' => ['Microphone', 'USB and wireless microphones for streaming, calls and recording.', false],
         ]],
         'desktop-pc' => ['Desktop PC', 'Ready-to-use desktop computers.', false, [
             'brand-pc' => ['Brand PC', 'Desktops from Dell, HP, Lenovo, Acer, MSI and Gigabyte.', true],
+        ]],
+        'pc-components' => ['PC Components', 'Graphics cards, processors, motherboards, memory, casings, power supplies and CPU coolers for building a PC.', false, [
+            'graphics-card' => ['Graphics Card', 'NVIDIA GeForce and AMD Radeon graphics cards.', true],
+            'processor' => ['Processor', 'Intel Core and AMD Ryzen desktop processors.', true],
+            'motherboard' => ['Motherboard', 'Intel and AMD motherboards from ASUS, MSI, Gigabyte and more.', true],
+            'ram' => ['RAM', 'DDR4 and DDR5 desktop memory.', true],
+            'casing' => ['Casing', 'Gaming and office PC cases.', true],
+            'power-supply' => ['Power Supply', 'PC power supplies from 450W to 1000W and up.', true],
+            'cpu-cooler' => ['CPU Cooler', 'Air and liquid CPU coolers.', true],
         ]],
         'office-equipment' => ['Office Equipment', 'Equipment for offices, classrooms and meeting rooms.', false, [
             'interactive-flat-panel' => ['Interactive Flat Panel', '65 and 86-inch 4K touch panels for teaching and meetings.', true],
@@ -47,11 +59,18 @@ class CategorySeeder extends Seeder
         'tv' => ['TV', 'Smart TVs from 32 to 55 inches.', false, [
             'smart-tv' => ['Smart TV', 'Google TV, Tizen and other smart TVs, HD to 4K Mini LED.', true],
         ]],
-        'gadget' => ['Gadget', 'Smart watches, earbuds, earphones and power banks.', false, [
+        'gadget' => ['Gadget', 'Smart watches, earbuds, speakers, power banks, cameras and smart home gear.', false, [
             'smart-watch' => ['Smart Watch', 'Smart watches and fitness bands.', true],
-            'earbuds' => ['Earbuds', 'True wireless earbuds, with and without noise cancelling.', true],
+            'earbuds' => ['Earbuds', 'True wireless earbuds and neckbands, with and without noise cancelling.', true],
             'earphone' => ['Earphone', 'Wired earphones with 3.5mm and USB-C plugs.', true],
-            'power-bank' => ['Power Bank', 'Power banks from 10000 to 30000mAh.', true],
+            'power-bank' => ['Power Bank', 'Power banks from 5000 to 50000mAh.', true],
+            'speaker' => ['Speaker', 'Portable Bluetooth speakers.', true],
+            'smart-home' => ['Smart Home', 'Air fryers, kettles, scales, trimmers and other smart home and personal care gear.', true],
+            'camera' => ['Camera', 'Security cameras and wireless microphones.', true],
+        ]],
+        'charger-cable' => ['Charger & Cable', 'Wall chargers, GaN adapters and USB-C, Lightning and HDMI cables.', false, [
+            'charger' => ['Charger', 'Fast chargers and power adapters from Anker, Xiaomi, Samsung and more.', true],
+            'cable' => ['Cable', 'USB-C, Lightning and HDMI cables.', true],
         ]],
         'printer' => ['Printer', 'Printers for home, office and shop counters.', false, [
             'laser-printer' => ['Laser Printer', 'Mono and colour laser printers.', true],

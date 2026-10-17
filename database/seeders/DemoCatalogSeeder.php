@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
- * The demo catalog: about 600 real products from startech.com.bd (12 to 30 per subcategory) across the
+ * The demo catalog: about 1,030 real products from startech.com.bd and motionview.com.bd (12 to 79 per subcategory) across the
  * CategorySeeder subcategories, with prices, specifications, attributes and photos. The data and the photos are
  * in database/seeders/catalog (products.php, images/); the highlights there are our own.
  *
@@ -66,17 +66,34 @@ class DemoCatalogSeeder extends Seeder
         'power-bank' => ['prefix' => 'PBK', 'warranty' => '6 Months Warranty', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
         'laser-printer' => ['prefix' => 'LPR', 'warranty' => '1 Year Warranty', 'variant_key' => 'option', 'intro' => self::DEVICE_INTRO, 'notes' => self::DEVICE_NOTES],
         'pos-printer' => ['prefix' => 'POS', 'warranty' => '1 Year Warranty', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
+        // From motionview.com.bd. New subcategories go last: a subcategory's place in this list is part of its products' barcodes
+        'speaker' => ['prefix' => 'SPK', 'warranty' => '6 Months Warranty', 'variant_key' => 'color', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
+        'charger' => ['prefix' => 'CHG', 'warranty' => '6 Months Warranty', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
+        'cable' => ['prefix' => 'CBL', 'warranty' => '3 Months Warranty', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
+        'smart-home' => ['prefix' => 'SHM', 'warranty' => '6 Months Warranty', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
+        'camera' => ['prefix' => 'CAM', 'warranty' => '1 Year Warranty', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
+        'pc-accessory' => ['prefix' => 'PCA', 'warranty' => '7 Days Replacement', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
+        // Gaming and PC components, from startech.com.bd
+        'graphics-card' => ['prefix' => 'GPU', 'warranty' => '3 Years Warranty', 'variant_key' => 'option', 'intro' => self::DEVICE_INTRO, 'notes' => self::DEVICE_NOTES],
+        'processor' => ['prefix' => 'CPU', 'warranty' => '3 Years Warranty', 'variant_key' => 'option', 'intro' => self::DEVICE_INTRO, 'notes' => self::DEVICE_NOTES],
+        'motherboard' => ['prefix' => 'MBD', 'warranty' => '3 Years Warranty', 'variant_key' => 'option', 'intro' => self::DEVICE_INTRO, 'notes' => self::DEVICE_NOTES],
+        'ram' => ['prefix' => 'RAM', 'warranty' => 'Lifetime Warranty', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
+        'casing' => ['prefix' => 'CAS', 'warranty' => '1 Year Warranty', 'variant_key' => 'color', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
+        'power-supply' => ['prefix' => 'PSU', 'warranty' => '3 Years Warranty', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
+        'cpu-cooler' => ['prefix' => 'CLR', 'warranty' => '1 Year Warranty', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
+        'webcam' => ['prefix' => 'WBC', 'warranty' => '1 Year Warranty', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
+        'microphone' => ['prefix' => 'MIC', 'warranty' => '1 Year Warranty', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
     ];
 
     /** From earlier demo catalogs (fashion, then the 16 flat tech categories); removed once nothing uses them */
     private const RETIRED_CATEGORIES = [
         'mens-fashion', 'womens-fashion', 'kids-fashion', 'electronics', 'sports-outdoors', 'accessories', 'shoes', 'home-garden',
-        'smartphone', 'tablet', 'processor', 'motherboard', 'graphics-card', 'ram', 'ssd', 'keyboard-mouse', 'ups-power',
+        'smartphone', 'tablet', 'ssd', 'keyboard-mouse', 'ups-power',
     ];
 
     private const RETIRED_BRANDS = [
         'levis', 'zara', 'hm', 'uniqlo', 'aarong', 'yellow', 'nike', 'adidas', 'puma', 'bata', 'apex', 'yonex', 'sg', 'decathlon', 'casio', 'fossil', 'ray-ban', 'philips', 'miyako', 'ikea', 'vision',
-        'intel', 'amd', 'zotac', 'kingston', 'adata', 'western-digital', 'walton', 'apc',
+        'intel', 'amd', 'zotac', 'kingston', 'western-digital', 'walton', 'apc',
     ];
 
     /** @var array{brands: array, products: array} */

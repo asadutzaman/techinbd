@@ -109,6 +109,10 @@ class HomePageTest extends TestCase
             'Interactive Flat Panel' => 'presentation', 'Networking' => 'router', 'TV' => 'tv', 'Smart TV' => 'tv', 'Gadget' => 'watch',
             'Smart Watch' => 'watch', 'Earbuds' => 'headphones', 'Earphone' => 'headphones', 'Power Bank' => 'battery-charging',
             'Laser Printer' => 'printer', 'POS Printer' => 'printer', 'Kitchen' => 'package',
+            'Speaker' => 'headphones', 'Charger & Cable' => 'battery-charging', 'Charger' => 'battery-charging', 'Cable' => 'plug',
+            'Smart Home' => 'house', 'Camera' => 'camera', 'Computer Accessory' => 'keyboard',
+            'PC Components' => 'desktop', 'Graphics Card' => 'gpu', 'Processor' => 'cpu', 'Motherboard' => 'circuit-board', 'RAM' => 'memory-stick',
+            'Casing' => 'desktop', 'Power Supply' => 'battery-charging', 'CPU Cooler' => 'fan', 'Webcam' => 'camera', 'Microphone' => 'mic',
         ];
 
         foreach ($icons as $name => $icon) {
