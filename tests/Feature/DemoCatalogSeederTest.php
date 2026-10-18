@@ -31,7 +31,7 @@ class DemoCatalogSeederTest extends TestCase
         $television = Category::factory()->create(['slug' => 'television', 'name' => 'Television', 'is_menu' => true]);
         $monitors = Category::factory()->create(['slug' => 'monitor', 'name' => 'Monitor']);
         $levis = Brand::factory()->create(['slug' => 'levis']);
-        $zotac = Brand::factory()->create(['slug' => 'zotac']);
+        $zotac = Brand::factory()->create(['slug' => 'western-digital']);
         $oldDemo = ProductOptimized::factory()->create(['sku' => 'TIB-MEN-001', 'category_id' => $fashion->id, 'brand_id' => $levis->id]);
         $oldPhone = ProductOptimized::factory()->create(['sku' => 'TIB-PHN-001', 'category_id' => $phones->id, 'brand_id' => $zotac->id]);
         $adminProduct = ProductOptimized::factory()->create(['sku' => 'ADMIN-1', 'category_id' => $phones->id]);
@@ -44,7 +44,7 @@ class DemoCatalogSeederTest extends TestCase
         $this->seed(DemoCatalogSeeder::class);
 
         $this->assertSame($productCount, ProductOptimized::where('sku', 'like', 'TIB-%')->count());
-        $this->assertGreaterThanOrEqual(1000, $productCount);
+        $this->assertGreaterThanOrEqual(1300, $productCount);
         $this->assertSame($productCount, ProductSearchIndex::count());
 
         // Every photo, with its card and gallery copies; every product has one leading
@@ -55,11 +55,11 @@ class DemoCatalogSeederTest extends TestCase
             ->count());
         $this->assertSame(0, ProductOptimized::where('stock_status', 'out_of_stock')->sum('total_stock'), 'Out-of-stock items carry no stock');
 
-        // The tree: 10 categories, products in the subcategories (and Monitor, which has none)
-        $this->assertSame(10, Category::whereNull('parent_id')->where('is_menu', true)->count());
+        // The tree: 11 categories, products in the subcategories (and Monitor, which has none)
+        $this->assertSame(11, Category::whereNull('parent_id')->where('is_menu', true)->count());
         $this->assertSame(count(CategorySeeder::slugs()), Category::whereIn('slug', CategorySeeder::slugs())->count());
-        $this->assertSame(21, Category::where('is_featured', true)->count());
-        $this->assertSame(['Laptop', 'Monitor', 'Peripherals', 'Desktop PC', 'Office Equipment', 'Networking', 'TV', 'Gadget', 'Charger & Cable', 'Printer'],
+        $this->assertSame(28, Category::where('is_featured', true)->count());
+        $this->assertSame(['Laptop', 'Monitor', 'Peripherals', 'Desktop PC', 'PC Components', 'Office Equipment', 'Networking', 'TV', 'Gadget', 'Charger & Cable', 'Printer'],
             Category::whereNull('parent_id')->where('is_menu', true)->orderBy('sort_order')->pluck('name')->all());
         $this->assertSame(0, ProductOptimized::where('sku', 'like', 'TIB-%')
             ->whereHas('category', fn ($category) => $category->whereNull('parent_id')->where('slug', '!=', 'monitor'))
@@ -128,5 +128,9 @@ class DemoCatalogSeederTest extends TestCase
         // A subcategory from the second source, under its own top-level category
         $this->get('/category/charger')->assertOk()->assertSee('Showing 1–24 of ' . count($catalog['products']['charger']) . ' products');
         $this->assertSame('charger-cable', Category::firstWhere('slug', 'charger')->parent->slug);
+        // PC components, from StarTech, under their own top-level category
+        $this->get('/category/graphics-card')->assertOk()->assertSee('Showing 1–24 of ' . count($catalog['products']['graphics-card']) . ' products');
+        $this->assertSame('pc-components', Category::firstWhere('slug', 'processor')->parent->slug);
+        $this->get('/shop?search=ryzen+7+7700')->assertOk()->assertSee('Ryzen 7 7700');
     }
 }

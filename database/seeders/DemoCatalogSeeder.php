@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
- * The demo catalog: about 1,030 real products from startech.com.bd and motionview.com.bd (12 to 79 per subcategory) across the
+ * The demo catalog: about 1,400 real products from startech.com.bd and motionview.com.bd (5 to 106 per subcategory) across the
  * CategorySeeder subcategories, with prices, specifications, attributes and photos. The data and the photos are
  * in database/seeders/catalog (products.php, images/); the highlights there are our own.
  *
@@ -93,7 +93,7 @@ class DemoCatalogSeeder extends Seeder
 
     private const RETIRED_BRANDS = [
         'levis', 'zara', 'hm', 'uniqlo', 'aarong', 'yellow', 'nike', 'adidas', 'puma', 'bata', 'apex', 'yonex', 'sg', 'decathlon', 'casio', 'fossil', 'ray-ban', 'philips', 'miyako', 'ikea', 'vision',
-        'intel', 'amd', 'zotac', 'kingston', 'western-digital', 'walton', 'apc',
+        'western-digital', 'apc',
     ];
 
     /** @var array{brands: array, products: array} */
