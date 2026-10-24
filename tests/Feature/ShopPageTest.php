@@ -96,6 +96,33 @@ class ShopPageTest extends TestCase
         $this->get('/shop?search=peripherals')->assertOk()->assertSee('K120')->assertSee('Viper');
     }
 
+    public function test_a_product_listed_in_a_second_category_shows_and_counts_there_too(): void
+    {
+        $peripherals = Category::factory()->create(['name' => 'Peripherals']);
+        $keyboards = Category::factory()->create(['name' => 'Keyboard', 'parent_id' => $peripherals->id]);
+        $gaming = Category::factory()->create(['name' => 'Gaming']);
+        $gamingKeyboards = Category::factory()->create(['name' => 'Gaming Keyboard', 'parent_id' => $gaming->id]);
+        $redragon = Brand::factory()->create(['name' => 'Redragon']);
+        $listed = ProductOptimized::factory()->create(['name' => 'Kumara K552', 'category_id' => $keyboards->id, 'brand_id' => $redragon->id]);
+        ProductOptimized::factory()->create(['name' => 'K120', 'category_id' => $keyboards->id]);
+        $listed->extraCategories()->attach($gamingKeyboards);
+
+        $this->assertSame(['Kumara K552'], $this->listed(route('shop.category', $gamingKeyboards)));
+        $this->assertSame(['Kumara K552'], $this->listed(route('shop.category', $gaming)), 'Through the subcategory');
+        $this->assertEqualsCanonicalizing(['Kumara K552', 'K120'], $this->listed(route('shop.category', $keyboards)), 'Still in its own category');
+        $this->assertSame(['Redragon' => '1'], $this->brandList(route('shop.category', $gamingKeyboards)));
+        $this->assertSame(['Kumara K552'], $this->listed(route('shop.category', $gamingKeyboards) . '?brand=' . $redragon->id));
+
+        $facet = Str::betweenFirst($this->get('/shop')->getContent(), '<span class="shop-facet-name">Category</span>', '</details>');
+        $this->assertMatchesRegularExpression('#Gaming</span>\s*<span class="shop-count">1</span>#', $facet);
+        $this->assertMatchesRegularExpression('#Peripherals</span>\s*<span class="shop-count">2</span>#', $facet);
+
+        // The product page keeps its own category in the breadcrumb
+        $this->get(route('product.detail', $listed))->assertOk()
+            ->assertSee('href="' . route('shop.category', $keyboards) . '"', false)
+            ->assertDontSee('href="' . route('shop.category', $gamingKeyboards) . '"', false);
+    }
+
     public function test_cards_show_key_specs_and_a_compare_button_without_made_up_ratings(): void
     {
         $product = ProductOptimized::factory()->create([

@@ -45,6 +45,9 @@
     $navChildren = $navCategories->mapWithKeys(fn ($category) => [
         $category->id => $category->children->filter(fn ($child) => $child->is_menu && $child->products_count > 0)->values(),
     ]);
+    // Category id => its brands, where there's a choice of two or more: they open from it in the menu (Brand PC → Dell,
+    // HP…), and a category without subcategories lists them in its own dropdown (Monitor)
+    $navBrands = collect($menuBrands ?? [])->filter(fn ($brands) => $brands->count() > 1);
     $shopContact = array_filter(config('shop.contact', []));
     $shopSocial = array_filter(config('shop.social', []));
     $accountUrl = auth()->check() ? route('customer.dashboard') : route('login');
@@ -134,21 +137,29 @@
                 <div class="sf-container">
                     <ul class="sf-catbar-list">
                         @foreach($navCategories as $category)
+                            {{-- Inline @php only: a block after one would swallow the template up to its @endphp --}}
                             @php($children = $navChildren[$category->id])
-                            <li @class(['has-menu' => $children->isNotEmpty()])>
+                            @php($categoryBrands = $children->isEmpty() ? $navBrands->get($category->id, collect()) : collect())
+                            <li @class(['has-menu' => $children->isNotEmpty() || $categoryBrands->isNotEmpty()])>
                                 <a href="{{ route('shop.category', $category) }}"
                                    @if($currentCategory === $category->slug) aria-current="page" @elseif($currentTop?->is($category)) aria-current="true" @endif>{{ $category->name }}</a>
+                                {{-- Menus open on hover and while focus is inside, so Tab walks through them --}}
                                 @if($children->isNotEmpty())
-                                    {{-- Opens on hover and while focus is inside, so Tab walks through it --}}
                                     <ul class="sf-catbar-menu" aria-label="{{ $category->name }}">
                                         <li><a href="{{ route('shop.category', $category) }}">All {{ $category->name }}</a></li>
                                         @foreach($children as $child)
-                                            <li>
+                                            @php($childBrands = $navBrands->get($child->id, collect()))
+                                            <li @class(['has-flyout' => $childBrands->isNotEmpty()])>
                                                 <a href="{{ route('shop.category', $child) }}"
-                                                   @if($currentCategory === $child->slug) aria-current="page" @endif>{{ $child->name }}</a>
+                                                   @if($currentCategory === $child->slug) aria-current="page" @endif>{{ $child->menu_label }}</a>
+                                                @if($childBrands->isNotEmpty())
+                                                    <x-menu-brands class="sf-catbar-flyout" :category="$child" :brands="$childBrands" />
+                                                @endif
                                             </li>
                                         @endforeach
                                     </ul>
+                                @elseif($categoryBrands->isNotEmpty())
+                                    <x-menu-brands class="sf-catbar-menu" :category="$category" :brands="$categoryBrands" />
                                 @endif
                             </li>
                         @endforeach
@@ -174,8 +185,9 @@
                     <ul class="sf-drawer-list">
                         @foreach($navCategories as $category)
                             @php($children = $navChildren[$category->id])
+                            @php($categoryBrands = $children->isEmpty() ? $navBrands->get($category->id, collect()) : collect())
                             <li>
-                                @if($children->isNotEmpty())
+                                @if($children->isNotEmpty() || $categoryBrands->isNotEmpty())
                                     <details class="sf-drawer-group" @if($currentTop?->is($category)) open @endif>
                                         <summary>
                                             <x-category-icon :name="$category->icon" />{{ $category->name }}
@@ -185,11 +197,26 @@
                                         <ul class="sf-drawer-sublist">
                                             <li><a href="{{ route('shop.category', $category) }}">All {{ $category->name }}</a></li>
                                             @foreach($children as $child)
-                                                <li>
+                                                @php($childBrands = $navBrands->get($child->id, collect()))
+                                                <li @class(['has-brands' => $childBrands->isNotEmpty()])>
                                                     <a href="{{ route('shop.category', $child) }}">
-                                                        {{ $child->name }}<span class="sf-drawer-count">{{ $child->products_count }}</span>
+                                                        {{ $child->menu_label }}<span class="sf-drawer-count">{{ $child->products_count }}</span>
                                                     </a>
+                                                    @if($childBrands->isNotEmpty())
+                                                        {{-- The subcategory's brands fold out under its link --}}
+                                                        <details class="sf-drawer-brands">
+                                                            <summary><span class="sr-only">{{ $child->name }} brands</span><i class="fas fa-chevron-down" aria-hidden="true"></i></summary>
+                                                            <ul>
+                                                                @foreach($childBrands as $brand)
+                                                                    <li><a href="{{ route('shop.category', ['category' => $child, 'brand' => $brand->id]) }}">{{ $brand->name }}</a></li>
+                                                                @endforeach
+                                                            </ul>
+                                                        </details>
+                                                    @endif
                                                 </li>
+                                            @endforeach
+                                            @foreach($categoryBrands as $brand)
+                                                <li><a href="{{ route('shop.category', ['category' => $category, 'brand' => $brand->id]) }}">{{ $brand->name }}</a></li>
                                             @endforeach
                                         </ul>
                                     </details>

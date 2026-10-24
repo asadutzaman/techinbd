@@ -26,8 +26,13 @@ class Banner extends Model
         'side' => 'Beside the slider',
     ];
 
-    /** Only this many side banners show, the first ones in banner order */
-    public const SIDE_SLOTS = 2;
+    /**
+     * Side banners show in banner order: four make a 2×2 grid beside a narrower slider; with fewer,
+     * the first two stack beside it.
+     */
+    public const SIDE_SLOTS = 4;
+
+    public const STACKED_SIDE_SLOTS = 2;
 
     public const DESKTOP_RATIO = 3.0;
     public const MOBILE_RATIO = 2.0;

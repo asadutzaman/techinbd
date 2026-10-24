@@ -7,6 +7,8 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ProductOptimized;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -93,30 +95,37 @@ class HomePageTest extends TestCase
 
         $tiles = $this->categoryTiles();
 
-        $this->assertMatchesRegularExpression('#' . preg_quote(route('shop.category', $laptops), '#') . '">\s*<svg class="category-icon"#', $tiles);
+        $this->assertMatchesRegularExpression('#' . preg_quote(route('shop.category', $laptops), '#') . '" style="--tile-color: \#2563EB">\s*<span class="home-category-icon"><svg class="category-icon"#', $tiles);
         $this->assertStringContainsString('<img src="' . asset('img/camera-tile.png') . '"', $tiles);
     }
 
     public function test_category_icons_follow_the_category_name(): void
     {
         $icons = [
-            'Laptop' => 'laptop', 'Desktop PC' => 'desktop', 'Monitor' => 'monitor', 'Smartphone' => 'smartphone',
-            'Tablet' => 'tablet', 'Processor' => 'cpu', 'Motherboard' => 'circuit-board', 'Graphics Card' => 'gpu',
-            'RAM' => 'memory-stick', 'SSD' => 'hard-drive', 'Router' => 'router', 'Printer' => 'printer',
-            'Headphones' => 'headphones', 'Keyboard & Mouse' => 'keyboard', 'Television' => 'tv', 'UPS & Power' => 'battery-charging',
-            'Peripherals' => 'keyboard', 'Keyboard' => 'keyboard', 'Mouse' => 'mouse', 'Mouse Pad' => 'mouse', 'Headphone' => 'headphones',
-            'Laptop Cooler' => 'fan', 'Apple MacBook' => 'laptop', 'Brand PC' => 'desktop', 'Office Equipment' => 'presentation',
-            'Interactive Flat Panel' => 'presentation', 'Networking' => 'router', 'TV' => 'tv', 'Smart TV' => 'tv', 'Gadget' => 'watch',
-            'Smart Watch' => 'watch', 'Earbuds' => 'headphones', 'Earphone' => 'headphones', 'Power Bank' => 'battery-charging',
-            'Laser Printer' => 'printer', 'POS Printer' => 'printer', 'Kitchen' => 'package',
-            'Speaker' => 'headphones', 'Charger & Cable' => 'battery-charging', 'Charger' => 'battery-charging', 'Cable' => 'plug',
-            'Smart Home' => 'house', 'Camera' => 'camera', 'Computer Accessory' => 'keyboard',
-            'PC Components' => 'desktop', 'Graphics Card' => 'gpu', 'Processor' => 'cpu', 'Motherboard' => 'circuit-board', 'RAM' => 'memory-stick',
-            'Casing' => 'desktop', 'Power Supply' => 'battery-charging', 'CPU Cooler' => 'fan', 'Webcam' => 'camera', 'Microphone' => 'mic',
+            'Laptop' => 'laptop', 'Apple MacBook' => 'laptop', 'Laptop Cooler' => 'fan', 'Gaming Laptop' => 'laptop',
+            'Desktop PC' => 'desktop', 'Brand PC' => 'desktop', 'Gaming PC' => 'desktop', 'Monitor' => 'monitor', 'Gaming Monitor' => 'monitor',
+            'PC Components' => 'cpu', 'Graphics Card' => 'gpu', 'Processor' => 'cpu', 'Motherboard' => 'circuit-board', 'RAM' => 'memory-stick',
+            'Casing' => 'pc-case', 'Gaming Casing' => 'pc-case', 'Power Supply' => 'power', 'CPU Cooler' => 'fan', 'SSD' => 'hard-drive',
+            'Peripherals' => 'keyboard', 'Keyboard' => 'keyboard', 'Gaming Keyboard' => 'keyboard', 'Mouse' => 'mouse', 'Gaming Mouse' => 'mouse',
+            'Mouse Pad' => 'mouse-pad', 'Gaming Mouse Pad' => 'mouse-pad', 'Headphone' => 'headphones', 'Gaming Headphone' => 'headphones',
+            'Headphones' => 'headphones', 'Computer Accessory' => 'usb', 'Webcam' => 'webcam', 'Microphone' => 'mic',
+            'Smart Gadget' => 'watch', 'Gadget' => 'watch', 'Smart Watch' => 'watch', 'Earbuds' => 'earbuds', 'Earphone' => 'earbuds',
+            'Power Bank' => 'battery-charging', 'Speaker' => 'speaker', 'Smart Home' => 'house-plug', 'Camera' => 'camera',
+            'Charger' => 'plug-zap', 'Cable' => 'cable', 'Gaming' => 'gamepad', 'TV' => 'tv', 'Smart TV' => 'tv', 'Television' => 'tv',
+            'Office Equipment' => 'presentation', 'Interactive Flat Panel' => 'presentation', 'Printer' => 'printer',
+            'Laser Printer' => 'printer', 'POS Printer' => 'receipt', 'Networking' => 'router', 'Router' => 'router',
+            'Smartphone' => 'smartphone', 'Tablet' => 'tablet', 'Keyboard & Mouse' => 'keyboard', 'UPS & Power' => 'battery-charging',
+            'Kitchen' => 'package',
         ];
 
+        $fallback = Blade::render('<x-category-icon name="package" />');
         foreach ($icons as $name => $icon) {
-            $this->assertSame($icon, (new Category(['name' => $name]))->icon, $name);
+            $category = new Category(['name' => $name]);
+            $this->assertSame($icon, $category->icon, $name);
+            $this->assertMatchesRegularExpression('/^#[0-9A-F]{6}$/', $category->icon_color, $name);
+            if ($icon !== 'package') {
+                $this->assertNotSame($fallback, Blade::render('<x-category-icon :name="$icon" />', ['icon' => $icon]), "{$icon} has a drawing");
+            }
         }
     }
 
@@ -130,9 +139,62 @@ class HomePageTest extends TestCase
 
         $this->assertMatchesRegularExpression('/Big Saving Monitor.*Small Saving Mouse/s', $deals);
         $this->assertStringNotContainsString('Full Price Cable', $deals);
-        $this->assertMatchesRegularExpression('#Save\s*<span class="price">.*1,000</span>#', $deals);
-        $this->assertStringContainsString('<span class="sr-only">Was </span>', $deals);
-        $this->assertStringContainsString('sf-card is-deal', $deals);
+        $this->assertMatchesRegularExpression('#<span class="sf-card-save-tag">Save\s*<span class="price">.*1,000</span>#', $deals);
+        $this->assertMatchesRegularExpression('#<span class="sf-card-was">Was\s*<span class="price">.*6,000</span>#', $deals);
+        $this->assertStringContainsString('class="sf-card is-deal is-rail"', $deals);
+        $this->assertStringContainsString('<span class="sf-card-tag">Deal</span>', $deals);
+    }
+
+    public function test_deals_of_the_day_are_a_new_dozen_each_day(): void
+    {
+        foreach (range(1, 30) as $i) {
+            ProductOptimized::factory()->onSale(1000 + $i * 10)->create(['name' => "Deal {$i}", 'base_price' => 1000]);
+        }
+
+        $this->travelTo(Carbon::parse('2026-10-24 09:00', 'Asia/Dhaka'));
+        $friday = $this->dealNumbers();
+        $this->travelTo(Carbon::parse('2026-10-24 23:50', 'Asia/Dhaka'));
+        $this->assertSame($friday, $this->dealNumbers(), 'The same dozen all day');
+        $this->travelTo(Carbon::parse('2026-10-25 00:10', 'Asia/Dhaka'));
+        $saturday = $this->dealNumbers();
+
+        $this->assertCount(12, $friday);
+        $this->assertCount(12, $saturday);
+        $this->assertNotEquals($friday, $saturday, 'A new dozen after midnight in the shop');
+        $this->assertSame(collect($saturday)->sortDesc()->values()->all(), $saturday, 'Biggest saving first');
+        $this->get('/')->assertSee('Deals of the Day')->assertDontSee('countdown');
+    }
+
+    public function test_deals_of_the_day_take_two_at_most_from_a_category_while_others_are_on_sale(): void
+    {
+        $tvs = Category::factory()->create(['name' => 'Smart TV']);
+        foreach (range(1, 14) as $i) {
+            ProductOptimized::factory()->onSale(50000 + $i * 1000)->create(['name' => "Deal TV {$i}", 'base_price' => 40000, 'category_id' => $tvs->id]);
+        }
+        foreach (range(1, 10) as $i) {
+            ProductOptimized::factory()->onSale(1500)->create(['name' => "Deal Gadget {$i}", 'base_price' => 1000]);
+        }
+
+        $rail = Str::betweenFirst($this->get('/')->assertOk()->getContent(), 'id="deals-rail"', '</ul>');
+
+        $this->assertSame(2, substr_count($rail, '>Deal TV '), 'Two TVs, then the ten gadgets');
+        $this->assertSame(10, substr_count($rail, '>Deal Gadget '));
+
+        // With nothing else on sale, more of one category fill the row (models saved one by one, which refreshes the home cache)
+        ProductOptimized::where('name', 'like', 'Deal Gadget%')->get()->each->update(['status' => 0]);
+        $this->assertSame(12, substr_count(Str::betweenFirst($this->get('/')->assertOk()->getContent(), 'id="deals-rail"', '</ul>'), '>Deal TV '));
+    }
+
+    public function test_rail_cards_show_the_model_and_the_stock(): void
+    {
+        ProductOptimized::factory()->featured()->create(['name' => 'Office Keyboard', 'manufacturer_part_no' => 'K120-BLK']);
+        ProductOptimized::factory()->featured()->create(['name' => 'Coming Soon Mouse', 'stock_status' => 'preorder']);
+
+        $featured = Str::betweenFirst($this->get('/')->assertOk()->getContent(), 'id="featured-rail"', '</ul>');
+
+        $this->assertStringContainsString('<p class="sf-card-model">Model: K120-BLK</p>', $featured);
+        $this->assertSame(1, substr_count($featured, 'class="sf-card-stock"'), 'Pre-order says so on its button');
+        $this->assertStringContainsString('Pre-order', $featured);
     }
 
     public function test_featured_and_latest_rows(): void
@@ -195,6 +257,17 @@ class HomePageTest extends TestCase
         $product->update(['base_price' => 1650]);
 
         $this->get('/')->assertSee('1,650')->assertDontSee('1,800');
+    }
+
+    /**
+     * The numbers of the "Deal N" cards in the Deals of the Day rail, in order.
+     */
+    private function dealNumbers(): array
+    {
+        $rail = Str::betweenFirst($this->get('/')->assertOk()->getContent(), 'id="deals-rail"', '</ul>');
+        preg_match_all('#class="sf-card-title"><a href="[^"]*">Deal (\d+)</a>#', $rail, $matches);
+
+        return array_map('intval', $matches[1]);
     }
 
     private function categoryTiles(): string

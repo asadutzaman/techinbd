@@ -66,6 +66,9 @@
                                 <td>{{ Str::limit($category->description, 50) ?? 'No description' }}</td>
                                 <td>
                                     <span class="badge badge-info">{{ $category->products_count ?? 0 }} Products</span>
+                                    @if($category->extra_products_count)
+                                        <span class="badge badge-light" title="Products from other categories listed here too">+{{ $category->extra_products_count }} listed</span>
+                                    @endif
                                 </td>
                                 <td>
                                     @if($category->status)

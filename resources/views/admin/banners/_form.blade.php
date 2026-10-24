@@ -23,8 +23,9 @@
                 @endforeach
             </select>
             <small class="form-text text-muted">
-                Slides take turns in the large slider. The first {{ \App\Models\Banner::SIDE_SLOTS }} live side banners
-                show in the column to its right on computers, and side by side under it on phones.
+                Slides take turns in the large slider. Side banners show to its right on computers: the first
+                {{ \App\Models\Banner::SIDE_SLOTS }} live ones in a 2×2 grid, or with fewer, the first {{ \App\Models\Banner::STACKED_SIDE_SLOTS }}
+                one above the other. On phones they sit two side by side under it.
             </small>
         </div>
 

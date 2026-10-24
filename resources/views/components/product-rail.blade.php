@@ -25,7 +25,7 @@
         </div>
         <ul class="sf-rail" id="{{ $id }}-rail">
             @foreach($products as $product)
-                <li><x-product-card :product="$product" :variant="$variant" /></li>
+                <li><x-product-card :product="$product" :variant="$variant" layout="rail" /></li>
             @endforeach
         </ul>
     </div>

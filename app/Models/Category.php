@@ -31,6 +31,7 @@ class Category extends Model
 
     protected $fillable = [
         'name',
+        'menu_name',
         'description',
         'image',
         'parent_id',
@@ -42,38 +43,89 @@ class Category extends Model
 
     /**
      * Words in a category's name or slug that pick its icon in <x-category-icon>, checked in
-     * order ("headphones" before "phone", "laptop cooler" before "laptop"), so categories added
-     * in admin get a fitting icon too.
+     * order ("earphone" before "phone", "laptop cooler" before "laptop", "gaming mouse" is a mouse),
+     * so categories added in admin get a fitting icon too.
      */
     private const ICON_KEYWORDS = [
         'fan' => '/cooler|cooling|\bfan\b/',
         'laptop' => '/laptop|notebook|macbook/',
         'mic' => '/microphone|\bmic\b/',
-        'headphones' => '/headphone|earphone|earbud|audio|speaker|sound/',
+        'earbuds' => '/earbud|earphone|neckband|\btws\b/',
+        'speaker' => '/speaker|sound ?bar/',
+        'headphones' => '/headphone|headset|audio/',
         'watch' => '/watch|wearable|gadget/',
         'presentation' => '/interactive|flat panel|presentation|projector|office equipment/',
         'monitor' => '/monitor|display/',
         'tv' => '/\btv\b|television/',
         'tablet' => '/tablet|ipad|\btab\b/',
         'smartphone' => '/phone|mobile/',
-        'cpu' => '/processor|\bcpu\b/',
+        'cpu' => '/processor|\bcpu\b|component/',
         'circuit-board' => '/motherboard|mainboard/',
         'gpu' => '/graphics|\bgpu\b|\bvga\b/',
         'memory-stick' => '/\bram\b|memory/',
         'hard-drive' => '/\bssd\b|\bhdd\b|storage|drive/',
         'router' => '/router|network|wi-?fi/',
+        'receipt' => '/\bpos\b|receipt|thermal/',
         'printer' => '/printer|scanner|office/',
-        'keyboard' => '/keyboard|accessor|peripheral/',
+        'keyboard' => '/keyboard|peripheral/',
+        'usb' => '/accessor|\busb\b|pen ?drive|\bhub\b/',
+        'mouse-pad' => '/mouse ?pad|desk ?mat/',
         'mouse' => '/mouse/',
-        'battery-charging' => '/\bups\b|power|battery|charger/',
-        'plug' => '/\bcable\b/',
-        'house' => '/smart home|\bhome\b/',
-        'camera' => '/camera|webcam|cctv|security/',
+        'power' => '/power supply|\bpsu\b/',
+        'battery-charging' => '/power ?bank|\bups\b|battery|power/',
+        'plug-zap' => '/charger|adapter/',
+        'cable' => '/\bcables?\b/',
+        'house-plug' => '/smart home|\bhome\b|appliance/',
+        'webcam' => '/webcam/',
+        'camera' => '/camera|cctv|security/',
+        'pc-case' => '/casing|\bcase\b|cabinet/',
+        'desktop' => '/desktop|\bpc\b|computer/',
         'gamepad' => '/gaming|\bgame|console/',
-        'desktop' => '/desktop|\bpc\b|computer|casing/',
     ];
 
     public const DEFAULT_ICON = 'package';
+
+    /**
+     * Each icon's colour on the home page's category tiles, on a pale tint of itself. Strong enough to read on
+     * the tint (3:1 or more), and the default tiles' neighbours differ.
+     */
+    private const ICON_COLORS = [
+        'laptop' => '#2563EB',
+        'desktop' => '#7C3AED',
+        'monitor' => '#0284C7',
+        'gpu' => '#059669',
+        'cpu' => '#EA580C',
+        'memory-stick' => '#4F46E5',
+        'keyboard' => '#475569',
+        'mouse' => '#DB2777',
+        'headphones' => '#9333EA',
+        'watch' => '#0D9488',
+        'earbuds' => '#E11D48',
+        'battery-charging' => '#B45309',
+        'gamepad' => '#C026D3',
+        'tv' => '#DC2626',
+        'printer' => '#0891B2',
+        'router' => '#15803D',
+        'circuit-board' => '#4D7C0F',
+        'hard-drive' => '#57534E',
+        'fan' => '#0369A1',
+        'speaker' => '#C2410C',
+        'plug-zap' => '#A16207',
+        'cable' => '#A16207',
+        'power' => '#B91C1C',
+        'pc-case' => '#4338CA',
+        'webcam' => '#BE123C',
+        'camera' => '#BE123C',
+        'mic' => '#A21CAF',
+        'house-plug' => '#047857',
+        'presentation' => '#C2410C',
+        'receipt' => '#0F766E',
+        'usb' => '#334155',
+        'mouse-pad' => '#BE185D',
+        'smartphone' => '#1D4ED8',
+        'tablet' => '#0369A1',
+        'package' => '#6B7280',
+    ];
 
     protected $casts = [
         'status' => 'boolean',
@@ -95,6 +147,23 @@ class Category extends Model
     }
 
     /**
+     * The colour of the category's icon on its home page tile.
+     */
+    public function getIconColorAttribute(): string
+    {
+        return self::ICON_COLORS[$this->icon] ?? self::ICON_COLORS[self::DEFAULT_ICON];
+    }
+
+    /**
+     * What the menus call a subcategory under its category: the menu name when one is set ("ASUS" under
+     * Laptop), else the name. Pages, breadcrumbs and tiles use the name.
+     */
+    public function getMenuLabelAttribute(): string
+    {
+        return $this->menu_name ?: $this->name;
+    }
+
+    /**
      * An image uploaded in admin (stored in public/img) replaces the icon on the home page tile.
      */
     public function getImageUrlAttribute(): ?string
@@ -105,6 +174,14 @@ class Category extends Model
     public function products()
     {
         return $this->hasMany(ProductOptimized::class);
+    }
+
+    /**
+     * Products from other categories listed here too (Gaming Keyboard lists gaming keyboards from Keyboard).
+     */
+    public function extraProducts()
+    {
+        return $this->belongsToMany(ProductOptimized::class, 'product_categories', 'category_id', 'product_id')->withTimestamps();
     }
 
     /**
@@ -133,15 +210,22 @@ class Category extends Model
     }
 
     /**
-     * Active categories with `products_count` of their active products, in menu order.
+     * Active categories with `products_count` of their active products (their own and those listed
+     * there too), in menu order.
      */
     public static function activeWithProductCounts()
     {
         return static::where('status', true)
-            ->withCount(['products' => fn ($query) => $query->where('status', 1)])
+            ->withCount([
+                'products' => fn ($query) => $query->active(),
+                'extraProducts' => fn ($query) => $query->active(),
+            ])
             ->orderBy('sort_order')
             ->orderBy('name')
-            ->get();
+            ->get()
+            ->each(function (Category $category) {
+                $category->products_count += $category->extra_products_count;
+            });
     }
 
     /**

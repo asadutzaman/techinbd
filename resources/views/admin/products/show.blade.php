@@ -203,11 +203,21 @@
                                         @endif
                                     </td>
                                 </tr>
+                                @if($product->extraCategories->isNotEmpty())
+                                    <tr>
+                                        <th>Also shows in</th>
+                                        <td>
+                                            @foreach($product->extraCategories as $extraCategory)
+                                                <a href="{{ route('admin.products.index', ['category' => $extraCategory->id]) }}">{{ $extraCategory->name }}</a>@if(! $loop->last), @endif
+                                            @endforeach
+                                        </td>
+                                    </tr>
+                                @endif
                                 <tr>
                                     <th>Brand</th>
                                     <td>
                                         @if($product->brand)
-                                            <a href="{{ route('admin.products.index', ['brand' => $product->brand_id]) }}">{{ $product->brand->name }}</a>
+                                            <a href="{{ route('admin.products.index', ['brand' => $product->brand_id]) }}">{{ $product->brand->name }}</a>@if(! $product->brand->status) <span class="badge badge-secondary">Hidden</span>@endif
                                         @else
                                             —
                                         @endif

@@ -25,9 +25,13 @@ class CartService
         return Cart::where('session_id', session()->getId())->whereNull('user_id');
     }
 
+    /**
+     * The lines whose product is still on sale. A line whose product was switched off, or whose brand
+     * was, drops out of the cart and checkout (and comes back if it's switched on again).
+     */
     public function items(): Collection
     {
-        return $this->query()->with(['product.mainImage', 'variant'])->get();
+        return $this->available()->with(['product.mainImage', 'variant'])->get();
     }
 
     public function find($id): Cart
@@ -71,7 +75,12 @@ class CartService
 
     public function count(): int
     {
-        return (int) $this->query()->sum('quantity');
+        return (int) $this->available()->sum('quantity');
+    }
+
+    private function available(): Builder
+    {
+        return $this->query()->whereHas('product', fn (Builder $product) => $product->active());
     }
 
     public function subtotal(Collection $items): float

@@ -241,7 +241,7 @@
                                     id="brand_id" name="brand_id">
                                 <option value="">Select Brand (Optional)</option>
                                 @foreach($brands as $brand)
-                                    <option value="{{ $brand->id }}" 
+                                    <option value="{{ $brand->id }}"
                                             {{ old('brand_id') == $brand->id ? 'selected' : '' }}>
                                         {{ $brand->name }}
                                     </option>
@@ -251,6 +251,8 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
+
+                        @include('admin.products._extra_categories', ['extraCategoryIds' => []])
                     </div>
                 </div>
 

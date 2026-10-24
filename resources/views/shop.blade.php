@@ -97,7 +97,7 @@
                                             @foreach($subcategoryList as $child)
                                                 <li>
                                                     <a class="shop-option" href="{{ $categoryUrl($child) }}" @if($filters->category?->id === $child->id) aria-current="page" @endif>
-                                                        <span class="shop-option-label">{{ $child->name }}</span>
+                                                        <span class="shop-option-label">{{ $child->menu_label }}</span>
                                                         <span class="shop-count">{{ $child->products_count }}</span>
                                                     </a>
                                                 </li>

@@ -20,12 +20,12 @@ class ProductController extends Controller
             'images' => fn ($query) => $query->orderByDesc('is_main')->orderBy('sort_order')->orderBy('id'),
             'variants' => fn ($query) => $query->orderBy('is_default', 'desc')->orderBy('price'),
             'productAttributes.attribute',
-        ])->where('status', 1)->firstWhere('slug', $slug);
+        ])->active()->firstWhere('slug', $slug);
 
         if (! $product) {
             // Old addresses: /product/{id} from before slugs, and slugs that have since changed
             $current = ctype_digit($slug) ? ProductOptimized::find($slug) : ProductOptimized::findByOldSlug($slug);
-            abort_unless($current?->status === 1, 404);
+            abort_unless($current?->loadMissing('brand')->is_active, 404);
 
             return redirect()->route('product.detail', ['product' => $current] + $request->query(), 301);
         }

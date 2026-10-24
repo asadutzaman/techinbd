@@ -9,9 +9,9 @@ use Illuminate\Support\Facades\Storage;
 
 /**
  * Starter banners for the home page: three slides (MacBook Air M5, gadgets, gaming laptops) and
- * two side banners (cash on delivery, deals), in public/img/banners. The slides show photos of
- * catalog products on white; all have their text designed in, so the title is what screen readers
- * announce and should say what the image says.
+ * four side banners (cash on delivery, deals, gaming, PC components) for the 2×2 grid beside the
+ * slider, in public/img/banners. The slides show photos of catalog products on white; all have their
+ * text designed in, so the title is what screen readers announce and should say what the image says.
  * Replace or reorder them in Admin → Home Banners.
  *
  * Safe to re-run: banners are matched by their image, and changed artwork is picked up.
@@ -37,7 +37,7 @@ class BannerSeeder extends Seeder
         [
             'photo' => 'banners/gaming-laptops.jpg',
             'mobile_photo' => 'banners/gaming-laptops-mobile.jpg',
-            'link' => ['category' => 'laptop'],
+            'link' => ['category' => 'gaming-laptop'],
             'title' => 'Gaming laptops: play at 144Hz with RTX gaming laptops from ASUS, HP, Lenovo, MSI and Acer.',
         ],
         [
@@ -51,6 +51,18 @@ class BannerSeeder extends Seeder
             'placement' => 'side',
             'link' => ['sale' => 1],
             'title' => 'Deals: marked-down tech. See all deals.',
+        ],
+        [
+            'photo' => 'banners/gaming-gear.jpg',
+            'placement' => 'side',
+            'link' => ['category' => 'gaming'],
+            'title' => 'Gaming: gear up to play. Shop gaming.',
+        ],
+        [
+            'photo' => 'banners/pc-components.jpg',
+            'placement' => 'side',
+            'link' => ['category' => 'pc-components'],
+            'title' => 'PC components: build your PC. Graphics cards, processors, RAM and more.',
         ],
     ];
 

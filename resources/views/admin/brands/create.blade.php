@@ -71,9 +71,10 @@
                                 <div class="form-group">
                                     <div class="custom-control custom-switch">
                                         <input type="checkbox" class="custom-control-input" id="status" 
-                                               name="status" {{ old('status', true) ? 'checked' : '' }}>
+                                               name="status" value="1" {{ old('status', true) ? 'checked' : '' }}>
                                         <label class="custom-control-label" for="status">Active</label>
                                     </div>
+                                    <small class="form-text text-muted">Off hides the brand and all its products from the shop.</small>
                                 </div>
                             </div>
                         </div>

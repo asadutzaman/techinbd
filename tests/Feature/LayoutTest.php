@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\ProductOptimized;
 use App\Models\User;
@@ -126,6 +127,58 @@ class LayoutTest extends TestCase
         $this->assertMatchesRegularExpression('#href="' . preg_quote(route('shop.category', $peripherals), '#') . '"\s+aria-current="true"#', $bar);
         $this->assertMatchesRegularExpression('#href="' . preg_quote(route('shop.category', $keyboards), '#') . '"\s+aria-current="page"#', $bar);
         $this->assertMatchesRegularExpression('#<details class="sf-drawer-group"\s+open\s*>#', Str::betweenFirst($html, 'id="sf-drawer"', 'class="sf-drawer-label">Shop'));
+    }
+
+    public function test_a_subcategory_with_a_choice_of_brands_opens_them_beside_it(): void
+    {
+        $desktops = Category::factory()->create(['name' => 'Desktop PC', 'is_menu' => true, 'sort_order' => 1]);
+        $brandPcs = Category::factory()->create(['name' => 'Brand PC', 'is_menu' => true, 'parent_id' => $desktops->id]);
+        $laptops = Category::factory()->create(['name' => 'Laptop', 'is_menu' => true, 'sort_order' => 2]);
+        $asusLaptops = Category::factory()->create(['name' => 'ASUS Laptop', 'menu_name' => 'ASUS', 'is_menu' => true, 'parent_id' => $laptops->id]);
+        [$hp, $dell, $hidden, $asus] = [
+            Brand::factory()->create(['name' => 'HP']), Brand::factory()->create(['name' => 'Dell']),
+            Brand::factory()->create(['name' => 'Retired Brand', 'status' => false]), Brand::factory()->create(['name' => 'ASUS']),
+        ];
+        foreach ([$hp, $dell, $hidden] as $brand) {
+            ProductOptimized::factory()->create(['category_id' => $brandPcs->id, 'brand_id' => $brand->id]);
+        }
+        ProductOptimized::factory()->count(2)->create(['category_id' => $asusLaptops->id, 'brand_id' => $asus->id]);
+
+        $html = $this->get('/')->assertOk()->getContent();
+        $bar = Str::betweenFirst($html, 'class="sf-catbar-list"', '</nav>');
+        $menu = Str::betweenFirst($html, 'id="sf-drawer"', 'class="sf-drawer-label">Shop');
+
+        // Desktop PC → Brand PC → its brands, A to Z, each a link to the subcategory narrowed to it
+        $this->assertMatchesRegularExpression('#<li class="has-flyout">\s*<a href="' . preg_quote(route('shop.category', $brandPcs), '#') . '"\s*>Brand PC</a>\s*<ul class="sf-brand-list sf-catbar-flyout" aria-label="Brand PC brands">#', $bar);
+        $flyout = Str::betweenFirst($bar, 'aria-label="Brand PC brands">', '</ul>');
+        $this->assertMatchesRegularExpression('#All Brand PC.*>Dell<.*>HP<#s', $flyout);
+        $this->assertStringContainsString('href="' . route('shop.category', ['category' => $brandPcs, 'brand' => $dell->id]) . '"', $flyout);
+        $this->assertStringNotContainsString('Retired Brand', $html, 'Switched-off brands stay out');
+
+        // One brand is no choice: the laptop subcategory is just a link, under its menu name
+        $this->assertMatchesRegularExpression('#<li class="">\s*<a href="' . preg_quote(route('shop.category', $asusLaptops), '#') . '"\s*>ASUS</a>\s*</li>#', $bar);
+        $this->assertStringNotContainsString('ASUS Laptop', $bar);
+
+        // The phone menu folds the brands out under the subcategory
+        $this->assertMatchesRegularExpression('#>\s*ASUS<span class="sf-drawer-count">2</span>#', $menu);
+        $this->assertMatchesRegularExpression('#<details class="sf-drawer-brands">\s*<summary><span class="sr-only">Brand PC brands</span>.*>Dell</a>.*>HP</a>#s', $menu);
+    }
+
+    public function test_a_category_without_subcategories_lists_its_brands_in_its_menu(): void
+    {
+        $monitors = Category::factory()->create(['name' => 'Monitor', 'is_menu' => true]);
+        $routers = Category::factory()->create(['name' => 'Router', 'is_menu' => true]);
+        foreach (['LG', 'Samsung'] as $name) {
+            ProductOptimized::factory()->create(['category_id' => $monitors->id, 'brand_id' => Brand::factory()->create(['name' => $name])]);
+        }
+        ProductOptimized::factory()->create(['category_id' => $routers->id]);
+
+        $html = $this->get('/')->assertOk()->getContent();
+        $bar = Str::betweenFirst($html, 'class="sf-catbar-list"', '</nav>');
+
+        $this->assertMatchesRegularExpression('#<li class="has-menu">\s*<a href="' . preg_quote(route('shop.category', $monitors), '#') . '"\s*>Monitor</a>\s*.*<ul class="sf-brand-list sf-catbar-menu" aria-label="Monitor brands">\s*<li><a href="[^"]+">All Monitor</a></li>\s*<li><a href="' . preg_quote(route('shop.category', ['category' => $monitors, 'brand' => 1]), '#') . '">LG</a>#s', $bar);
+        $this->assertMatchesRegularExpression('#<li class="">\s*<a href="' . preg_quote(route('shop.category', $routers), '#') . '"\s*>Router</a>\s*</li>#', $bar, 'One brand: a plain link');
+        $this->assertMatchesRegularExpression('#<details class="sf-drawer-group"\s*>\s*<summary>.*Monitor.*All Monitor.*>LG</a>.*>Samsung</a>#s', Str::betweenFirst($html, 'id="sf-drawer"', 'class="sf-drawer-label">Shop'));
     }
 
     public function test_bottom_bar_marks_the_current_page(): void

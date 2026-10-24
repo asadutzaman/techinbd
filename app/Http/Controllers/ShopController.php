@@ -113,7 +113,7 @@ class ShopController extends Controller
     {
         return $this->catalogCache->remember('shop-brands:' . ($category?->id ?? 'all'), 600, fn () => Brand::active()
             ->withCount(['products' => fn ($products) => $products->active()
-                ->when($category, fn ($products) => $products->whereIn('category_id', $category->familyIds()))])
+                ->when($category, fn ($products) => $products->inCategories($category->familyIds()))])
             ->orderBy('name')
             ->get());
     }
@@ -175,7 +175,7 @@ class ShopController extends Controller
                 ->whereHas('product', function ($q) use ($familyIds) {
                     $q->active();
                     if ($familyIds) {
-                        $q->whereIn('category_id', $familyIds);
+                        $q->inCategories($familyIds);
                     }
                 })
                 ->distinct()

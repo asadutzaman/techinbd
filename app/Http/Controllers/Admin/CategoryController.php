@@ -14,7 +14,7 @@ class CategoryController extends Controller
      */
     public function index()
     {
-        $all = Category::withCount(['products', 'children'])->orderBy('sort_order')->orderBy('name')->get();
+        $all = Category::withCount(['products', 'extraProducts', 'children'])->orderBy('sort_order')->orderBy('name')->get();
         $children = $all->whereNotNull('parent_id')->groupBy('parent_id');
 
         $categories = $all->whereNull('parent_id')
@@ -32,6 +32,7 @@ class CategoryController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255|unique:categories,name',
+            'menu_name' => 'nullable|string|max:100',
             'description' => 'nullable|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'parent_id' => ['nullable', 'integer', $this->topLevelRule()],
@@ -69,6 +70,7 @@ class CategoryController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255|unique:categories,name,' . $id,
+            'menu_name' => 'nullable|string|max:100',
             'description' => 'nullable|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             // Categories are one level deep: a category with subcategories stays top-level
@@ -135,6 +137,7 @@ class CategoryController extends Controller
     {
         return [
             'name' => $request->input('name'),
+            'menu_name' => $request->filled('menu_name') ? trim($request->input('menu_name')) : null,
             'description' => $request->input('description'),
             'parent_id' => $request->input('parent_id') ?: null,
             'sort_order' => (int) $request->input('sort_order', 0),

@@ -24,6 +24,12 @@
     --sf-save: #059669;
     --sf-deal: linear-gradient(135deg, #F97316, #EA580C);
     --sf-deal-hover: linear-gradient(135deg, #EA580C, #C2410C);
+    /* The home page's rail cards, after Best Buy's: a yellow Add to cart and a red saving tag */
+    --sf-buy: #FFE000;
+    --sf-buy-hover: #F2D200;
+    --sf-buy-ink: #1D252C;
+    --sf-save-tag: #BB0628;
+    --sf-in-stock: #047857;
     --sf-footer: #E5E7EB;
     --sf-radius: 12px;
     --sf-shadow: 0 12px 24px -14px rgba(17, 24, 39, .35);
@@ -476,8 +482,9 @@ summary:focus-visible {
     transform: none;
 }
 
-/* The last menus open leftwards, so they stay on screen */
-.sf-catbar-list > li:nth-last-child(-n+2) > .sf-catbar-menu {
+/* The last menus open leftwards, so they stay on screen (storefront.js flips any other menu that would run off it) */
+.sf-catbar-list > li:nth-last-child(-n+2) > .sf-catbar-menu,
+.sf-catbar-list > li > .sf-catbar-menu.is-flipped {
     right: -14px;
     left: auto;
 }
@@ -490,20 +497,112 @@ summary:focus-visible {
     white-space: nowrap;
 }
 
+/* "All {category}" */
 .sf-catbar-menu li:first-child a {
     font-weight: 600;
 }
 
 .sf-catbar-menu a:hover,
-.sf-catbar-menu a[aria-current="page"] {
+.sf-catbar-menu a[aria-current="page"],
+.sf-catbar-menu > .has-flyout:hover > a {
     background: var(--sf-hover);
     color: var(--sf-accent);
     text-decoration: none;
 }
 
+/* A subcategory's brands open beside it (Brand PC → Dell, HP…). They wait a moment before opening and before
+   closing, so the pointer can cross other subcategories on its way to them. */
+.sf-catbar-menu > .has-flyout {
+    position: relative;
+}
+
+.sf-catbar-menu > .has-flyout > a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.sf-catbar-menu > .has-flyout > a::after {
+    content: "";
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-top: 1.5px solid currentColor;
+    border-right: 1.5px solid currentColor;
+    opacity: .55;
+    transform: rotate(45deg);
+}
+
+.sf-catbar-flyout {
+    position: absolute;
+    top: -7px;
+    left: 100%;
+    z-index: 31;
+    min-width: 190px;
+    margin: 0;
+    padding: 6px 0;
+    list-style: none;
+    background: var(--sf-surface);
+    border: 1px solid var(--sf-line);
+    border-radius: var(--sf-radius);
+    box-shadow: var(--sf-shadow);
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity .1s .2s, visibility 0s .3s;
+}
+
+.sf-catbar-menu > .has-flyout:hover > .sf-catbar-flyout,
+.sf-catbar-menu > .has-flyout:focus-within > .sf-catbar-flyout {
+    z-index: 32;
+    visibility: visible;
+    opacity: 1;
+    transition: opacity .1s .08s, visibility 0s .08s;
+}
+
+/* Leaving the whole menu closes its brands with it */
+.sf-catbar-list > li:not(:hover):not(:focus-within) .sf-catbar-flyout {
+    visibility: hidden;
+    opacity: 0;
+    transition: none;
+}
+
+.sf-catbar-flyout.is-flipped {
+    right: 100%;
+    left: auto;
+}
+
+/* Long brand lists run in columns of up to 12 (<x-menu-brands>) */
+.sf-brand-list.is-cols-2 {
+    min-width: 380px;
+    columns: 2;
+    column-gap: 0;
+}
+
+.sf-brand-list.is-cols-3 {
+    min-width: 540px;
+    columns: 3;
+    column-gap: 0;
+}
+
+.sf-brand-list li {
+    break-inside: avoid;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .sf-catbar-menu {
         transition: none;
+    }
+
+    /* No fading; the short waits stay */
+    .sf-catbar-flyout {
+        opacity: 1;
+        transition: visibility 0s .2s;
+    }
+
+    .sf-catbar-menu > .has-flyout:hover > .sf-catbar-flyout,
+    .sf-catbar-menu > .has-flyout:focus-within > .sf-catbar-flyout {
+        transition: visibility 0s .08s;
     }
 }
 
@@ -739,8 +838,74 @@ summary:focus-visible {
 
 /* Lined up with the category names above, past the icon */
 .sf-drawer-list .sf-drawer-sublist a {
+    min-height: 40px;
     padding: 9px 16px 9px 50px;
     font-size: 14px;
+}
+
+/* A subcategory's brands fold out under it, from a toggle at the end of its row */
+.sf-drawer-sublist .has-brands {
+    position: relative;
+}
+
+.sf-drawer-list .sf-drawer-sublist .has-brands > a {
+    padding-right: 56px;
+}
+
+.sf-drawer-brands > summary {
+    position: absolute;
+    top: 0;
+    right: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 40px;
+    border-radius: 8px;
+    color: var(--sf-muted);
+    list-style: none;
+    cursor: pointer;
+}
+
+.sf-drawer-brands > summary::-webkit-details-marker {
+    display: none;
+}
+
+.sf-drawer-brands > summary:hover {
+    background: var(--sf-hover);
+    color: var(--sf-accent);
+}
+
+.sf-drawer-list .sf-drawer-brands summary i {
+    width: auto;
+    height: auto;
+    font-size: 11px;
+    line-height: 1;
+    color: inherit;
+    transition: transform .15s;
+}
+
+.sf-drawer-brands[open] > summary i {
+    transform: rotate(180deg);
+}
+
+.sf-drawer-brands > ul {
+    margin: 0 0 4px;
+    padding: 0;
+    list-style: none;
+}
+
+.sf-drawer-list .sf-drawer-sublist .sf-drawer-brands a {
+    min-height: 36px;
+    padding: 7px 16px 7px 66px;
+    font-size: 13px;
+    color: var(--sf-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sf-drawer-list .sf-drawer-brands summary i {
+        transition: none;
+    }
 }
 
 body.sf-drawer-open {
@@ -1100,7 +1265,7 @@ body.sf-drawer-open {
     text-decoration: none;
 }
 
-/* A row of cards that scrolls sideways: 210px cards on computers, two per screen on phones */
+/* A row of cards that scrolls sideways: 220px cards on computers, two per screen on phones */
 .sf-rail {
     display: flex;
     gap: 12px;
@@ -1119,7 +1284,7 @@ body.sf-drawer-open {
 
 .sf-rail > li {
     display: flex;
-    flex: 0 0 210px;
+    flex: 0 0 220px;
     scroll-snap-align: start;
 }
 
@@ -1320,6 +1485,112 @@ body.sf-drawer-open {
 .sf-card-compare:hover {
     border-color: var(--sf-accent);
     color: var(--sf-accent);
+}
+
+/* Home page rail cards (layout="rail"), after Best Buy's: left-aligned, the model under the name, a big price
+   with a red saving tag and the old price, the stock, and a yellow Add to cart */
+.sf-card.is-rail {
+    padding: 14px 14px 16px;
+}
+
+.sf-card.is-rail .sf-card-media {
+    height: 150px;
+    margin-bottom: 14px;
+}
+
+.sf-card-tag {
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    z-index: 1;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: var(--sf-buy);
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 16px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--sf-buy-ink);
+}
+
+.sf-card.is-rail .sf-card-title {
+    min-height: 4.05em;
+    margin-bottom: 4px;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    font-weight: 500;
+}
+
+.sf-card-model {
+    margin: 0;
+    overflow: hidden;
+    font-size: 12px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--sf-faint);
+}
+
+.sf-card-pricing {
+    margin: auto 0 0;
+    padding-top: 10px;
+}
+
+.sf-card.is-rail .sf-card-price {
+    justify-content: flex-start;
+    margin: 0;
+}
+
+.sf-card.is-rail .sf-card-price > .price {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    color: var(--sf-ink);
+}
+
+.sf-card-saving {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    margin: 6px 0 0;
+    font-size: 12px;
+}
+
+.sf-card-save-tag {
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: var(--sf-save-tag);
+    font-weight: 700;
+    color: #FFFFFF;
+}
+
+.sf-card.is-rail .sf-card-was {
+    color: var(--sf-muted);
+}
+
+.sf-card-stock {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 8px 0 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--sf-in-stock);
+}
+
+.sf-card.is-rail .sf-card-actions {
+    margin-top: 12px;
+}
+
+.sf-card.is-rail .sf-card-cta:not(:disabled) {
+    background: var(--sf-buy);
+    font-weight: 600;
+    color: var(--sf-buy-ink);
+}
+
+.sf-card.is-rail .sf-card-cta:hover:not(:disabled) {
+    background: var(--sf-buy-hover);
 }
 
 /* ---------- Pagination (custom-pagination.blade.php) ---------- */
@@ -1651,12 +1922,18 @@ a.sf-pager-page:hover {
         flex-basis: calc((100% - 12px) / 2);
     }
 
-    .sf-card {
+    .sf-card,
+    .sf-card.is-rail {
         padding: 12px;
     }
 
-    .sf-card-media {
+    .sf-card-media,
+    .sf-card.is-rail .sf-card-media {
         height: 120px;
+    }
+
+    .sf-card.is-rail .sf-card-price > .price {
+        font-size: 18px;
     }
 }
 

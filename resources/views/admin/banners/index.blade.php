@@ -14,8 +14,9 @@
         </div>
         <div class="card-body">
             <p class="text-muted">
-                Live banners show in this order at the top of the home page: slides in the main slider, and the first
-                {{ \App\Models\Banner::SIDE_SLOTS }} side banners beside it. Times are in {{ config('shop.timezone') }}.
+                Live banners show in this order at the top of the home page: slides in the main slider, and side banners
+                beside it: the first {{ \App\Models\Banner::SIDE_SLOTS }} in a 2×2 grid, or with fewer live, the first
+                {{ \App\Models\Banner::STACKED_SIDE_SLOTS }} one above the other. Times are in {{ config('shop.timezone') }}.
             </p>
             <div class="table-responsive">
                 <table class="table table-bordered table-striped mb-0">

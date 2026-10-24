@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class ProductOptimized extends Model
@@ -128,16 +129,13 @@ class ProductOptimized extends Model
         return $this->belongsTo(Category::class);
     }
 
-    public function categories(): BelongsToMany
+    /**
+     * Categories the product is also listed in, besides its own (a gaming keyboard sits in Keyboard and
+     * is also listed in Gaming Keyboard). Its own category stays the one for the breadcrumb and related products.
+     */
+    public function extraCategories(): BelongsToMany
     {
-        return $this->belongsToMany(Category::class, 'product_categories', 'product_id', 'category_id')
-                    ->withPivot('is_primary')
-                    ->withTimestamps();
-    }
-
-    public function primaryCategory(): BelongsTo
-    {
-        return $this->belongsTo(Category::class, 'category_id');
+        return $this->belongsToMany(Category::class, 'product_categories', 'product_id', 'category_id')->withTimestamps();
     }
 
     public function variants(): HasMany
@@ -171,9 +169,16 @@ class ProductOptimized extends Model
     }
 
     // Scopes
+
+    /**
+     * On sale in the shop: switched on, and not of a brand that has been switched off. Columns are
+     * qualified, as some callers join tables that have a status too.
+     */
     public function scopeActive($query)
     {
-        return $query->where('status', 1);
+        return $query->where($query->qualifyColumn('status'), 1)
+            ->where(fn ($query) => $query->whereNull($query->qualifyColumn('brand_id'))
+                ->orWhereIn($query->qualifyColumn('brand_id'), Brand::active()->select('id')));
     }
 
     public function scopeInStock($query)
@@ -184,6 +189,15 @@ class ProductOptimized extends Model
     public function scopeByCategory($query, $categoryId)
     {
         return $query->where('category_id', $categoryId);
+    }
+
+    /**
+     * In any of these categories: as its own category, or listed there too (extraCategories).
+     */
+    public function scopeInCategories($query, array $categoryIds)
+    {
+        return $query->where(fn ($query) => $query->whereIn($query->qualifyColumn('category_id'), $categoryIds)
+            ->orWhereIn($query->qualifyColumn('id'), DB::table('product_categories')->select('product_id')->whereIn('category_id', $categoryIds)));
     }
 
     public function scopeByBrand($query, $brandId)
@@ -225,9 +239,12 @@ class ProductOptimized extends Model
         return number_format($this->base_price, 2);
     }
 
+    /**
+     * The same test as the active() scope, for a loaded product. Expects the brand loaded.
+     */
     public function getIsActiveAttribute()
     {
-        return $this->status === 1;
+        return $this->status === 1 && (! $this->brand_id || (bool) $this->brand?->status);
     }
 
     /**

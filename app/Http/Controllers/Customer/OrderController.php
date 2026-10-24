@@ -51,8 +51,8 @@ class OrderController extends Controller
         }
 
         $skipped = 0;
-        foreach ($order->orderItems()->with('product')->get() as $item) {
-            // Products that were deleted or deactivated since the order can't be re-added
+        foreach ($order->orderItems()->with('product.brand')->get() as $item) {
+            // Products that were deleted or deactivated (or whose brand was) since the order can't be re-added
             if (! $item->product || ! $item->product->is_active) {
                 $skipped++;
                 continue;

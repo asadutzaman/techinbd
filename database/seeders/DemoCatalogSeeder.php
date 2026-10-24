@@ -36,11 +36,14 @@ class DemoCatalogSeeder extends Seeder
     private const INSTALL_INTRO = 'The %1$s is a genuine %2$s product, delivered sealed in its original box and covered by the warranty listed below.';
     private const INSTALL_NOTES = ['Brand-new, sealed-box unit', '7-day replacement for manufacturing defects', 'Keep the box and invoice for warranty claims'];
 
-    private const LAPTOP = ['warranty' => '2 Years Warranty', 'variant_key' => 'configuration', 'intro' => self::DEVICE_INTRO, 'notes' => self::DEVICE_NOTES];
+    private const LAPTOP = ['warranty' => '2 Years Warranty', 'variant_key' => 'configuration', 'intro' => self::DEVICE_INTRO, 'notes' => self::DEVICE_NOTES, 'gaming' => 'gaming-laptop'];
+
+    /** A product named like this is listed in its subcategory's Gaming subcategory too (the 'gaming' setting) */
+    private const GAMING_NAME = '/\b(gaming|rog)\b/i';
 
     /**
      * Per subcategory: SKU prefix, default warranty (when a product lists none), variant JSON key,
-     * description intro and "good to know" notes.
+     * description intro and "good to know" notes, and the Gaming subcategory its gaming products are listed in too.
      */
     private const CATEGORIES = [
         'apple-macbook' => ['prefix' => 'MBK', 'warranty' => '1 Year Warranty'] + self::LAPTOP,
@@ -51,12 +54,12 @@ class DemoCatalogSeeder extends Seeder
         'acer-laptop' => ['prefix' => 'LAC'] + self::LAPTOP,
         'msi-laptop' => ['prefix' => 'LMS'] + self::LAPTOP,
         'laptop-cooler' => ['prefix' => 'LCL', 'warranty' => '7 Days Replacement', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
-        'monitor' => ['prefix' => 'MON', 'warranty' => '3 Years Warranty', 'variant_key' => 'option', 'intro' => self::DEVICE_INTRO, 'notes' => self::DEVICE_NOTES],
-        'keyboard' => ['prefix' => 'KBD', 'warranty' => '1 Year Warranty', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
-        'mouse' => ['prefix' => 'MOU', 'warranty' => '1 Year Warranty', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
-        'headphone' => ['prefix' => 'HPH', 'warranty' => '1 Year Warranty', 'variant_key' => 'color', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
-        'mouse-pad' => ['prefix' => 'MPD', 'warranty' => '7 Days Replacement', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
-        'brand-pc' => ['prefix' => 'BPC', 'warranty' => '3 Years Warranty', 'variant_key' => 'configuration', 'intro' => self::DEVICE_INTRO, 'notes' => self::DEVICE_NOTES],
+        'monitor' => ['prefix' => 'MON', 'warranty' => '3 Years Warranty', 'variant_key' => 'option', 'intro' => self::DEVICE_INTRO, 'notes' => self::DEVICE_NOTES, 'gaming' => 'gaming-monitor'],
+        'keyboard' => ['prefix' => 'KBD', 'warranty' => '1 Year Warranty', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES, 'gaming' => 'gaming-keyboard'],
+        'mouse' => ['prefix' => 'MOU', 'warranty' => '1 Year Warranty', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES, 'gaming' => 'gaming-mouse'],
+        'headphone' => ['prefix' => 'HPH', 'warranty' => '1 Year Warranty', 'variant_key' => 'color', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES, 'gaming' => 'gaming-headphone'],
+        'mouse-pad' => ['prefix' => 'MPD', 'warranty' => '7 Days Replacement', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES, 'gaming' => 'gaming-mouse-pad'],
+        'brand-pc' => ['prefix' => 'BPC', 'warranty' => '3 Years Warranty', 'variant_key' => 'configuration', 'intro' => self::DEVICE_INTRO, 'notes' => self::DEVICE_NOTES, 'gaming' => 'gaming-pc'],
         'interactive-flat-panel' => ['prefix' => 'IFP', 'warranty' => '3 Years Warranty', 'variant_key' => 'option', 'intro' => self::INSTALL_INTRO, 'notes' => self::INSTALL_NOTES],
         'router' => ['prefix' => 'RTR', 'warranty' => '1 Year Warranty', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
         'smart-tv' => ['prefix' => 'STV', 'warranty' => '3 Years Warranty', 'variant_key' => 'option', 'intro' => self::DEVICE_INTRO, 'notes' => self::DEVICE_NOTES],
@@ -78,7 +81,7 @@ class DemoCatalogSeeder extends Seeder
         'processor' => ['prefix' => 'CPU', 'warranty' => '3 Years Warranty', 'variant_key' => 'option', 'intro' => self::DEVICE_INTRO, 'notes' => self::DEVICE_NOTES],
         'motherboard' => ['prefix' => 'MBD', 'warranty' => '3 Years Warranty', 'variant_key' => 'option', 'intro' => self::DEVICE_INTRO, 'notes' => self::DEVICE_NOTES],
         'ram' => ['prefix' => 'RAM', 'warranty' => 'Lifetime Warranty', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
-        'casing' => ['prefix' => 'CAS', 'warranty' => '1 Year Warranty', 'variant_key' => 'color', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
+        'casing' => ['prefix' => 'CAS', 'warranty' => '1 Year Warranty', 'variant_key' => 'color', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES, 'gaming' => 'gaming-casing'],
         'power-supply' => ['prefix' => 'PSU', 'warranty' => '3 Years Warranty', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
         'cpu-cooler' => ['prefix' => 'CLR', 'warranty' => '1 Year Warranty', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
         'webcam' => ['prefix' => 'WBC', 'warranty' => '1 Year Warranty', 'variant_key' => 'option', 'intro' => self::GEAR_INTRO, 'notes' => self::GEAR_NOTES],
@@ -112,6 +115,7 @@ class DemoCatalogSeeder extends Seeder
             ->whereIn('slug', ['screen-size', 'storage', 'ram', 'color'])
             ->get()
             ->keyBy('slug');
+        $gamingCategories = Category::whereIn('slug', array_column(self::CATEGORIES, 'gaming'))->pluck('id', 'slug');
 
         $number = 0;
         foreach ($this->data['products'] as $categorySlug => $items) {
@@ -124,7 +128,12 @@ class DemoCatalogSeeder extends Seeder
                 $sku = sprintf('TIB-%s-%03d', $settings['prefix'], $position + 1);
                 // Barcodes go by subcategory and position, so adding products doesn't renumber the others
                 $ean = $this->ean13($categoryNumber * 1000 + $position + 1);
-                $this->seedProduct($item, $sku, $ean, $category, $settings, $brands[$item['brand']], $attributes);
+                $product = $this->seedProduct($item, $sku, $ean, $category, $settings, $brands[$item['brand']], $attributes);
+
+                // Never detached here, so a listing added in admin stays
+                if (isset($settings['gaming']) && preg_match(self::GAMING_NAME, $item['name'])) {
+                    $product->extraCategories()->syncWithoutDetaching([$gamingCategories[$settings['gaming']]]);
+                }
             }
 
             $this->command?->info(sprintf('  %-24s %d products', $category->name, count($items)));
@@ -188,7 +197,7 @@ class DemoCatalogSeeder extends Seeder
         return $brands;
     }
 
-    private function seedProduct(array $item, string $sku, string $ean, Category $category, array $settings, Brand $brand, $attributes): void
+    private function seedProduct(array $item, string $sku, string $ean, Category $category, array $settings, Brand $brand, $attributes): ProductOptimized
     {
         $status = $item['status'] ?? 'in_stock';
         $stock = $status === 'in_stock' ? 8 + crc32($sku) % 60 : 0;
@@ -228,6 +237,8 @@ class DemoCatalogSeeder extends Seeder
         $this->seedImages($product, $sku, $item['name']);
 
         $product->updateSearchIndex();
+
+        return $product;
     }
 
     private function seedAttributes(ProductOptimized $product, array $attrs, $attributes): void

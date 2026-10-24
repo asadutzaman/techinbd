@@ -4,10 +4,18 @@
 @section('main_class', 'is-flush')
 
 @php
-    // The slider shares the row with the side banners on computers
-    $sliderSizes = $sideBanners->isNotEmpty()
-        ? '(min-width: 1536px) 1110px, (min-width: 992px) calc(75vw - 36px), (min-width: 768px) calc(100vw - 48px), calc(100vw - 32px)'
-        : '(min-width: 1536px) 1488px, (min-width: 768px) calc(100vw - 48px), calc(100vw - 32px)';
+    // On computers the slider shares the row with the side banners: four make a 2×2 grid beside a 60% slider,
+    // one or two stack beside a 75% one
+    $sideGrid = $sideBanners->count() >= App\Models\Banner::SIDE_SLOTS;
+    $heroLayout = $sliderBanners->isNotEmpty() && $sideBanners->isNotEmpty() ? ($sideGrid ? 'has-side-grid' : 'has-side') : '';
+    $sliderSizes = match ($heroLayout) {
+        'has-side-grid' => '(min-width: 1536px) 883px, (min-width: 992px) calc(60vw - 38px), (min-width: 768px) calc(100vw - 48px), calc(100vw - 32px)',
+        'has-side' => '(min-width: 1536px) 1110px, (min-width: 992px) calc(75vw - 36px), (min-width: 768px) calc(100vw - 48px), calc(100vw - 32px)',
+        default => '(min-width: 1536px) 1488px, (min-width: 768px) calc(100vw - 48px), calc(100vw - 32px)',
+    };
+    $sideSizes = $heroLayout === 'has-side-grid'
+        ? '(min-width: 1536px) 286px, (min-width: 992px) calc(20vw - 21px), calc(50vw - 20px)'
+        : '(min-width: 1536px) 370px, (min-width: 992px) calc(25vw - 12px), calc(50vw - 20px)';
 @endphp
 
 @section('content')
@@ -16,10 +24,10 @@
     <h1 class="sr-only">{{ config('shop.name') }}</h1>
 
     @if($sliderBanners->isNotEmpty() || $sideBanners->isNotEmpty())
-        <!-- Hero: the banner slider, with up to two side banners (Admin → Home Banners) -->
+        <!-- Hero: the banner slider, with up to four side banners (Admin → Home Banners) -->
         <section class="home-hero" aria-label="Offers and collections">
             <div class="sf-container">
-                <div class="home-hero-grid {{ $sliderBanners->isNotEmpty() && $sideBanners->isNotEmpty() ? 'has-side' : '' }}">
+                <div class="home-hero-grid {{ $heroLayout }}">
                     @if($sliderBanners->isNotEmpty())
                         <div id="home-banner" class="home-banner carousel slide" aria-roledescription="carousel">
                             <div class="carousel-inner">
@@ -74,8 +82,7 @@
                             @foreach($sideBanners as $banner)
                                 @php $tag = $banner->link_url ? 'a' : 'div'; @endphp
                                 <{{ $tag }} class="home-side-banner" @if($banner->link_url) href="{{ $banner->link_url }}" @endif>
-                                    <img src="{{ $banner->src('side') }}" srcset="{{ $banner->srcset('side') }}"
-                                         sizes="(min-width: 1536px) 370px, (min-width: 992px) calc(25vw - 12px), calc(50vw - 20px)"
+                                    <img src="{{ $banner->src('side') }}" srcset="{{ $banner->srcset('side') }}" sizes="{{ $sideSizes }}"
                                          width="800" height="400" alt="{{ $banner->title }}" decoding="async">
                                 </{{ $tag }}>
                             @endforeach
@@ -98,11 +105,11 @@
                 <ul class="home-categories">
                     @foreach($categories as $category)
                         <li>
-                            <a class="home-category" href="{{ route('shop.category', $category) }}">
+                            <a class="home-category" href="{{ route('shop.category', $category) }}" style="--tile-color: {{ $category->icon_color }}">
                                 @if($category->image_url)
                                     <img src="{{ $category->image_url }}" alt="" width="56" height="56" loading="lazy">
                                 @else
-                                    <x-category-icon :name="$category->icon" />
+                                    <span class="home-category-icon"><x-category-icon :name="$category->icon" /></span>
                                 @endif
                                 <span class="home-category-name">{{ $category->name }}</span>
                             </a>
@@ -114,7 +121,7 @@
     @endif
 
     @if($deals->isNotEmpty())
-        <x-product-rail id="deals" title="Deals" subtitle="Marked down from their regular price"
+        <x-product-rail id="deals" title="Deals of the Day" subtitle="A new pick of markdowns every day"
                         :products="$deals" :view-all="route('shop', ['sale' => 1])" variant="deal" />
     @endif
 
@@ -355,14 +362,36 @@
     text-decoration: none;
 }
 
-.home-category .category-icon,
 .home-category img {
     flex: none;
     width: 40px;
     height: 40px;
     object-fit: contain;
-    color: var(--sf-ink);
-    stroke-width: 1.1;
+}
+
+/* The icon in its category's colour, on a pale tint of it (Category::getIconColorAttribute()) */
+.home-category-icon {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: var(--sf-hover);
+    background: color-mix(in srgb, var(--tile-color) 12%, #FFFFFF);
+    color: var(--tile-color);
+    transition: background-color .2s ease;
+}
+
+.home-category-icon .category-icon {
+    width: 28px;
+    height: 28px;
+    stroke-width: 1.75;
+}
+
+.home-category:hover .home-category-icon {
+    background: color-mix(in srgb, var(--tile-color) 20%, #FFFFFF);
 }
 
 .home-category-name {
@@ -394,10 +423,20 @@
         border-radius: 12px;
     }
 
-    .home-category .category-icon,
     .home-category img {
         width: 56px;
         height: 56px;
+    }
+
+    .home-category-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 18px;
+    }
+
+    .home-category-icon .category-icon {
+        width: 36px;
+        height: 36px;
     }
 
     .home-category-name {
@@ -414,13 +453,22 @@
         grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
     }
 
-    /* Two banners share the slider's height */
+    .home-hero-grid.has-side-grid {
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    }
+
+    /* The side banners share the slider's height: two stacked, or four in a 2×2 grid */
     .home-hero-grid.has-side .home-side {
         grid-template-columns: minmax(0, 1fr);
         grid-template-rows: repeat(2, minmax(0, 1fr));
     }
 
-    .home-hero-grid.has-side .home-side-banner img {
+    .home-hero-grid.has-side-grid .home-side {
+        grid-template-rows: repeat(2, minmax(0, 1fr));
+    }
+
+    .home-hero-grid.has-side .home-side-banner img,
+    .home-hero-grid.has-side-grid .home-side-banner img {
         position: absolute;
         inset: 0;
         height: 100%;
@@ -506,6 +554,7 @@
 
 @media (prefers-reduced-motion: reduce) {
     .home-category,
+    .home-category-icon,
     .home-side-banner img {
         transition: none;
     }

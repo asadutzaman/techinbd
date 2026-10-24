@@ -55,8 +55,8 @@ class BrandController extends Controller
             $data['logo'] = $logoName;
         }
 
-        // Handle status checkbox
-        $data['status'] = $request->has('status') ? 1 : 0;
+        // An unticked switch isn't submitted
+        $data['status'] = $request->boolean('status');
 
         Brand::create($data);
 
@@ -116,8 +116,8 @@ class BrandController extends Controller
             $data['logo'] = $logoName;
         }
 
-        // Handle status checkbox
-        $data['status'] = $request->has('status') ? 1 : 0;
+        // An unticked switch isn't submitted
+        $data['status'] = $request->boolean('status');
 
         $brand->update($data);
 

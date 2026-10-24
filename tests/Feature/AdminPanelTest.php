@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Mail\TestEmail;
 use App\Models\AttributeOptimized;
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderEmail;
@@ -135,6 +136,89 @@ class AdminPanelTest extends TestCase
         $this->assertNull($product->variants->sole()->compare_price);
         $this->assertFalse($product->featured);
         $this->assertSame(9, $product->total_stock, 'Ending the sale keeps the stock typed in the form');
+    }
+
+    public function test_a_brand_can_be_switched_off_and_on_again(): void
+    {
+        $brand = Brand::factory()->create(['name' => 'Fantech']);
+        $this->actingAs($this->admin());
+
+        // An unticked switch sends nothing
+        $this->put(route('admin.brands.update', $brand->id), ['name' => 'Fantech'])->assertSessionHasNoErrors();
+        $this->assertFalse($brand->fresh()->status);
+
+        $this->put(route('admin.brands.update', $brand->id), ['name' => 'Fantech', 'status' => '1'])->assertSessionHasNoErrors();
+        $this->assertTrue($brand->fresh()->status);
+
+        $this->post(route('admin.brands.store'), ['name' => 'Rapoo', 'status' => '1'])->assertSessionHasNoErrors();
+        $this->assertTrue(Brand::firstWhere('name', 'Rapoo')->status);
+        $this->get(route('admin.brands.edit', $brand->id))->assertSee('name="status" value="1"', false);
+    }
+
+    public function test_a_product_keeps_its_brand_when_the_brand_is_switched_off(): void
+    {
+        $brand = Brand::factory()->create(['name' => 'Fantech', 'status' => false]);
+        $product = ProductOptimized::factory()->create(['brand_id' => $brand->id]);
+
+        $html = $this->actingAs($this->admin())->get(route('admin.products.edit', $product->id))->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('#<option value="' . $brand->id . '"\s+selected>\s*Fantech \(hidden\)\s*</option>#', $html);
+        $this->assertStringContainsString('Fantech is switched off', $html);
+        $this->get(route('admin.products.index'))->assertSee('Fantech (hidden)');
+    }
+
+    public function test_a_category_can_have_a_shorter_name_for_the_menu(): void
+    {
+        $laptops = Category::factory()->create(['name' => 'Laptop']);
+        $this->actingAs($this->admin());
+
+        $this->post(route('admin.categories.store'), ['name' => 'ASUS Laptop', 'menu_name' => ' ASUS ', 'parent_id' => $laptops->id, 'status' => 1, 'is_menu' => 1])
+            ->assertSessionHasNoErrors();
+        $asus = Category::firstWhere('name', 'ASUS Laptop');
+        $this->assertSame('ASUS', $asus->menu_name);
+        $this->assertSame('ASUS', $asus->menu_label);
+        $this->get(route('admin.categories.edit', $asus->id))->assertSee('value="ASUS"', false);
+
+        // Emptied, the menu uses the name again
+        $this->put(route('admin.categories.update', $asus->id), ['name' => 'ASUS Laptop', 'menu_name' => '', 'parent_id' => $laptops->id, 'status' => 1])
+            ->assertSessionHasNoErrors();
+        $this->assertNull($asus->fresh()->menu_name);
+        $this->assertSame('ASUS Laptop', $asus->fresh()->menu_label);
+    }
+
+    public function test_a_product_can_also_show_in_other_categories(): void
+    {
+        $keyboards = Category::factory()->create(['name' => 'Keyboard']);
+        $gamingKeyboards = Category::factory()->create(['name' => 'Gaming Keyboard']);
+        $deals = Category::factory()->create(['name' => 'Clearance']);
+        $form = [
+            'name' => 'Kumara K552',
+            'category_id' => $keyboards->id,
+            'base_price' => 3200,
+            'stock_status' => 'in_stock',
+            'status' => 1,
+        ];
+        $this->actingAs($this->admin());
+
+        // Its own category is skipped: it lists the product already
+        $this->post(route('admin.products.store'), $form + ['extra_categories' => [$gamingKeyboards->id, $keyboards->id]])->assertSessionHasNoErrors();
+        $product = ProductOptimized::sole();
+        $this->assertSame([$gamingKeyboards->id], $product->extraCategories()->pluck('categories.id')->all());
+
+        $this->assertMatchesRegularExpression(
+            '#name="extra_categories\[\]" value="' . $gamingKeyboards->id . '" checked>#',
+            $this->get(route('admin.products.edit', $product->id))->assertOk()->getContent()
+        );
+        $this->get(route('admin.products.show', $product->id))->assertSee('Also shows in')->assertSee('Gaming Keyboard');
+        $this->get(route('admin.products.index', ['category' => $gamingKeyboards->id]))->assertSee('Kumara K552');
+        $this->get(route('admin.categories.index'))->assertSee('+1 listed');
+
+        $this->put(route('admin.products.update', $product->id), $form + ['extra_categories' => [$deals->id]])->assertSessionHasNoErrors();
+        $this->assertSame([$deals->id], $product->extraCategories()->pluck('categories.id')->all());
+
+        // Unticking them all sends nothing
+        $this->put(route('admin.products.update', $product->id), $form)->assertSessionHasNoErrors();
+        $this->assertSame(0, $product->extraCategories()->count());
     }
 
     public function test_two_products_can_have_the_same_name(): void

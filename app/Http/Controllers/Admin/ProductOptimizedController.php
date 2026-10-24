@@ -20,13 +20,16 @@ use Illuminate\Support\Str;
 class ProductOptimizedController extends Controller
 {
     /**
-     * The "was" price and the key specs, for both the create and edit forms.
+     * The "was" price, the key specs and the extra categories, for both the create and edit forms.
      */
     private const SALE_AND_SPEC_RULES = [
         'compare_price' => 'nullable|numeric|gt:base_price',
         'specs' => 'nullable|array|max:40',
         'specs.*.label' => 'nullable|string|max:60',
         'specs.*.value' => 'nullable|string|max:255',
+        // Other categories that list it too ("Also show in")
+        'extra_categories' => 'nullable|array',
+        'extra_categories.*' => 'integer|exists:categories,id',
     ];
 
     private const SALE_AND_SPEC_MESSAGES = [
@@ -60,9 +63,9 @@ class ProductOptimizedController extends Controller
             });
         }
 
-        // A category includes its subcategories' products
+        // A category includes its subcategories' products, and those listed there too
         if ($category && $selected = Category::find($category)) {
-            $query->whereIn('category_id', $selected->familyIds());
+            $query->inCategories($selected->familyIds());
         }
 
         if ($brand) {
@@ -75,9 +78,9 @@ class ProductOptimizedController extends Controller
 
         $products = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
-        // Get filter options
+        // Get filter options; switched-off brands too, as their products are still here
         $categories = Category::nestedList();
-        $brands = Brand::where('status', true)->orderBy('name')->get(['id', 'name']);
+        $brands = Brand::orderBy('name')->get(['id', 'name', 'status']);
 
         return view('admin.products.index', compact('products', 'categories', 'brands'));
     }
@@ -166,6 +169,7 @@ class ProductOptimizedController extends Controller
             }
 
             $this->saveComparePrice($product, $request->input('compare_price'));
+            $this->saveExtraCategories($product, $request);
 
             // Update search index
             $product->updateSearchIndex();
@@ -187,6 +191,7 @@ class ProductOptimizedController extends Controller
         $product = ProductOptimized::with([
             'brand',
             'category',
+            'extraCategories',
             'images' => fn ($query) => $query->orderByDesc('is_main')->orderBy('sort_order')->orderBy('id'),
             'variants' => fn ($query) => $query->orderByDesc('is_default')->orderBy('price')->orderBy('id'),
             'productAttributes.attribute',
@@ -209,6 +214,8 @@ class ProductOptimizedController extends Controller
     public function edit($id)
     {
         $product = ProductOptimized::with([
+            'brand',
+            'extraCategories',
             'images',
             'variants',
             'productAttributes.attribute',
@@ -216,7 +223,8 @@ class ProductOptimizedController extends Controller
         ])->findOrFail($id);
 
         $categories = Category::nestedList();
-        $brands = Brand::where('status', true)->orderBy('name')->get();
+        // The product's own brand stays listed when it's switched off, or saving would clear it
+        $brands = Brand::where('status', true)->orWhere('id', $product->brand_id)->orderBy('name')->get();
 
         // Get current product attributes as key-value pairs
         $currentAttributes = [];
@@ -282,6 +290,7 @@ class ProductOptimizedController extends Controller
 
             $product->update($productData);
             $this->saveComparePrice($product, $request->input('compare_price'));
+            $this->saveExtraCategories($product, $request);
 
             // Handle new images
             if ($request->hasFile('images')) {
@@ -412,6 +421,22 @@ class ProductOptimizedController extends Controller
             $variant->product()->associate($product);
             $variant->save();
         }
+    }
+
+    /**
+     * The other categories that list the product ("Also show in"). Its own category is left out: it
+     * already lists the product.
+     */
+    private function saveExtraCategories(ProductOptimized $product, Request $request): void
+    {
+        $ids = collect($request->input('extra_categories', []))
+            ->map(fn ($id) => (int) $id)
+            ->reject(fn ($id) => $id === (int) $product->category_id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $product->extraCategories()->sync($ids);
     }
 
     /**

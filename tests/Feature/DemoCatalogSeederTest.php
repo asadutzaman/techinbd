@@ -18,6 +18,16 @@ class DemoCatalogSeederTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_menus_list_laptops_by_brand_and_gaming_subcategories_without_gaming(): void
+    {
+        $this->seed(CategorySeeder::class);
+        $menuLabels = fn (string $slug) => Category::firstWhere('slug', $slug)->children()->get()->map->menu_label->all();
+
+        $this->assertSame(['Apple', 'ASUS', 'HP', 'Lenovo', 'Dell', 'Acer', 'MSI', 'Laptop Cooler'], $menuLabels('laptop'));
+        $this->assertSame(['Laptop', 'PC', 'Monitor', 'Keyboard', 'Mouse', 'Headphone', 'Mouse Pad', 'Casing'], $menuLabels('gaming'));
+        $this->assertSame('Gaming Keyboard', Category::firstWhere('slug', 'gaming-keyboard')->name, 'Pages keep the full name');
+    }
+
     public function test_it_seeds_the_startech_catalog_into_subcategories_retires_earlier_demos_and_is_safe_to_rerun(): void
     {
         Storage::fake('public');
@@ -30,6 +40,10 @@ class DemoCatalogSeederTest extends TestCase
         $phones = Category::factory()->create(['slug' => 'smartphone', 'is_menu' => true, 'is_featured' => true]);
         $television = Category::factory()->create(['slug' => 'television', 'name' => 'Television', 'is_menu' => true]);
         $monitors = Category::factory()->create(['slug' => 'monitor', 'name' => 'Monitor']);
+        // The earlier tree: Gadget before it became Smart Gadget, and Charger & Cable before it moved under it
+        $gadgets = Category::factory()->create(['slug' => 'gadget', 'name' => 'Gadget', 'is_menu' => true]);
+        $chargerCable = Category::factory()->create(['slug' => 'charger-cable', 'name' => 'Charger & Cable', 'is_menu' => true]);
+        Category::factory()->create(['slug' => 'charger', 'name' => 'Charger', 'parent_id' => $chargerCable->id]);
         $levis = Brand::factory()->create(['slug' => 'levis']);
         $zotac = Brand::factory()->create(['slug' => 'western-digital']);
         $oldDemo = ProductOptimized::factory()->create(['sku' => 'TIB-MEN-001', 'category_id' => $fashion->id, 'brand_id' => $levis->id]);
@@ -41,6 +55,10 @@ class DemoCatalogSeederTest extends TestCase
         $oldCover = ProductImageOptimized::create(['product_id' => $reused->id, 'url' => 'products/demo/tib-mon-001.jpg', 'is_main' => true, 'sort_order' => 0]);
 
         $this->seed(DemoCatalogSeeder::class);
+        // A listing added in admin: a keyboard that isn't named as a gaming one, in Gaming Keyboard
+        $gamingKeyboards = Category::firstWhere('slug', 'gaming-keyboard');
+        $officeKeyboard = ProductOptimized::where('sku', 'like', 'TIB-KBD-%')->where('name', 'not like', '%gaming%')->orderBy('sku')->firstOrFail();
+        $officeKeyboard->extraCategories()->attach($gamingKeyboards);
         $this->seed(DemoCatalogSeeder::class);
 
         $this->assertSame($productCount, ProductOptimized::where('sku', 'like', 'TIB-%')->count());
@@ -58,9 +76,12 @@ class DemoCatalogSeederTest extends TestCase
         // The tree: 11 categories, products in the subcategories (and Monitor, which has none)
         $this->assertSame(11, Category::whereNull('parent_id')->where('is_menu', true)->count());
         $this->assertSame(count(CategorySeeder::slugs()), Category::whereIn('slug', CategorySeeder::slugs())->count());
-        $this->assertSame(28, Category::where('is_featured', true)->count());
-        $this->assertSame(['Laptop', 'Monitor', 'Peripherals', 'Desktop PC', 'PC Components', 'Office Equipment', 'Networking', 'TV', 'Gadget', 'Charger & Cable', 'Printer'],
+        $this->assertSame(16, Category::where('is_featured', true)->count(), 'Two rows of category tiles');
+        $this->assertSame(['Laptop', 'Desktop PC', 'Monitor', 'PC Components', 'Peripherals', 'Smart Gadget', 'Gaming', 'TV', 'Office Equipment', 'Printer', 'Networking'],
             Category::whereNull('parent_id')->where('is_menu', true)->orderBy('sort_order')->pluck('name')->all());
+        $this->assertSame('Smart Gadget', $gadgets->fresh()->name, 'Renamed, as it still had the old name');
+        $this->assertSame(['Apple', 'ASUS', 'HP', 'Lenovo', 'Dell', 'Acer', 'MSI', 'Laptop Cooler'],
+            Category::firstWhere('slug', 'laptop')->children()->get()->map->menu_label->all(), 'The laptop menu lists brands');
         $this->assertSame(0, ProductOptimized::where('sku', 'like', 'TIB-%')
             ->whereHas('category', fn ($category) => $category->whereNull('parent_id')->where('slug', '!=', 'monitor'))
             ->count(), 'Products sit in subcategories');
@@ -125,12 +146,26 @@ class DemoCatalogSeederTest extends TestCase
         $this->get('/category/gadget')->assertOk()->assertSee('Showing 1–24 of ' . $gadgetFamily . ' products');
         $this->get('/category/smart-watch')->assertOk()->assertSee('Showing 1–24 of ' . count($catalog['products']['smart-watch']) . ' products');
         $this->get('/shop?search=amazfit+bip+max')->assertOk()->assertSee('Amazfit Bip Max');
-        // A subcategory from the second source, under its own top-level category
+        // A subcategory from the second source; Charger & Cable moved under Smart Gadget, and its address leads there
         $this->get('/category/charger')->assertOk()->assertSee('Showing 1–24 of ' . count($catalog['products']['charger']) . ' products');
-        $this->assertSame('charger-cable', Category::firstWhere('slug', 'charger')->parent->slug);
+        $this->assertSame('gadget', Category::firstWhere('slug', 'charger')->parent->slug);
+        $this->assertNull(Category::find($chargerCable->id));
+        $this->get('/category/charger-cable')->assertRedirect('/category/gadget');
         // PC components, from StarTech, under their own top-level category
         $this->get('/category/graphics-card')->assertOk()->assertSee('Showing 1–24 of ' . count($catalog['products']['graphics-card']) . ' products');
         $this->assertSame('pc-components', Category::firstWhere('slug', 'processor')->parent->slug);
         $this->get('/shop?search=ryzen+7+7700')->assertOk()->assertSee('Ryzen 7 7700');
+
+        // Gaming products stay in their own category and are listed under Gaming too
+        $named = fn (string $slug) => array_values(array_filter($catalog['products'][$slug], fn ($item) => preg_match('/\b(gaming|rog)\b/i', $item['name'])));
+        $gamingNamed = $named('keyboard');
+        $this->assertGreaterThan(20, count($gamingNamed));
+        $this->get('/category/gaming-keyboard')->assertOk()->assertSee('Showing 1–24 of ' . (count($gamingNamed) + 1) . ' products');
+        $this->get('/category/keyboard')->assertOk()->assertSee('Showing 1–24 of ' . count($catalog['products']['keyboard']) . ' products');
+        $this->assertTrue($officeKeyboard->extraCategories()->whereKey($gamingKeyboards->id)->exists(), 'A listing added in admin stays');
+        // The laptops, not the coolers beside them
+        $laptopSlugs = array_diff(array_keys(CategorySeeder::CATEGORIES['laptop'][3]), ['laptop-cooler']);
+        $gamingLaptops = array_sum(array_map(fn ($slug) => count($named($slug)), $laptopSlugs));
+        $this->assertSame($gamingLaptops, Category::firstWhere('slug', 'gaming-laptop')->extraProducts()->count());
     }
 }

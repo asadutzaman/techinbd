@@ -1,7 +1,7 @@
 /*
  * Storefront behaviour shared by every page: the drawers (phone menu, shop filters), the phone search
- * toggle, the product rails' scroll buttons, the product cards' Add to cart and compare buttons, and the
- * account forms' Show / Hide password buttons.
+ * toggle, the category bar's menu placement, the product rails' scroll buttons, the product cards' Add to
+ * cart and compare buttons, and the account forms' Show / Hide password buttons.
  * Plain JS; loaded at the end of the layout.
  */
 (function () {
@@ -128,6 +128,28 @@
             }
         });
     }
+
+    // ---------- Category bar ----------
+    // A menu or brand list that would run off the right of the screen opens leftwards instead. Measured as each
+    // category is reached, so it follows the window's width and the menu's real size.
+    document.querySelectorAll('.sf-catbar-list > li.has-menu').forEach(function (item) {
+        function place() {
+            item.querySelectorAll('.sf-catbar-menu, .sf-catbar-flyout').forEach(function (menu) {
+                menu.classList.remove('is-flipped');
+                if (menu.getBoundingClientRect().right > document.documentElement.clientWidth - 8) {
+                    menu.classList.add('is-flipped');
+                }
+            });
+        }
+
+        item.addEventListener('pointerenter', place);
+        item.addEventListener('focusin', function (event) {
+            // Once per visit, not on every Tab inside it
+            if (!item.contains(event.relatedTarget)) {
+                place();
+            }
+        });
+    });
 
     // ---------- Product rails ----------
     document.querySelectorAll('[data-rail]').forEach(function (section) {

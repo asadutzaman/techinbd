@@ -125,14 +125,32 @@ class BannerTest extends TestCase
         $this->assertStringContainsString('aria-label="1 of 1"', $html, 'Side banners are not slides');
     }
 
-    public function test_only_the_first_two_side_banners_show(): void
+    public function test_three_side_banners_show_the_first_two_stacked(): void
     {
         $this->makeBanner(['title' => 'Main slide']);
         $this->makeBanner(['title' => 'Side one', 'placement' => 'side', 'sort_order' => 1]);
         $this->makeBanner(['title' => 'Side two', 'placement' => 'side', 'sort_order' => 2]);
         $this->makeBanner(['title' => 'Side three', 'placement' => 'side', 'sort_order' => 3]);
 
-        $this->get('/')->assertOk()->assertSeeInOrder(['Side one', 'Side two'])->assertDontSee('Side three');
+        $this->get('/')->assertOk()
+            ->assertSee('home-hero-grid has-side"', false)
+            ->assertSeeInOrder(['Side one', 'Side two'])
+            ->assertDontSee('Side three');
+    }
+
+    public function test_four_side_banners_make_a_grid_beside_a_narrower_slider(): void
+    {
+        $this->makeBanner(['title' => 'Main slide']);
+        foreach (['one', 'two', 'three', 'four', 'five'] as $position => $name) {
+            $this->makeBanner(['title' => "Side {$name}", 'placement' => 'side', 'sort_order' => $position + 1]);
+        }
+
+        $this->get('/')->assertOk()
+            ->assertSee('home-hero-grid has-side-grid', false)
+            ->assertSee('(min-width: 992px) calc(60vw - 38px)', false)
+            ->assertSee('(min-width: 1536px) 286px', false)
+            ->assertSeeInOrder(['Side one', 'Side two', 'Side three', 'Side four'])
+            ->assertDontSee('Side five');
     }
 
     public function test_a_slider_without_side_banners_takes_the_whole_row(): void
@@ -230,13 +248,16 @@ class BannerTest extends TestCase
         $slides = $banners->reject->isSide()->values();
         $sides = $banners->filter->isSide()->values();
         $this->assertCount(3, $slides);
-        $this->assertCount(2, $sides);
+        $this->assertCount(4, $sides);
         $this->assertStringStartsWith('MacBook Air M5', $slides[0]->title);
         $this->assertStringStartsWith('Smart gadgets', $slides[1]->title);
         $this->assertSame('/category/gadget', $slides[1]->link_url);
         $this->assertStringStartsWith('Gaming laptops', $slides[2]->title);
         $this->assertStringStartsWith('Cash on delivery', $sides[0]->title);
         $this->assertSame('/shop?sale=1', $sides[1]->link_url);
+        $this->assertSame('/category/gaming', $sides[2]->link_url);
+        $this->assertSame('/category/pc-components', $sides[3]->link_url);
+        $this->assertSame('/category/gaming-laptop', $slides[2]->link_url);
         $this->assertNull(Banner::find($retired->id));
         $this->assertNull(Banner::find($graphicsCards->id));
 
@@ -258,7 +279,7 @@ class BannerTest extends TestCase
         // Re-running updates in place rather than adding duplicates, and leaves unchanged artwork alone
         $generated = $macbook->images;
         $this->seed(\Database\Seeders\BannerSeeder::class);
-        $this->assertSame(5, Banner::count());
+        $this->assertSame(7, Banner::count());
         $this->assertSame($generated, $macbook->fresh()->images);
     }
 

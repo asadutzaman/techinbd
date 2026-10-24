@@ -307,16 +307,21 @@
                                     id="brand_id" name="brand_id">
                                 <option value="">Select Brand (Optional)</option>
                                 @foreach($brands as $brand)
-                                    <option value="{{ $brand->id }}" 
+                                    <option value="{{ $brand->id }}"
                                             {{ old('brand_id', $product->brand_id) == $brand->id ? 'selected' : '' }}>
-                                        {{ $brand->name }}
+                                        {{ $brand->name }}{{ $brand->status ? '' : ' (hidden)' }}
                                     </option>
                                 @endforeach
                             </select>
                             @error('brand_id')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+                            @if($product->brand && ! $product->brand->status)
+                                <small class="form-text text-muted">{{ $product->brand->name }} is switched off, so this product doesn't show in the shop.</small>
+                            @endif
                         </div>
+
+                        @include('admin.products._extra_categories', ['extraCategoryIds' => $product->extraCategories->pluck('id')->all()])
                     </div>
                 </div>
 

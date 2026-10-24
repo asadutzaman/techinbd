@@ -61,9 +61,9 @@
                         <select class="form-control" id="brand" name="brand">
                             <option value="">All Brands</option>
                             @foreach($brands as $brand)
-                                <option value="{{ $brand->id }}" 
+                                <option value="{{ $brand->id }}"
                                         {{ request('brand') == $brand->id ? 'selected' : '' }}>
-                                    {{ $brand->name }}
+                                    {{ $brand->name }}{{ $brand->status ? '' : ' (hidden)' }}
                                 </option>
                             @endforeach
                         </select>

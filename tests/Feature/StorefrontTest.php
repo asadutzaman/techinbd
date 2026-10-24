@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\ProductOptimized;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -33,6 +34,41 @@ class StorefrontTest extends TestCase
         $this->get('/shop')->assertOk()->assertDontSee($hidden->name);
         $this->get(route('product.detail', $hidden))->assertNotFound();
         $this->get('/product/' . $hidden->id)->assertNotFound();
+    }
+
+    public function test_switching_a_brand_off_hides_its_products_until_it_is_switched_on(): void
+    {
+        $user = User::factory()->create();
+        $keyboards = Category::factory()->create(['name' => 'Keyboards', 'is_menu' => true]);
+        $fantech = Brand::factory()->create(['name' => 'Fantech']);
+        $hidden = ProductOptimized::factory()->featured()->onSale(2500)->create([
+            'name' => 'MK853 Mechanical Keyboard', 'base_price' => 2000, 'category_id' => $keyboards->id, 'brand_id' => $fantech->id,
+        ]);
+        $other = ProductOptimized::factory()->featured()->create(['name' => 'K120 Office Keyboard', 'category_id' => $keyboards->id]);
+        $this->actingAs($user)->post(route('cart.add'), ['product_id' => $hidden->id, 'quantity' => 2])->assertOk();
+
+        $fantech->update(['status' => false]);
+
+        $this->get('/')->assertOk()->assertSee($other->name)->assertDontSee($hidden->name);
+        $this->get('/shop')->assertOk()->assertSee($other->name)->assertDontSee('MK853')->assertDontSee('Fantech');
+        $this->assertMatchesRegularExpression('/Keyboards.*?shop-count">1</s', $this->get('/shop')->getContent());
+        $this->get(route('shop.category', $keyboards))->assertOk()->assertDontSee($hidden->name);
+        $this->get('/shop?search=mk853')->assertOk()->assertDontSee($hidden->name);
+        $this->getJson('/search/suggestions?q=mk853')->assertOk()->assertExactJson([]);
+        $this->get(route('product.detail', $hidden))->assertNotFound();
+        $this->get('/product/' . $hidden->id)->assertNotFound();
+        $this->postJson(route('cart.add'), ['product_id' => $hidden->id, 'quantity' => 1])->assertNotFound();
+
+        // The line already in the cart drops out of the cart, its badge and checkout
+        $this->get('/cart')->assertOk()->assertDontSee($hidden->name);
+        $this->assertSame(3, preg_match_all('#class="sf-count cart-count"\s+hidden\s*>0</span>#', $this->get('/')->getContent()));
+        $this->get('/checkout')->assertRedirect(route('cart'));
+
+        $fantech->update(['status' => true]);
+
+        $this->get('/shop')->assertSee($hidden->name)->assertSee('Fantech');
+        $this->get(route('product.detail', $hidden))->assertOk();
+        $this->get('/cart')->assertSee($hidden->name);
     }
 
     public function test_shop_sidebar_counts_active_catalog_products(): void

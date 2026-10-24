@@ -32,4 +32,17 @@
             <small class="form-text text-muted">Lower numbers come first in the menu.</small>
         </div>
     </div>
+    <div class="col-md-8">
+        <div class="form-group">
+            <label for="menu_name">Name in the menu <span class="text-muted font-weight-normal">(optional)</span></label>
+            <input type="text" maxlength="100" class="form-control @error('menu_name') is-invalid @enderror" id="menu_name" name="menu_name"
+                   value="{{ old('menu_name', $category?->menu_name) }}" placeholder="The name" aria-describedby="menu_name_help">
+            @error('menu_name')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+            <small class="form-text text-muted" id="menu_name_help">
+                A shorter name for its parent's menu, for example "ASUS" for ASUS Laptop under Laptop. Pages keep the name.
+            </small>
+        </div>
+    </div>
 </div>
