@@ -8,6 +8,8 @@ use App\Models\OrderItem;
 use App\Models\ProductOptimized;
 use App\Support\CatalogCache;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class HomeController extends Controller
 {
@@ -20,15 +22,26 @@ class HomeController extends Controller
     /** Best Sellers waits for this many products with sales, so two orders don't make a "best sellers" row */
     private const MIN_BEST_SELLERS = 4;
 
-    /** Deals of the Day are a dozen of this many biggest savings, a different dozen each day */
+    /** Top Deals are a dozen of this many biggest savings, a different dozen each day */
     private const DEAL_POOL = 96;
 
     private const DEALS_PER_CATEGORY = 2;
 
+    /** Trending deals: up to this many category tabs, each ranking this many deals */
+    private const TRENDING_TABS = 6;
+
+    private const TRENDING_SIZE = 10;
+
+    /** A category needs this many deals for a tab, so its row fills */
+    private const TRENDING_MIN = 8;
+
+    /** "Trending" counts the units ordered over this many days */
+    private const TRENDING_DAYS = 30;
+
     public function index(CatalogCache $catalogCache)
     {
         // Everything on the page comes from the catalog, so it's cached until the catalog changes. The day is in
-        // the key: Deals of the Day change at midnight in the shop's time zone.
+        // the key: Top Deals change at midnight in the shop's time zone.
         $day = now(config('shop.timezone'))->toDateString();
         $home = $catalogCache->remember('home:' . $day, 600, fn () => $this->homeData($day));
 
@@ -39,15 +52,21 @@ class HomeController extends Controller
         $home['sideBanners'] = $side->take($side->count() >= Banner::SIDE_SLOTS ? Banner::SIDE_SLOTS : Banner::STACKED_SIDE_SLOTS);
         unset($home['banners']);
 
+        // The cards' hearts: what's in the signed-in customer's wishlist
+        $home['wishlistIds'] = Auth::check() ? Auth::user()->wishlistItems()->pluck('product_id')->all() : [];
+
         return view('home', $home);
     }
 
     private function homeData(string $day): array
     {
+        $tree = Category::tree();
+
         return [
             'banners' => Banner::active()->get(),
-            'categories' => $this->categories(),
-            'deals' => $this->dealsOfTheDay($day),
+            'categories' => $this->categories($tree),
+            'deals' => $this->topDeals($day),
+            'trending' => $this->trendingDeals($tree),
             'featured' => $this->cards()->featured()->latest()->orderByDesc('id')->limit(self::ROW_SIZE)->get(),
             'latest' => $this->cards()->latest()->orderByDesc('id')->limit(self::ROW_SIZE)->get(),
             'bestSellers' => $this->bestSellers(),
@@ -67,7 +86,7 @@ class HomeController extends Controller
      * A dozen of the biggest savings: a different dozen each day and the same all day, shown biggest saving first.
      * Nothing about the deals themselves changes at midnight, so there's no countdown.
      */
-    private function dealsOfTheDay(string $day): Collection
+    private function topDeals(string $day): Collection
     {
         $pool = ProductOptimized::active()->onSale()->orderBySaving()->orderByDesc('id')->limit(self::DEAL_POOL)->get(['id', 'category_id'])
             ->sortBy(fn ($product) => crc32($day . ':' . $product->id))
@@ -86,12 +105,65 @@ class HomeController extends Controller
     }
 
     /**
+     * Trending deals: a tab per menu category with enough deals, in menu order. Each ranks the category's deals (its
+     * subcategories', and those listed in it) by units ordered lately, then by the biggest saving.
+     *
+     * @return Collection<int, array{category: Category, products: Collection<int, ProductOptimized>}>
+     */
+    private function trendingDeals(Collection $tree): Collection
+    {
+        // Units ordered over the past month, leaving out cancelled orders
+        $sold = OrderItem::query()
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.status', '!=', 'cancelled')
+            ->where('orders.created_at', '>=', now()->subDays(self::TRENDING_DAYS))
+            ->whereNotNull('order_items.product_id')
+            ->groupBy('order_items.product_id')
+            ->selectRaw('order_items.product_id, sum(order_items.quantity) as units')
+            ->pluck('units', 'product_id');
+
+        // Every deal with its saving, and the other categories each is listed in (Gaming)
+        $deals = ProductOptimized::active()->onSale()->select('id', 'category_id', 'base_price')->withMax('variants', 'compare_price')->get();
+        $listedIn = DB::table('product_categories')
+            ->whereIn('product_id', ProductOptimized::active()->onSale()->select('products_optimized.id'))
+            ->get(['product_id', 'category_id'])
+            ->groupBy('product_id');
+        $saving = fn ($deal) => (float) $deal->variants_max_compare_price - (float) $deal->base_price;
+
+        $tabs = $tree->filter(fn (Category $category) => $category->is_menu)
+            ->map(function (Category $category) use ($deals, $listedIn, $sold, $saving) {
+                $family = $category->familyIds();
+                $ranked = $deals
+                    ->filter(fn ($deal) => in_array($deal->category_id, $family)
+                        || $listedIn->get($deal->id, collect())->contains(fn ($listing) => in_array($listing->category_id, $family)))
+                    ->sortBy([
+                        fn ($a, $b) => ($sold[$b->id] ?? 0) <=> ($sold[$a->id] ?? 0),
+                        fn ($a, $b) => $saving($b) <=> $saving($a),
+                        fn ($a, $b) => $b->id <=> $a->id,
+                    ]);
+
+                return ['category' => $category, 'ids' => $ranked->take(self::TRENDING_SIZE)->pluck('id'), 'count' => $ranked->count()];
+            })
+            ->filter(fn (array $tab) => $tab['count'] >= self::TRENDING_MIN)
+            ->take(self::TRENDING_TABS)
+            ->values();
+
+        // One query for every tab's cards
+        $cards = $this->cards()->whereIn('id', $tabs->pluck('ids')->flatten()->unique()->values())->get()->keyBy('id');
+
+        return $tabs->map(fn (array $tab) => [
+            'category' => $tab['category'],
+            'products' => $tab['ids']->map(fn ($id) => $cards[$id])->values(),
+        ]);
+    }
+
+    /**
      * The featured categories and subcategories with active products, in menu order (each category
      * followed by its subcategories); the top-level categories when none are featured.
      */
-    private function categories(): Collection
+    private function categories(Collection $tree): Collection
     {
-        $tree = Category::tree()->filter(fn ($category) => $category->products_count > 0);
+        $tree = $tree->filter(fn ($category) => $category->products_count > 0);
         $featured = $tree->flatMap(fn ($category) => [$category, ...$category->children])
             ->filter(fn ($category) => $category->is_featured && $category->products_count > 0);
 

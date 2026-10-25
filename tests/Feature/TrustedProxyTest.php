@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Banner;
 use App\Models\ProductOptimized;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -35,8 +36,10 @@ class TrustedProxyTest extends TestCase
     {
         ProductOptimized::factory()->featured()->create();
 
-        // Browsers block http:// images and AJAX on an https page, which hid the banner on the public site
-        $html = $this->withHeaders(['X-Forwarded-Proto' => 'https', 'X-Forwarded-For' => '203.0.113.9'])
+        // Browsers block http:// images and AJAX on an https page, which hid the banner on the public site.
+        // Signed in, the home cards' hearts post to the wishlist.
+        $html = $this->actingAs(User::factory()->create())
+            ->withHeaders(['X-Forwarded-Proto' => 'https', 'X-Forwarded-For' => '203.0.113.9'])
             ->get('/')
             ->assertOk()
             ->getContent();
@@ -44,7 +47,7 @@ class TrustedProxyTest extends TestCase
         $this->assertStringContainsString('srcset="https://localhost/storage/banners/1/desktop-800-abc.webp 800w', $html);
         $this->assertStringContainsString('imagesrcset="https://localhost/storage/banners/1/mobile-600-abc.webp 600w', $html);
         $this->assertStringContainsString("url: 'https://localhost/search/suggestions'", $html);
-        $this->assertStringContainsString('data-cart-url="https://localhost/cart/add"', $html);
+        $this->assertStringContainsString('data-wishlist-url="https://localhost/customer/wishlist/toggle"', $html);
         $this->assertStringNotContainsString('http://localhost', $html);
     }
 

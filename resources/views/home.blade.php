@@ -121,22 +121,36 @@
     @endif
 
     @if($deals->isNotEmpty())
-        <x-product-rail id="deals" title="Deals of the Day" subtitle="A new pick of markdowns every day"
-                        :products="$deals" :view-all="route('shop', ['sale' => 1])" variant="deal" />
+        <!-- Top Deals: a new dozen of the biggest savings every day (HomeController::topDeals()) -->
+        <section class="sf-section" aria-labelledby="deals-title">
+            <div class="sf-container">
+                <div class="sf-panel home-top-deals">
+                    <div class="home-top-deals-intro">
+                        <h2 class="home-top-deals-tile" id="deals-title"><span class="home-top-deals-top">Top</span> <span class="home-top-deals-word">Deals</span></h2>
+                        <a class="home-top-deals-all" href="{{ route('shop', ['sale' => 1]) }}">See all Top Deals</a>
+                    </div>
+                    <x-rail-cards id="deals" title="Top Deals" :products="$deals" :wishlist="$wishlistIds" label="Top Deal" variant="deal" />
+                </div>
+            </div>
+        </section>
     @endif
 
     @if($featured->isNotEmpty())
         <x-product-rail id="featured" title="Featured Products" subtitle="Picked by our team"
-                        :products="$featured" :view-all="route('shop', ['featured' => 1])" />
+                        :products="$featured" :view-all="route('shop', ['featured' => 1])" :wishlist="$wishlistIds" />
+    @endif
+
+    @if($trending->isNotEmpty())
+        <x-trending-deals :tabs="$trending" :wishlist="$wishlistIds" />
     @endif
 
     @if($latest->isNotEmpty())
         <x-product-rail id="latest" title="Latest Products" subtitle="New in the shop"
-                        :products="$latest" :view-all="route('shop', ['sort' => 'latest'])" />
+                        :products="$latest" :view-all="route('shop', ['sort' => 'latest'])" :wishlist="$wishlistIds" />
     @endif
 
     @if($bestSellers->isNotEmpty())
-        <x-product-rail id="best-sellers" title="Best Sellers" subtitle="Most ordered by our customers" :products="$bestSellers" />
+        <x-product-rail id="best-sellers" title="Best Sellers" subtitle="Most ordered by our customers" :products="$bestSellers" :wishlist="$wishlistIds" />
     @endif
 </div>
 @endsection
@@ -405,6 +419,109 @@
     line-height: 1.3;
 }
 
+/* ---------- Top Deals, after Best Buy's: a tile and "See all" beside the row (a strip above it on phones) ---------- */
+/* minmax(0, …): a column sized by its content would stretch to the whole row of cards */
+.home-top-deals {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+}
+
+.home-top-deals-intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+}
+
+/* Yellow words on a blue-to-teal square in a blue frame; the teal end still gives large text 3:1 */
+.home-top-deals-tile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .3em;
+    min-height: 64px;
+    margin: 0;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #0A4FC4, #0B7F8F);
+    border: 6px solid #0046BE;
+    border-radius: 4px;
+    font-size: 26px;
+    line-height: 1;
+    text-transform: uppercase;
+    color: #FFE000;
+}
+
+.home-top-deals-top {
+    font-weight: 400;
+}
+
+.home-top-deals-word {
+    font-weight: 800;
+    letter-spacing: -.02em;
+}
+
+.home-top-deals-all {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    border: 1px solid #C5CBD5;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    color: var(--sf-ink);
+}
+
+.home-top-deals-all:hover {
+    border-color: var(--sf-ink);
+    color: var(--sf-ink);
+    text-decoration: none;
+}
+
+/* ---------- Trending deals: category tabs over a ranked row ---------- */
+.home-trending-tabs {
+    display: flex;
+    gap: 10px;
+    margin: 0 -2px 12px;
+    padding: 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.home-trending-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.home-trending-tabs [role="tab"] {
+    flex: none;
+    height: 40px;
+    padding: 0 18px;
+    background: var(--sf-surface);
+    border: 1px solid #C5CBD5;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    color: var(--sf-ink);
+}
+
+.home-trending-tabs [role="tab"]:hover {
+    border-color: var(--sf-ink);
+}
+
+/* A 2px ring that doesn't move the text */
+.home-trending-tabs [role="tab"][aria-selected="true"] {
+    border-color: var(--sf-rank);
+    box-shadow: inset 0 0 0 1px var(--sf-rank);
+    color: var(--sf-rank);
+}
+
+/* The theme rings every focused button; the selected tab says enough after a click (keyboard focus keeps its outline) */
+.home-trending-tabs [role="tab"]:focus:not(:focus-visible) {
+    outline: none;
+}
+
 /* Four columns until there's room for eight, so 16 categories always fill whole rows */
 @media (min-width: 576px) {
     .home-categories {
@@ -478,6 +595,34 @@
     .home-categories {
         grid-template-columns: repeat(8, minmax(0, 1fr));
         gap: 16px;
+    }
+
+    .home-top-deals {
+        grid-template-columns: 290px minmax(0, 1fr);
+        gap: 32px;
+        align-items: start;
+    }
+
+    .home-top-deals-intro {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 20px;
+    }
+
+    .home-top-deals-tile {
+        flex-direction: column;
+        gap: 0;
+        aspect-ratio: 29 / 35;
+        border-width: 20px;
+        font-size: 64px;
+    }
+
+    .home-top-deals-top {
+        font-size: .86em;
+    }
+
+    .home-top-deals-all {
+        height: 50px;
+        font-size: 15px;
     }
 }
 
@@ -595,7 +740,7 @@ $(document).ready(function() {
         });
     }
 
-    // The product cards' cart buttons are wired up in public/js/storefront.js
+    // The rows' arrows, the cards' hearts and the Trending deals tabs are wired up in public/js/storefront.js
 });
 </script>
 @endpush

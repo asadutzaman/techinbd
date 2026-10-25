@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ProductOptimized;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Blade;
@@ -129,23 +130,28 @@ class HomePageTest extends TestCase
         }
     }
 
-    public function test_deals_list_marked_down_products_biggest_saving_first(): void
+    public function test_top_deals_list_marked_down_products_biggest_saving_first(): void
     {
         ProductOptimized::factory()->onSale(1200)->create(['name' => 'Small Saving Mouse', 'base_price' => 1000]);
         ProductOptimized::factory()->onSale(6000)->create(['name' => 'Big Saving Monitor', 'base_price' => 5000]);
         ProductOptimized::factory()->create(['name' => 'Full Price Cable', 'base_price' => 300]);
 
-        $deals = Str::betweenFirst($this->get('/')->assertOk()->getContent(), 'id="deals-rail"', '</ul>');
+        $html = $this->get('/')->assertOk()->getContent();
+        $deals = Str::betweenFirst($html, 'id="deals-rail"', '</ul>');
+
+        // The panel: the TOP DEALS tile is the heading, with a button to every deal
+        $this->assertMatchesRegularExpression('#<h2 class="home-top-deals-tile" id="deals-title">.*Top.*Deals</span></h2>#', $html);
+        $this->assertStringContainsString('<a class="home-top-deals-all" href="' . route('shop', ['sale' => 1]) . '">See all Top Deals</a>', $html);
 
         $this->assertMatchesRegularExpression('/Big Saving Monitor.*Small Saving Mouse/s', $deals);
         $this->assertStringNotContainsString('Full Price Cable', $deals);
-        $this->assertMatchesRegularExpression('#<span class="sf-card-save-tag">Save\s*<span class="price">.*1,000</span>#', $deals);
-        $this->assertMatchesRegularExpression('#<span class="sf-card-was">Was\s*<span class="price">.*6,000</span>#', $deals);
+        $this->assertMatchesRegularExpression('#<span class="sf-card-save-pill">Save <span class="price">.*1,000</span>#', $deals);
+        $this->assertStringContainsString('<p class="sf-card-label">Top Deal</p>', $deals);
+        $this->assertMatchesRegularExpression('#<p class="sf-card-old"><s><span class="sr-only">Was </span><span class="price">.*6,000</span>#', $deals);
         $this->assertStringContainsString('class="sf-card is-deal is-rail"', $deals);
-        $this->assertStringContainsString('<span class="sf-card-tag">Deal</span>', $deals);
     }
 
-    public function test_deals_of_the_day_are_a_new_dozen_each_day(): void
+    public function test_top_deals_are_a_new_dozen_each_day(): void
     {
         foreach (range(1, 30) as $i) {
             ProductOptimized::factory()->onSale(1000 + $i * 10)->create(['name' => "Deal {$i}", 'base_price' => 1000]);
@@ -162,10 +168,10 @@ class HomePageTest extends TestCase
         $this->assertCount(12, $saturday);
         $this->assertNotEquals($friday, $saturday, 'A new dozen after midnight in the shop');
         $this->assertSame(collect($saturday)->sortDesc()->values()->all(), $saturday, 'Biggest saving first');
-        $this->get('/')->assertSee('Deals of the Day')->assertDontSee('countdown');
+        $this->get('/')->assertSee('See all Top Deals')->assertDontSee('countdown');
     }
 
-    public function test_deals_of_the_day_take_two_at_most_from_a_category_while_others_are_on_sale(): void
+    public function test_top_deals_take_two_at_most_from_a_category_while_others_are_on_sale(): void
     {
         $tvs = Category::factory()->create(['name' => 'Smart TV']);
         foreach (range(1, 14) as $i) {
@@ -185,16 +191,81 @@ class HomePageTest extends TestCase
         $this->assertSame(12, substr_count(Str::betweenFirst($this->get('/')->assertOk()->getContent(), 'id="deals-rail"', '</ul>'), '>Deal TV '));
     }
 
-    public function test_rail_cards_show_the_model_and_the_stock(): void
+    public function test_trending_deals_rank_a_category_by_recent_sales_then_saving(): void
     {
-        ProductOptimized::factory()->featured()->create(['name' => 'Office Keyboard', 'manufacturer_part_no' => 'K120-BLK']);
+        $laptops = Category::factory()->create(['name' => 'Laptop', 'is_menu' => true, 'sort_order' => 1]);
+        $gaming = Category::factory()->create(['name' => 'Gaming', 'is_menu' => true, 'sort_order' => 2]);
+        $gamingLaptops = Category::factory()->create(['name' => 'Gaming Laptop', 'is_menu' => true, 'parent_id' => $gaming->id]);
+        $printers = Category::factory()->create(['name' => 'Printer', 'is_menu' => true, 'sort_order' => 3]);
+        $laptopDeals = collect(range(1, 9))->map(fn ($i) => ProductOptimized::factory()->onSale(1000 + $i * 100)->create([
+            'name' => "Laptop Deal {$i}", 'base_price' => 1000, 'category_id' => $laptops->id,
+        ]));
+        foreach (range(1, 5) as $i) {
+            ProductOptimized::factory()->onSale(1500)->create(['name' => "Gaming Deal {$i}", 'base_price' => 1000, 'category_id' => $gamingLaptops->id]);
+        }
+        foreach (range(1, 3) as $i) {
+            ProductOptimized::factory()->onSale(2000)->create(['name' => "Printer Deal {$i}", 'base_price' => 1000, 'category_id' => $printers->id]);
+        }
+        // Gaming lists three of the laptops too
+        $laptopDeals->take(3)->each(fn ($deal) => $deal->extraCategories()->attach($gamingLaptops));
+        // Sold this month, the smallest saving leads; a cancelled order and one from two months ago don't count
+        $this->sell($laptopDeals[0], 3);
+        $this->sell($laptopDeals[1], 50, 'cancelled');
+        $this->travelTo(now()->subDays(60));
+        $this->sell($laptopDeals[2], 20);
+        $this->travelBack();
+
+        $html = $this->get('/')->assertOk()->getContent();
+        $tabs = Str::betweenFirst($html, 'role="tablist"', '</div>');
+
+        $this->assertMatchesRegularExpression('#role="tab" id="trending-tab-' . $laptops->slug . '" aria-controls="trending-' . $laptops->slug . '"\s+aria-selected="true" tabindex="0"#', $tabs);
+        $this->assertMatchesRegularExpression('#id="trending-tab-' . $gaming->slug . '".*aria-selected="false" tabindex="-1"#s', $tabs);
+        $this->assertStringNotContainsString('Printer', $tabs, 'Three deals are too few for a tab');
+        $this->assertMatchesRegularExpression('#<a class="sf-panel-more" href="' . preg_quote(route('shop.category', ['category' => $laptops, 'sale' => 1]), '#') . '" data-tabs-more>#', $html);
+        $this->assertMatchesRegularExpression('#<div role="tabpanel" id="trending-' . $gaming->slug . '" aria-labelledby="trending-tab-' . $gaming->slug . '"\s+hidden\s*>#', $html);
+
+        $this->assertSame(['Laptop Deal 1', 'Laptop Deal 9', 'Laptop Deal 8', 'Laptop Deal 7', 'Laptop Deal 6', 'Laptop Deal 5', 'Laptop Deal 4', 'Laptop Deal 3', 'Laptop Deal 2'],
+            $this->trendingNames($html, $laptops));
+        $this->assertSame(['Laptop Deal 1', 'Gaming Deal 5', 'Gaming Deal 4', 'Gaming Deal 3', 'Gaming Deal 2', 'Gaming Deal 1', 'Laptop Deal 3', 'Laptop Deal 2'],
+            $this->trendingNames($html, $gaming), 'Listed laptops rank in Gaming too');
+        $this->assertSame(['#1', '#2', '#3'], array_slice($this->trendingRanks($html, $laptops), 0, 3));
+    }
+
+    public function test_trending_deals_show_six_tabs_at_most_in_menu_order(): void
+    {
+        foreach (range(1, 7) as $position) {
+            $category = Category::factory()->create(['name' => "Aisle {$position}", 'is_menu' => true, 'sort_order' => $position]);
+            ProductOptimized::factory()->count(8)->onSale(1500)->create(['base_price' => 1000, 'category_id' => $category->id]);
+        }
+
+        $tabs = Str::betweenFirst($this->get('/')->assertOk()->getContent(), 'role="tablist"', '</div>');
+
+        preg_match_all('#role="tab"[^>]*>([^<]+)</button>#', $tabs, $names);
+        $this->assertSame(['Aisle 1', 'Aisle 2', 'Aisle 3', 'Aisle 4', 'Aisle 5', 'Aisle 6'], $names[1]);
+    }
+
+    public function test_home_cards_open_the_product_and_save_it_to_the_wishlist_without_buttons(): void
+    {
+        $keyboard = ProductOptimized::factory()->featured()->create(['name' => 'Office Keyboard']);
         ProductOptimized::factory()->featured()->create(['name' => 'Coming Soon Mouse', 'stock_status' => 'preorder']);
 
+        // Guests are asked to sign in
         $featured = Str::betweenFirst($this->get('/')->assertOk()->getContent(), 'id="featured-rail"', '</ul>');
+        $this->assertStringContainsString('<a class="sf-card-wish" href="' . route('login') . '" aria-label="Sign in to save Office Keyboard to your wishlist">', $featured);
+        $this->assertStringContainsString('<p class="sf-card-status">Pre-order</p>', $featured);
+        $this->assertStringNotContainsString('sf-card-actions', $featured);
+        $this->assertStringNotContainsString('sf-card-save-pill', $featured, 'Nothing is marked down');
 
-        $this->assertStringContainsString('<p class="sf-card-model">Model: K120-BLK</p>', $featured);
-        $this->assertSame(1, substr_count($featured, 'class="sf-card-stock"'), 'Pre-order says so on its button');
-        $this->assertStringContainsString('Pre-order', $featured);
+        // A signed-in customer's heart says whether it's saved, and toggles through the wishlist
+        $customer = User::factory()->create();
+        $customer->wishlistItems()->create(['product_id' => $keyboard->id]);
+        $featured = Str::betweenFirst($this->actingAs($customer)->get('/')->assertOk()->getContent(), 'id="featured-rail"', '</ul>');
+        $this->assertMatchesRegularExpression('#data-product-id="' . $keyboard->id . '"\s+aria-pressed="true" aria-label="Save Office Keyboard to your wishlist">\s*<i class="fas fa-heart"#', $featured);
+        $this->assertMatchesRegularExpression('#data-wishlist-url="' . preg_quote(route('customer.wishlist.toggle'), '#') . '"#', $featured);
+
+        $this->postJson(route('customer.wishlist.toggle'), ['product_id' => $keyboard->id])
+            ->assertOk()
+            ->assertJson(['in_wishlist' => false, 'wishlist_count' => 0]);
     }
 
     public function test_featured_and_latest_rows(): void
@@ -242,7 +313,7 @@ class HomePageTest extends TestCase
         $this->assertStringNotContainsString(e($cancelled->name), $row);
     }
 
-    public function test_out_of_stock_products_cannot_be_added_to_cart(): void
+    public function test_out_of_stock_products_say_so_and_the_home_page_has_no_add_to_cart(): void
     {
         ProductOptimized::factory()->featured()->create(['stock_status' => 'out_of_stock']);
 
@@ -268,6 +339,23 @@ class HomePageTest extends TestCase
         preg_match_all('#class="sf-card-title"><a href="[^"]*">Deal (\d+)</a>#', $rail, $matches);
 
         return array_map('intval', $matches[1]);
+    }
+
+    /**
+     * The product names in a Trending deals tab's row, in rank order.
+     */
+    private function trendingNames(string $html, Category $category): array
+    {
+        preg_match_all('#class="sf-card-title"><a href="[^"]*">([^<]*)</a>#', Str::betweenFirst($html, 'id="trending-' . $category->slug . '-rail"', '</ul>'), $matches);
+
+        return $matches[1];
+    }
+
+    private function trendingRanks(string $html, Category $category): array
+    {
+        preg_match_all('#<span class="sf-card-rank">(\#\d+)</span>#', Str::betweenFirst($html, 'id="trending-' . $category->slug . '-rail"', '</ul>'), $matches);
+
+        return $matches[1];
     }
 
     private function categoryTiles(): string

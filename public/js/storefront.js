@@ -1,7 +1,7 @@
 /*
  * Storefront behaviour shared by every page: the drawers (phone menu, shop filters), the phone search
- * toggle, the category bar's menu placement, the product rails' scroll buttons, the product cards' Add to
- * cart and compare buttons, and the account forms' Show / Hide password buttons.
+ * toggle, the category bar's menu placement, the product rails' scroll buttons, tabs, the product cards'
+ * Add to cart, compare and wishlist buttons, and the account forms' Show / Hide password buttons.
  * Plain JS; loaded at the end of the layout.
  */
 (function () {
@@ -176,6 +176,50 @@
         update();
     });
 
+    // ---------- Tabs ([data-tabs]: role="tab" buttons and the role="tabpanel" each one controls) ----------
+    // Home page Trending deals. Clicking a tab or moving along them with the arrow keys, Home and End shows its
+    // panel; a [data-tabs-more] link follows the open tab's data-more-url.
+    document.querySelectorAll('[data-tabs]').forEach(function (container) {
+        var tabs = Array.prototype.slice.call(container.querySelectorAll('[role="tab"]'));
+        var more = container.querySelector('[data-tabs-more]');
+        var moreLabel = more && more.querySelector('[data-tabs-more-label]');
+
+        function select(tab, focus) {
+            tabs.forEach(function (other) {
+                var selected = other === tab;
+                other.setAttribute('aria-selected', selected ? 'true' : 'false');
+                other.tabIndex = selected ? 0 : -1;
+                document.getElementById(other.getAttribute('aria-controls')).hidden = !selected;
+            });
+            if (more && tab.dataset.moreUrl) {
+                more.href = tab.dataset.moreUrl;
+            }
+            if (moreLabel && tab.dataset.moreLabel) {
+                moreLabel.textContent = tab.dataset.moreLabel;
+            }
+            // The panel's row could only measure itself for its arrows once it shows
+            var rail = document.getElementById(tab.getAttribute('aria-controls')).querySelector('.sf-rail');
+            if (rail) {
+                rail.dispatchEvent(new Event('scroll'));
+            }
+            if (focus) {
+                tab.focus();
+            }
+        }
+
+        tabs.forEach(function (tab, index) {
+            tab.addEventListener('click', function () { select(tab, false); });
+            tab.addEventListener('keydown', function (event) {
+                var target = { ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: tabs.length - 1 }[event.key];
+                if (target === undefined) {
+                    return;
+                }
+                event.preventDefault();
+                select(tabs[(target + tabs.length) % tabs.length], true);
+            });
+        });
+    });
+
     // ---------- Product cards (components/product-card.blade.php) ----------
     var csrfToken = document.querySelector('meta[name="csrf-token"]');
 
@@ -222,6 +266,45 @@
         if (button && typeof window.addToCompare === 'function') {
             window.addToCompare(Number(button.dataset.compareId), button.dataset.compareName, Number(button.dataset.comparePrice), button.dataset.compareImage);
         }
+    });
+
+    // The home cards' hearts (signed in; guests get a link to sign in): every card of the product follows, and the
+    // header's wishlist badges take the new count
+    document.addEventListener('click', function (event) {
+        var button = event.target.closest('button.sf-card-wish[data-wishlist-url]');
+        if (!button || button.disabled) {
+            return;
+        }
+
+        button.disabled = true;
+        var data = new FormData();
+        data.append('product_id', button.dataset.productId);
+
+        fetch(button.dataset.wishlistUrl, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrfToken ? csrfToken.content : '', 'Accept': 'application/json' },
+            body: data,
+            credentials: 'same-origin'
+        }).then(function (response) {
+            if (!response.ok) {
+                throw new Error();
+            }
+            return response.json();
+        }).then(function (json) {
+            document.querySelectorAll('button.sf-card-wish[data-product-id="' + button.dataset.productId + '"]').forEach(function (heart) {
+                heart.setAttribute('aria-pressed', json.in_wishlist ? 'true' : 'false');
+                heart.querySelector('i').className = (json.in_wishlist ? 'fas' : 'far') + ' fa-heart';
+            });
+            document.querySelectorAll('.wishlist-count').forEach(function (badge) {
+                badge.textContent = json.wishlist_count;
+                badge.hidden = !json.wishlist_count;
+            });
+            toastr.success(json.message);
+        }).catch(function () {
+            toastr.error('Could not update your wishlist. Try again.');
+        }).then(function () {
+            button.disabled = false;
+        });
     });
 
     // ---------- Password fields: Show / Hide ----------

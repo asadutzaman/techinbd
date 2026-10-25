@@ -24,12 +24,11 @@
     --sf-save: #059669;
     --sf-deal: linear-gradient(135deg, #F97316, #EA580C);
     --sf-deal-hover: linear-gradient(135deg, #EA580C, #C2410C);
-    /* The home page's rail cards, after Best Buy's: a yellow Add to cart and a red saving tag */
-    --sf-buy: #FFE000;
-    --sf-buy-hover: #F2D200;
-    --sf-buy-ink: #1D252C;
-    --sf-save-tag: #BB0628;
-    --sf-in-stock: #047857;
+    /* The home page's rows, after Best Buy's: grey pictures, green saving pills, blue ranks, links and tabs */
+    --sf-media: #F5F6F7;
+    --sf-save-pill: #0F6B33;
+    --sf-save-pill-bg: #E3F4E8;
+    --sf-rank: #0046BE;
     --sf-footer: #E5E7EB;
     --sf-radius: 12px;
     --sf-shadow: 0 12px 24px -14px rgba(17, 24, 39, .35);
@@ -405,10 +404,12 @@ summary:focus-visible {
     display: none;
 }
 
-/* Category bar */
+/* Category bar. Clipped sideways: a closed brand list past the right edge (storefront.js only flips one as it
+   opens) would otherwise widen the page; menus still drop down below it. */
 .sf-catbar {
     display: none;
     border-top: 1px solid var(--sf-line);
+    overflow-x: clip;
 }
 
 /* Wraps rather than scrolls: a scrolling list would clip the dropdowns */
@@ -1204,40 +1205,83 @@ body.sf-drawer-open {
     color: var(--sf-muted);
 }
 
-.sf-section-tools {
+/* A home page row's white panel, after Best Buy's: the title, and "See more" at the right */
+.sf-panel {
+    padding: 16px;
+    background: var(--sf-surface);
+    border-radius: 16px;
+}
+
+.sf-panel-head {
     display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.sf-panel-more {
     flex: none;
-    align-items: center;
-    gap: 12px;
+    padding-top: 4px;
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--sf-rank);
 }
 
-.sf-rail-nav {
-    display: flex;
-    gap: 8px;
+.sf-panel-more:hover {
+    color: var(--sf-rank);
 }
 
-.sf-round-btn {
-    display: inline-flex;
+/* A row's arrows sit over its ends, halfway down the pictures (the row's 8px padding plus half of a 236px
+   picture); the one at an end of the row disappears. Phones swipe instead. */
+.sf-rail-row {
+    position: relative;
+}
+
+.sf-rail-arrow {
+    position: absolute;
+    top: 126px;
+    z-index: 2;
+    display: none;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     padding: 0;
     background: var(--sf-surface);
-    border: 1px solid var(--sf-line-strong);
+    border: 1px solid var(--sf-line);
     border-radius: 50%;
-    font-size: 12px;
-    color: var(--sf-text);
+    box-shadow: 0 4px 12px rgba(17, 24, 39, .18);
+    font-size: 13px;
+    color: var(--sf-ink);
+    transform: translateY(-50%);
 }
 
-.sf-round-btn:hover:not(:disabled) {
-    border-color: var(--sf-accent);
-    color: var(--sf-accent);
+.sf-rail-arrow.is-prev {
+    left: -12px;
 }
 
-.sf-round-btn:disabled {
-    opacity: .4;
-    cursor: default;
+.sf-rail-arrow.is-next {
+    right: -12px;
+}
+
+.sf-rail-arrow:hover {
+    color: var(--sf-rank);
+}
+
+.sf-rail-arrow:disabled {
+    visibility: hidden;
+}
+
+@media (min-width: 768px) {
+    .sf-panel {
+        padding: 24px 24px 20px;
+    }
+
+    .sf-rail-arrow {
+        display: inline-flex;
+    }
 }
 
 .sf-view-all {
@@ -1265,7 +1309,7 @@ body.sf-drawer-open {
     text-decoration: none;
 }
 
-/* A row of cards that scrolls sideways: 220px cards on computers, two per screen on phones */
+/* A row of cards that scrolls sideways: 236px cards on computers, two per screen on phones */
 .sf-rail {
     display: flex;
     gap: 12px;
@@ -1284,7 +1328,7 @@ body.sf-drawer-open {
 
 .sf-rail > li {
     display: flex;
-    flex: 0 0 220px;
+    flex: 0 0 236px;
     scroll-snap-align: start;
 }
 
@@ -1314,7 +1358,7 @@ body.sf-drawer-open {
     margin-bottom: 12px;
 }
 
-.sf-card-media > a {
+.sf-card-media > .sf-card-image {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1487,53 +1531,112 @@ body.sf-drawer-open {
     color: var(--sf-accent);
 }
 
-/* Home page rail cards (layout="rail"), after Best Buy's: left-aligned, the model under the name, a big price
-   with a red saving tag and the old price, the stock, and a yellow Add to cart */
+/* Home page cards (layout="rail"), after Best Buy's: no frame; a grey picture with the saving (or the rank) and a
+   heart, then the name, an optional label ("Top Deal"), a big price with a raised taka sign, and the old price */
 .sf-card.is-rail {
-    padding: 14px 14px 16px;
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
+}
+
+.sf-card.is-rail:hover {
+    transform: none;
+    box-shadow: none;
 }
 
 .sf-card.is-rail .sf-card-media {
-    height: 150px;
-    margin-bottom: 14px;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    margin-bottom: 12px;
+    background: var(--sf-media);
+    border-radius: 8px;
+    /* Its own stacking context, so the photo blends with this grey inside the scrolling row */
+    isolation: isolate;
 }
 
-.sf-card-tag {
+/* The picture fills the square under the pill and heart, whatever its own shape */
+.sf-card.is-rail .sf-card-image {
     position: absolute;
-    top: -4px;
-    left: -4px;
+    inset: 44px 20px 20px;
+    width: auto;
+    height: auto;
+}
+
+/* White photo backgrounds take on the grey */
+.sf-card.is-rail .sf-card-media img {
+    mix-blend-mode: multiply;
+}
+
+.sf-card-save-pill,
+.sf-card-rank {
+    position: absolute;
+    top: 10px;
+    left: 10px;
     z-index: 1;
-    padding: 3px 8px;
+    padding: 2px 8px;
     border-radius: 4px;
-    background: var(--sf-buy);
-    font-size: 11px;
-    font-weight: 800;
-    line-height: 16px;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-    color: var(--sf-buy-ink);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 22px;
+}
+
+.sf-card-save-pill {
+    background: var(--sf-save-pill-bg);
+    color: var(--sf-save-pill);
+}
+
+.sf-card-rank {
+    background: var(--sf-rank);
+    color: #FFFFFF;
+}
+
+.sf-card-wish {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    background: var(--sf-surface);
+    border: 1px solid #C5CBD5;
+    border-radius: 50%;
+    font-size: 17px;
+    color: var(--sf-ink);
+}
+
+.sf-card-wish:hover {
+    border-color: var(--sf-ink);
+    color: var(--sf-ink);
+    text-decoration: none;
+}
+
+.sf-card-wish[aria-pressed="true"] {
+    color: var(--sf-price);
 }
 
 .sf-card.is-rail .sf-card-title {
-    min-height: 4.05em;
-    margin-bottom: 4px;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
-    font-weight: 500;
+    min-height: 2.9em;
+    margin: 0 0 6px;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--sf-ink);
 }
 
-.sf-card-model {
+/* On the link, as the theme makes every h3 bold with !important */
+.sf-card.is-rail .sf-card-title a {
+    font-weight: 400;
+}
+
+.sf-card-label {
     margin: 0;
-    overflow: hidden;
     font-size: 12px;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    color: var(--sf-faint);
-}
-
-.sf-card-pricing {
-    margin: auto 0 0;
-    padding-top: 10px;
+    font-weight: 700;
+    color: var(--sf-ink);
 }
 
 .sf-card.is-rail .sf-card-price {
@@ -1542,55 +1645,31 @@ body.sf-drawer-open {
 }
 
 .sf-card.is-rail .sf-card-price > .price {
-    font-size: 22px;
+    font-size: 24px;
     font-weight: 700;
+    line-height: 1.25;
     letter-spacing: -.01em;
     color: var(--sf-ink);
 }
 
-.sf-card-saving {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 8px;
-    margin: 6px 0 0;
+/* The taka sign raised and small, like the dollar sign on Best Buy's prices */
+.sf-card.is-rail .sf-card-price .price-sign {
+    margin-right: 2px;
+    font-size: .55em;
+    vertical-align: .75em;
+}
+
+.sf-card-old {
+    margin: 2px 0 0;
+    font-size: 14px;
+    color: var(--sf-faint);
+}
+
+.sf-card-status {
+    margin: 4px 0 0;
     font-size: 12px;
-}
-
-.sf-card-save-tag {
-    padding: 2px 6px;
-    border-radius: 3px;
-    background: var(--sf-save-tag);
-    font-weight: 700;
-    color: #FFFFFF;
-}
-
-.sf-card.is-rail .sf-card-was {
+    font-weight: 600;
     color: var(--sf-muted);
-}
-
-.sf-card-stock {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin: 8px 0 0;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--sf-in-stock);
-}
-
-.sf-card.is-rail .sf-card-actions {
-    margin-top: 12px;
-}
-
-.sf-card.is-rail .sf-card-cta:not(:disabled) {
-    background: var(--sf-buy);
-    font-weight: 600;
-    color: var(--sf-buy-ink);
-}
-
-.sf-card.is-rail .sf-card-cta:hover:not(:disabled) {
-    background: var(--sf-buy-hover);
 }
 
 /* ---------- Pagination (custom-pagination.blade.php) ---------- */
@@ -1914,26 +1993,46 @@ a.sf-pager-page:hover {
         font-size: 13px;
     }
 
-    .sf-rail-nav {
-        display: none;
-    }
-
     .sf-rail > li {
         flex-basis: calc((100% - 12px) / 2);
     }
 
-    .sf-card,
-    .sf-card.is-rail {
+    .sf-card {
         padding: 12px;
     }
 
-    .sf-card-media,
-    .sf-card.is-rail .sf-card-media {
+    .sf-card-media {
         height: 120px;
     }
 
+    /* Home cards: a smaller pill, rank and heart, and room for them above the picture */
+    .sf-card.is-rail .sf-card-image {
+        inset: 38px 12px 12px;
+    }
+
+    .sf-card-save-pill,
+    .sf-card-rank {
+        top: 8px;
+        left: 8px;
+        padding: 1px 6px;
+        font-size: 12px;
+        line-height: 20px;
+    }
+
+    .sf-card-wish {
+        top: 6px;
+        right: 6px;
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+    }
+
+    .sf-card.is-rail .sf-card-title {
+        font-size: 13px;
+    }
+
     .sf-card.is-rail .sf-card-price > .price {
-        font-size: 18px;
+        font-size: 20px;
     }
 }
 
